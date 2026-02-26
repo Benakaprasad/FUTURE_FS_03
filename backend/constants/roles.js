@@ -1,0 +1,19 @@
+const ROLES = {
+  ADMIN:    'admin',
+  MANAGER:  'manager',
+  STAFF:    'staff',
+  TRAINER:  'trainer',
+  CUSTOMER: 'customer',
+};
+
+// Role groups for middleware
+const ROLE_GROUPS = {
+  INTERNAL_STAFF:  [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+  DECISION_MAKER:  [ROLES.ADMIN, ROLES.MANAGER],
+  ADMIN_ONLY:      [ROLES.ADMIN],
+  TRAINER_ONLY:    [ROLES.TRAINER],
+  CUSTOMER_ONLY:   [ROLES.CUSTOMER],
+  ALL_STAFF:       [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF, ROLES.TRAINER],
+};
+
+module.exports = { ROLES, ROLE_GROUPS };
