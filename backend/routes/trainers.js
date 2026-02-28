@@ -154,11 +154,14 @@ router.patch('/:id/reject',
   authorize(ROLE_GROUPS.DECISION_MAKER),
   async (req, res, next) => {
     try {
+      const { notes } = req.body; // ← add this line
+
       const { rows } = await require('../config/database').query(
-        `UPDATE trainers SET status = 'on_leave'
+        `UPDATE trainers SET status = 'on_leave', notes = $2  -- ← add notes = $2
          WHERE id = $1 RETURNING *`,
-        [req.params.id]
+        [req.params.id, notes || null]                        // ← add notes || null
       );
+
       if (!rows[0]) return res.status(404).json({ error: 'Trainer not found' });
       res.json({ message: 'Trainer rejected', trainer: rows[0] });
     } catch (err) { next(err); }
