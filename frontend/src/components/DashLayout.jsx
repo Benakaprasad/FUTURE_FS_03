@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
+// RESPONSIVE: mobile styles added via className + CSS in <style> block. Zero logic changes.
 
 export default function DashLayout({ children, title, subtitle, actions }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -13,26 +14,67 @@ export default function DashLayout({ children, title, subtitle, actions }) {
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+
+        /* ── Responsive: mobile ── */
+        @media (max-width: 768px) {
+          .dash-main {
+            margin-left: 0 !important;
+            padding-bottom: 80px; /* space for bottom nav */
+          }
+          .dash-topbar {
+            padding: 16px 16px !important;
+          }
+          .dash-content {
+            padding: 16px !important;
+          }
+          .dash-title {
+            font-size: 1.4rem !important;
+          }
+          .dash-subtitle {
+            font-size: 0.75rem !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+          }
+          .dash-actions {
+            width: 100%;
+            justify-content: flex-start !important;
+          }
+        }
+
+        /* ── Responsive: tablet ── */
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .dash-main {
+            margin-left: 72px !important;
+          }
+          .dash-content {
+            padding: 20px !important;
+          }
+        }
       `}</style>
 
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      <main style={{
-        ...s.main,
-        marginLeft: collapsed ? "72px" : "240px",
-        transition: "margin-left 0.3s cubic-bezier(0.4,0,0.2,1)",
-      }}>
+      <main
+        className="dash-main"
+        style={{
+          ...s.main,
+          marginLeft: collapsed ? "72px" : "240px",
+          transition: "margin-left 0.3s cubic-bezier(0.4,0,0.2,1)",
+        }}
+      >
         {/* Top bar */}
-        <div style={s.topBar}>
-          <div>
-            <h1 style={s.pageTitle}>{title}</h1>
-            {subtitle && <p style={s.pageSubtitle}>{subtitle}</p>}
+        <div className="dash-topbar" style={s.topBar}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h1 className="dash-title" style={s.pageTitle}>{title}</h1>
+            {subtitle && <p className="dash-subtitle" style={s.pageSubtitle}>{subtitle}</p>}
           </div>
-          {actions && <div style={s.actions}>{actions}</div>}
+          {actions && <div className="dash-actions" style={s.actions}>{actions}</div>}
         </div>
 
         {/* Content */}
-        <div style={s.content}>
+        <div className="dash-content" style={s.content}>
           {children}
         </div>
       </main>

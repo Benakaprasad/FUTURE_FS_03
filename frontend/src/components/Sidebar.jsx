@@ -58,6 +58,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   };
   const accent = roleColors[role] || "#FF1A1A";
 
+  // For mobile bottom nav: show max 4 links + logout
+  const mobileLinks = links.slice(0, 4);
+
   return (
     <>
       <style>{`
@@ -66,9 +69,22 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         .nav-link-item:hover { background: rgba(255,255,255,0.06) !important; }
         .logout-btn:hover { background: rgba(255,26,26,0.1) !important; color: #FF1A1A !important; }
         .collapse-btn:hover { background: rgba(255,255,255,0.1) !important; }
+        .mob-nav-link { transition: all 0.15s ease; }
+
+        /* ── Hide desktop sidebar on mobile ── */
+        @media (max-width: 768px) {
+          .desktop-sidebar { display: none !important; }
+          .mobile-bottom-nav { display: flex !important; }
+        }
+        /* ── Hide mobile nav on desktop ── */
+        @media (min-width: 769px) {
+          .mobile-bottom-nav { display: none !important; }
+          .desktop-sidebar { display: flex !important; }
+        }
       `}</style>
 
-      <aside style={{
+      {/* ── Desktop sidebar (unchanged) ── */}
+      <aside className="desktop-sidebar" style={{
         ...s.sidebar,
         width: collapsed ? "72px" : "240px",
         transition: "width 0.3s cubic-bezier(0.4,0,0.2,1)",
@@ -156,10 +172,54 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           </button>
         </div>
       </aside>
+
+      {/* ── Mobile bottom nav bar ── */}
+      <nav className="mobile-bottom-nav" style={{
+        ...mob.bar,
+        borderTop: `1px solid ${accent}20`,
+      }}>
+        {mobileLinks.map((link) => {
+          const active = location.pathname === link.href;
+          return (
+            <Link
+              key={link.href}
+              to={link.href}
+              className="mob-nav-link"
+              style={{
+                ...mob.link,
+                color: active ? accent : "rgba(255,255,255,0.35)",
+              }}
+            >
+              {/* Active indicator dot */}
+              {active && (
+                <span style={{ ...mob.activeDot, background: accent }} />
+              )}
+              <span style={mob.icon}>{link.icon}</span>
+              <span style={{
+                ...mob.label,
+                color: active ? accent : "rgba(255,255,255,0.35)",
+                fontWeight: active ? 700 : 500,
+              }}>
+                {link.label}
+              </span>
+            </Link>
+          );
+        })}
+
+        {/* Logout as last tab on mobile */}
+        <button
+          onClick={logout}
+          style={mob.logoutTab}
+        >
+          <span style={mob.icon}>⎋</span>
+          <span style={mob.label}>Logout</span>
+        </button>
+      </nav>
     </>
   );
 }
 
+// ── Desktop sidebar styles (unchanged from original) ──────────────────────────
 const s = {
   sidebar: {
     position: "fixed", top: 0, left: 0, bottom: 0,
@@ -245,5 +305,58 @@ const s = {
     fontSize: "0.875rem", fontWeight: 500,
     cursor: "pointer", transition: "all 0.2s",
     fontFamily: "'DM Sans', sans-serif",
+  },
+};
+
+// ── Mobile bottom nav styles ───────────────────────────────────────────────────
+const mob = {
+  bar: {
+    position: "fixed", bottom: 0, left: 0, right: 0,
+    background: "rgba(5,5,5,0.98)",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
+    display: "flex",
+    zIndex: 100,
+    paddingBottom: "env(safe-area-inset-bottom)", // iPhone notch support
+  },
+  link: {
+    flex: 1,
+    display: "flex", flexDirection: "column",
+    alignItems: "center", justifyContent: "center",
+    gap: "3px",
+    padding: "10px 4px 8px",
+    textDecoration: "none",
+    position: "relative",
+    minWidth: 0,
+  },
+  activeDot: {
+    position: "absolute", top: "6px",
+    width: "4px", height: "4px",
+    borderRadius: "50%",
+  },
+  icon: {
+    fontSize: "1.3rem",
+    lineHeight: 1,
+  },
+  label: {
+    fontSize: "10px",
+    fontFamily: "'DM Sans', sans-serif",
+    letterSpacing: "0.3px",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxWidth: "100%",
+  },
+  logoutTab: {
+    flex: 1,
+    display: "flex", flexDirection: "column",
+    alignItems: "center", justifyContent: "center",
+    gap: "3px",
+    padding: "10px 4px 8px",
+    background: "none", border: "none",
+    color: "rgba(255,255,255,0.3)",
+    cursor: "pointer",
+    fontFamily: "'DM Sans', sans-serif",
+    minWidth: 0,
   },
 };

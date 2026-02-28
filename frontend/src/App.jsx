@@ -19,7 +19,7 @@ import AdminLeads        from "./pages/admin/Leads";
 import AdminMembers      from "./pages/admin/Members";
 import AdminRequests     from "./pages/admin/Requests";
 import AdminTrainers     from "./pages/admin/Trainers";
-import AdminApplications from "./pages/admin/Applications";
+import { AdminApplications } from "./pages/admin/Applications";
 import AdminUsers        from "./pages/admin/Users";
 import AdminPayments     from "./pages/admin/Payments";
 
