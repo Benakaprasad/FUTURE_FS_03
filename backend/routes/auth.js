@@ -10,6 +10,8 @@ const Lead     = require('../models/Lead');
 const { validate }      = require('../middleware/validate');
 const { authenticate }  = require('../middleware/auth');
 const { ROLES }         = require('../constants/roles');
+const pool = require('../config/database');
+const notify = require('../helpers/notify');
 
 // ── Validation Rules ─────────────────────────────────────────
 const registerRules = [
@@ -41,8 +43,11 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
   try {
     const { username, email, password, full_name, phone } = req.body;
 
-    // Block role injection — register creates ONLY customers
-    if (req.body.role && req.body.role !== ROLES.CUSTOMER) {
+    // Only customers and trainers can self-register
+    const requestedRole = req.body.role || ROLES.CUSTOMER;
+    const allowedRoles  = [ROLES.CUSTOMER, ROLES.TRAINER];
+
+    if (!allowedRoles.includes(requestedRole)) {
       return res.status(403).json({ error: 'Cannot self-register with that role' });
     }
 
@@ -54,15 +59,35 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
     if (existingEmail)    return res.status(409).json({ error: 'Email already registered' });
     if (existingUsername) return res.status(409).json({ error: 'Username already taken' });
 
-    // Create user
+    // Create user with correct role
     const user = await User.create({
       username, email, password,
-      role: ROLES.CUSTOMER,
+      role: requestedRole,
       full_name, phone,
     });
 
-    // Create customer profile
-    await Customer.create(user.id);
+    // Create role-specific profile
+    if (requestedRole === ROLES.TRAINER) {
+      await notify.trainerRegistered(user);   
+    await pool.query(
+    `INSERT INTO trainers 
+       (user_id, status, specialization, experience_years, certifications, bio, availability, hourly_rate)
+     VALUES ($1, 'inactive', $2, $3, $4, $5, $6, $7)`,
+    [
+      user.id,
+      req.body.specialization    || null,
+      req.body.experience_years  || null,
+      req.body.certifications    || null,
+      req.body.bio               || null,
+      req.body.availability      || null,
+      req.body.hourly_rate       || null,
+    ]
+  );
+  } else {
+      // Customer profile created immediately
+      await notify.customerRegistered(user);
+      await Customer.create(user.id);
+    }
 
     // Link any existing leads with this email
     await Lead.linkToUser(email, user.id);
@@ -73,12 +98,11 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
       user.id, req.ip, req.headers['user-agent']
     );
 
-    // Set refresh token in httpOnly cookie
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure:   process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge:   7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge:   7 * 24 * 60 * 60 * 1000,
     });
 
     res.status(201).json({

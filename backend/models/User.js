@@ -59,25 +59,25 @@ class User {
 
   // ── Create ──────────────────────────────────────────────────
   static async create({ username, email, password, role = 'customer', full_name, phone, created_by = null }) {
-    const hash = await bcrypt.hash(password, 12);
-    const { rows } = await pool.query(
-      `INSERT INTO users
-         (username, email, password, role, full_name, phone, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, username, email, role, full_name, phone,
-                 is_active, is_email_verified, created_at`,
-      [
-        username.toLowerCase(),
-        email.toLowerCase(),
-        hash,
-        role,
-        full_name || null,
-        phone || null,
-        created_by,
-      ]
-    );
-    return rows[0];
-  }
+  const hash = await bcrypt.hash(password, 12);
+  const { rows } = await pool.query(
+    `INSERT INTO users
+       (username, email, password, role, full_name, phone, created_by, is_active, is_email_verified)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, true, true)
+     RETURNING id, username, email, role, full_name, phone,
+               is_active, is_email_verified, created_at`,
+    [
+      username.toLowerCase(),
+      email.toLowerCase(),
+      hash,
+      role,
+      full_name || null,
+      phone || null,
+      created_by,
+    ]
+  );
+  return rows[0];
+}
 
   // ── Password ─────────────────────────────────────────────────
   static async comparePassword(plainPassword, hashedPassword) {

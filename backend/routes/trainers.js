@@ -106,4 +106,63 @@ router.patch('/:id/status',
   }
 );
 
+router.get('/pending',
+  authorize(ROLE_GROUPS.DECISION_MAKER),
+  async (req, res, next) => {
+    try {
+      const { rows } = await require('../config/database').query(
+        `SELECT t.*, u.username, u.email, u.full_name, u.phone, u.created_at as registered_at
+         FROM trainers t
+         JOIN users u ON t.user_id = u.id
+         WHERE t.status = 'inactive'
+         ORDER BY u.created_at DESC`
+      );
+      res.json({ trainers: rows });
+    } catch (err) { next(err); }
+  }
+);
+
+// PATCH /api/trainers/:id/approve — admin/manager approves trainer
+router.patch('/:id/approve',
+  authorize(ROLE_GROUPS.DECISION_MAKER),
+  async (req, res, next) => {
+    const client = await require('../config/database').connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        `UPDATE trainers SET status = 'active'
+         WHERE id = $1 RETURNING *`,
+        [req.params.id]
+      );
+      if (!rows[0]) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Trainer not found' });
+      }
+      await client.query('COMMIT');
+      res.json({ message: 'Trainer approved', trainer: rows[0] });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      next(err);
+    } finally {
+      client.release();
+    }
+  }
+);
+
+// PATCH /api/trainers/:id/reject — admin/manager rejects trainer
+router.patch('/:id/reject',
+  authorize(ROLE_GROUPS.DECISION_MAKER),
+  async (req, res, next) => {
+    try {
+      const { rows } = await require('../config/database').query(
+        `UPDATE trainers SET status = 'on_leave'
+         WHERE id = $1 RETURNING *`,
+        [req.params.id]
+      );
+      if (!rows[0]) return res.status(404).json({ error: 'Trainer not found' });
+      res.json({ message: 'Trainer rejected', trainer: rows[0] });
+    } catch (err) { next(err); }
+  }
+);
+
 module.exports = router;
