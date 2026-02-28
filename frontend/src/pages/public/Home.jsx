@@ -576,7 +576,13 @@ function EnergyShakeSection({
     if (userName.length < MAX_NAME_LENGTH) return `Almost there, ${userName}!`;
     return `${userName.trim()}, YOUR ZONE IS READY. 🔥`;
   };
-
+  const barColor = energy < 30
+  ? "#FF6B00"
+  : energy < 60
+  ? "#FFB800"
+  : energy < 90
+  ? "#FF4400"
+  : "#FF1A1A";
   return (
     <section style={{
       ...energyStyles.section,

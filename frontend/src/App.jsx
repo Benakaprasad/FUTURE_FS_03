@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import { RequireAuth, RequireRole, RedirectIfAuth } from "./components/ProtectedRoute";
 
 // Public pages
@@ -32,48 +33,52 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        {/* NotificationProvider must be INSIDE AuthProvider so it can
+            access the auth token via your api/axios interceptors.     */}
+        <NotificationProvider>
+          <Routes>
 
-          {/* ── Public ──────────────────────────── */}
-          <Route path="/" element={<Home />} />
+            {/* ── Public ──────────────────────────── */}
+            <Route path="/" element={<Home />} />
 
-          {/* ── Auth (redirect if already logged in) ── */}
-          <Route element={<RedirectIfAuth />}>
-            <Route path="/login"    element={<Login />} />
-            <Route path="/register" element={<Register />} />
-          </Route>
+            {/* ── Auth (redirect if already logged in) ── */}
+            <Route element={<RedirectIfAuth />}>
+              <Route path="/login"    element={<Login />} />
+              <Route path="/register" element={<Register />} />
+            </Route>
 
-          {/* ── Customer ────────────────────────── */}
-          <Route element={<RequireRole roles={["customer"]} />}>
-            <Route path="/dashboard"            element={<CustomerDashboard />} />
-            <Route path="/dashboard/profile"    element={<CustomerProfile />} />
-            <Route path="/dashboard/membership" element={<CustomerMembership />} />
-            <Route path="/dashboard/request"    element={<CustomerRequest />} />
-          </Route>
+            {/* ── Customer ────────────────────────── */}
+            <Route element={<RequireRole roles={["customer"]} />}>
+              <Route path="/dashboard"            element={<CustomerDashboard />} />
+              <Route path="/dashboard/profile"    element={<CustomerProfile />} />
+              <Route path="/dashboard/membership" element={<CustomerMembership />} />
+              <Route path="/dashboard/request"    element={<CustomerRequest />} />
+            </Route>
 
-          {/* ── Trainer ─────────────────────────── */}
-          <Route element={<RequireRole roles={["trainer"]} />}>
-            <Route path="/trainer"          element={<TrainerDashboard />} />
-            <Route path="/trainer/members"  element={<TrainerMembers />} />
-            <Route path="/trainer/schedule" element={<TrainerSchedule />} />
-          </Route>
+            {/* ── Trainer ─────────────────────────── */}
+            <Route element={<RequireRole roles={["trainer"]} />}>
+              <Route path="/trainer"          element={<TrainerDashboard />} />
+              <Route path="/trainer/members"  element={<TrainerMembers />} />
+              <Route path="/trainer/schedule" element={<TrainerSchedule />} />
+            </Route>
 
-          {/* ── Admin / Manager / Staff ─────────── */}
-          <Route element={<RequireRole roles={["admin", "manager", "staff"]} />}>
-            <Route path="/admin"              element={<AdminDashboard />} />
-            <Route path="/admin/leads"        element={<AdminLeads />} />
-            <Route path="/admin/members"      element={<AdminMembers />} />
-            <Route path="/admin/requests"     element={<AdminRequests />} />
-            <Route path="/admin/trainers"     element={<AdminTrainers />} />
-            <Route path="/admin/applications" element={<AdminApplications />} />
-            <Route path="/admin/payments"     element={<AdminPayments />} />
-            <Route path="/admin/users"        element={<AdminUsers />} />
-          </Route>
+            {/* ── Admin / Manager / Staff ─────────── */}
+            <Route element={<RequireRole roles={["admin", "manager", "staff"]} />}>
+              <Route path="/admin"              element={<AdminDashboard />} />
+              <Route path="/admin/leads"        element={<AdminLeads />} />
+              <Route path="/admin/members"      element={<AdminMembers />} />
+              <Route path="/admin/requests"     element={<AdminRequests />} />
+              <Route path="/admin/trainers"     element={<AdminTrainers />} />
+              <Route path="/admin/applications" element={<AdminApplications />} />
+              <Route path="/admin/payments"     element={<AdminPayments />} />
+              <Route path="/admin/users"        element={<AdminUsers />} />
+            </Route>
 
-          {/* ── Fallback ────────────────────────── */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+            {/* ── Fallback ────────────────────────── */}
+            <Route path="*" element={<Navigate to="/" replace />} />
 
-        </Routes>
+          </Routes>
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   );
