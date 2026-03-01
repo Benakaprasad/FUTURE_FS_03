@@ -120,9 +120,27 @@ export function DataTable({
         .dt-row:hover td { background: rgba(255,255,255,0.02) !important; }
         .dt-search:focus { border-color: #FF1A1A !important; outline: none; }
         .dt-search::placeholder { color: rgba(255,255,255,0.2); }
-        .dt-filter { cursor: pointer; transition: all 0.2s; }
+        .dt-filter { 
+            cursor: pointer; 
+            transition: all 0.2s;
+            background: rgba(255,255,255,0.04) !important;
+            border: 1px solid rgba(255,255,255,0.09) !important;
+            border-radius: 8px !important;
+            padding: 10px 14px !important;
+            color: #fff !important;
+            font-size: 0.875rem !important;
+            font-family: 'DM Sans', sans-serif !important;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.4)' d='M6 8L1 3h10z'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 12px center !important;
+            padding-right: 32px !important;
+        }
         .dt-filter:hover { border-color: rgba(255,26,26,0.4) !important; }
-      `}</style>
+        .dt-filter:focus { border-color: #FF1A1A !important; outline: none; }
+        .dt-filter option { background: #1a1a1a; color: #fff; }
+        `}</style>
 
       {/* Controls */}
       <div style={dt.controls}>
@@ -145,7 +163,7 @@ export function DataTable({
             value={filter}
             onChange={(e) => { setFilter(e.target.value); setPage(1); }}
             style={dt.filterSelect}
-          >
+            >
             <option value="all">All</option>
             {filterOptions.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>

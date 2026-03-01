@@ -2,12 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 
-const VIDEOS = [
-  "/vido (1).mp4", "/vido (2).mp4", "/vido (3).mp4",
-  "/vido (4).mp4", "/vido (5).mp4", "/vido (6).mp4",
-  "/vido (7).mp4", "/vido (8).mp4", "/vido (9).mp4",
-];
-
 const PHRASES = [
   "TRAIN HARD.",
   "PUSH LIMITS.",
@@ -22,7 +16,7 @@ const PHRASES = [
 
 const SESSIONS = [
   {
-    image: "/images/sessions/strength-training.jpg",
+    image: "/images/sessions/strength-training.png",
     imageAlt: "Strength Training — Add your image at: frontend/public/images/sessions/strength-training.jpg",
     title: "Strength Training",
     desc: "Free weights & machines. Muscle building programs from beginner to advanced splits.",
@@ -30,7 +24,7 @@ const SESSIONS = [
     color: "#FF1A1A",
   },
   {
-    image: "/images/sessions/cardio-conditioning.jpg",
+    image: "/images/sessions/cardio-conditioning.png",
     imageAlt: "Cardio Conditioning — Add your image at: frontend/public/images/sessions/cardio-conditioning.jpg",
     title: "Cardio Conditioning",
     desc: "Treadmills, rowers, cycling. Fat-loss focused programs designed for real results.",
@@ -38,7 +32,7 @@ const SESSIONS = [
     color: "#FF6B00",
   },
   {
-    image: "/images/sessions/hiit.jpg",
+    image: "/images/sessions/hiit.png",
     imageAlt: "HIIT — Add your image at: frontend/public/images/sessions/hiit.jpg",
     title: "HIIT",
     desc: "30-minute fat-burn circuit sessions. High intensity interval training that works.",
@@ -46,7 +40,7 @@ const SESSIONS = [
     color: "#FFB800",
   },
   {
-    image: "/images/sessions/functional-training.jpg",
+    image: "/images/sessions/functional-training.png",
     imageAlt: "Functional Training — Add your image at: frontend/public/images/sessions/functional-training.jpg",
     title: "Functional Training",
     desc: "Kettlebells, battle ropes, TRX. Mobility & endurance focus for real-world strength.",
@@ -54,7 +48,7 @@ const SESSIONS = [
     color: "#00C2FF",
   },
   {
-    image: "/images/sessions/yoga.jpg",
+    image: "/images/sessions/yoga.png",
     imageAlt: "Yoga — Add your image at: frontend/public/images/sessions/yoga.jpg",
     title: "Yoga",
     desc: "Morning flexibility & stress relief. Weekend power yoga for body and mind.",
@@ -62,7 +56,7 @@ const SESSIONS = [
     color: "#A855F7",
   },
   {
-    image: "/images/sessions/zumba.jpg",
+    image: "/images/sessions/zumba.png",
     imageAlt: "Zumba — Add your image at: frontend/public/images/sessions/zumba.jpg",
     title: "Zumba",
     desc: "Evening dance fitness sessions. High-energy group class that never feels like work.",
@@ -70,7 +64,7 @@ const SESSIONS = [
     color: "#EC4899",
   },
   {
-    image: "/images/sessions/boxing.jpg",
+    image: "/images/sessions/boxing.png",
     imageAlt: "Boxing & Conditioning — Add your image at: frontend/public/images/sessions/boxing.jpg",
     title: "Boxing & Conditioning",
     desc: "Bag work, pad training, core strengthening. Build power and mental toughness.",
@@ -78,7 +72,7 @@ const SESSIONS = [
     color: "#FF1A1A",
   },
   {
-    image: "/images/sessions/personal-training.jpg",
+    image: "/images/sessions/personal-training.png",
     imageAlt: "Personal Training — Add your image at: frontend/public/images/sessions/personal-training.jpg",
     title: "Personal Training",
     desc: "1-on-1 customized programs with diet guidance and body transformation tracking.",
@@ -89,43 +83,43 @@ const SESSIONS = [
 
 const TRAINERS = [
   {
-    name: "Trainer Name",
+    name: "Arjun Reddy",
     role: "Head Strength Coach",
     exp: "8+ years",
     cert: "ISSA Certified",
     spec: "Muscle Building & Fat Loss",
-    image: "/images/trainers/trainer-1.jpg",
-    imageAlt: "Trainer 1 — Add your image at: frontend/public/images/trainers/trainer-1.jpg",
+    image: "/images/trainers/male1.jpeg",
+    imageAlt: "Trainer 1 — Add your image at: frontend/public/images/trainers/male1.jpeg",
     color: "#FF1A1A",
   },
   {
-    name: "Trainer Name",
+    name: "Sneha Rao",
     role: "Yoga & Mobility Coach",
     exp: "6+ years",
     cert: "RYT-200 Certified",
     spec: "Flexibility & Rehabilitation",
-    image: "/images/trainers/trainer-2.jpg",
-    imageAlt: "Trainer 2 — Add your image at: frontend/public/images/trainers/trainer-2.jpg",
+    image: "/images/trainers/female1.jpeg",
+    imageAlt: "Trainer 2 — Add your image at: frontend/public/images/trainers/female1.jpeg",
     color: "#A855F7",
   },
   {
-    name: "Trainer Name",
+    name: "Vikram Shetty",
     role: "HIIT & Functional Specialist",
     exp: "5+ years",
     cert: "CrossFit Level 1",
     spec: "Weight Loss & Conditioning",
-    image: "/images/trainers/trainer-3.jpg",
-    imageAlt: "Trainer 3 — Add your image at: frontend/public/images/trainers/trainer-3.jpg",
+    image: "/images/trainers/male2.jpeg",
+    imageAlt: "Trainer 3 — Add your image at: frontend/public/images/trainers/male2.jpeg",
     color: "#00C2FF",
   },
   {
-    name: "Trainer Name",
+    name: "Aditi Sharma",
     role: "Zumba & Group Fitness",
     exp: "4+ years",
     cert: "Licensed Zumba Instructor",
     spec: "Dance Fitness & Cardio",
-    image: "/images/trainers/trainer-4.jpg",
-    imageAlt: "Trainer 4 — Add your image at: frontend/public/images/trainers/trainer-4.jpg",
+    image: "/images/trainers/female2.jpeg",
+    imageAlt: "Trainer 4 — Add your image at: frontend/public/images/trainers/female2.jpeg",
     color: "#EC4899",
   },
 ];
@@ -898,10 +892,6 @@ function EnergyShakeSection({
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [currentVideo, setCurrentVideo] = useState(0);
-  const [nextVideo, setNextVideo] = useState(1);
-  const [fading, setFading] = useState(false);
-  const [phraseVisible, setPhraseVisible] = useState(true);
   const [energy, setEnergy] = useState(0);
   const [selectedGoal, setSelectedGoal] = useState(null);
   const [goalStep, setGoalStep] = useState(false);
@@ -909,13 +899,22 @@ export default function Home() {
   const [shakeHint, setShakeHint] = useState("idle"); // idle | shaking | done
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", message: "" });
   const [formSent, setFormSent] = useState(false);
-
-  const videoARef = useRef(null);
-  const videoBRef = useRef(null);
-  const [activeSlot, setActiveSlot] = useState("A");
+  const videoRef = useRef(null);
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [phraseVisible, setPhraseVisible] = useState(true);
 
   const [statsRef, statsInView] = useInView(0.3);
 
+  useEffect(() => {
+  const interval = setInterval(() => {
+    setPhraseVisible(false);
+    setTimeout(() => {
+      setPhraseIndex(i => (i + 1) % PHRASES.length);
+      setPhraseVisible(true);
+    }, 400);
+  }, 4000);
+  return () => clearInterval(interval);
+}, []);
   // Scroll
   useEffect(() => {
     const fn = () => setScrollY(window.scrollY);
@@ -925,43 +924,10 @@ export default function Home() {
 
   // Init video A
   useEffect(() => {
-    if (videoARef.current) {
-      videoARef.current.src = VIDEOS[0];
-      videoARef.current.load();
-      videoARef.current.play().catch(() => {});
-    }
-  }, []);
-
-  // Video cycle — every 20 seconds
-  useEffect(() => {
-    const CLIP_MS = 20000;
-    const interval = setInterval(() => {
-      const next = (currentVideo + 1) % VIDEOS.length;
-      setNextVideo(next);
-
-      // Preload next in hidden slot
-      const nextRef = activeSlot === "A" ? videoBRef : videoARef;
-      if (nextRef.current) {
-        nextRef.current.src = VIDEOS[next];
-        nextRef.current.load();
-        nextRef.current.play().catch(() => {});
-      }
-
-      // Fade phrase out
-      setPhraseVisible(false);
-
-      setTimeout(() => {
-        setFading(true);
-        setTimeout(() => {
-          setActiveSlot((p) => (p === "A" ? "B" : "A"));
-          setCurrentVideo(next);
-          setFading(false);
-          setPhraseVisible(true);
-        }, 1200);
-      }, 300);
-    }, CLIP_MS);
-    return () => clearInterval(interval);
-  }, [currentVideo, activeSlot]);
+  if (videoRef.current) {
+    videoRef.current.play().catch(() => {});
+  }
+}, []);
 
   const handleEnquiry = useCallback((e) => {
     e.preventDefault();
@@ -1131,16 +1097,16 @@ export default function Home() {
       ════════════════════════════════════════════ */}
       <section id="home" style={s.hero}>
         {/* Video slots */}
-        <video ref={videoARef} style={{
-          ...s.videoBg,
-          opacity: activeSlot === "A" ? 1 : 0,
-          transition: "opacity 1.2s ease",
-        }} muted loop playsInline preload="auto" />
-        <video ref={videoBRef} style={{
-          ...s.videoBg,
-          opacity: activeSlot === "B" ? 1 : 0,
-          transition: "opacity 1.2s ease",
-        }} muted loop playsInline preload="auto" />
+        <video
+        ref={videoRef}
+        src="/hero-loop.mp4"
+        style={s.videoBg}
+        muted
+        loop
+        autoPlay
+        playsInline
+        preload="auto"
+      />
 
         {/* Overlays */}
         <div style={s.heroOverlay} />
@@ -1172,7 +1138,7 @@ export default function Home() {
               className={phraseVisible ? "hero-phrase" : "hero-phrase-exit"}
               style={s.heroPhrase}
             >
-              {PHRASES[currentVideo]}
+              {PHRASES[phraseIndex]}
             </span>
           </div>
 
@@ -1192,15 +1158,6 @@ export default function Home() {
           </div>
 
           {/* Video indicator */}
-          <div style={s.videoIndicator}>
-            {VIDEOS.map((_, i) => (
-              <div key={i} style={{
-                ...s.videoDot,
-                background: i === currentVideo ? "#FF1A1A" : "rgba(255,255,255,0.3)",
-                width: i === currentVideo ? "24px" : "6px",
-              }} />
-            ))}
-          </div>
         </div>
 
         {/* Scroll hint */}
