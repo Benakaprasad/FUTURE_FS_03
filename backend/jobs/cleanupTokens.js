@@ -1,17 +1,24 @@
 const cron = require('node-cron');
 const pool = require('../config/database');
 
-// Runs every day at 2:00 AM
-cron.schedule('0 2 * * *', async () => {
+const runCleanup = async () => {
   console.log('[CRON] Running cleanup job...');
+  const start = Date.now();
   try {
-    await pool.query('SELECT cleanup_expired_records()');
-    console.log('[CRON] Cleanup complete');
-
-    // Expire memberships whose end_date has passed
-    const { rows } = await pool.query('SELECT expire_memberships()');
-    console.log(`[CRON] Expired ${rows[0].expire_memberships} memberships`);
+    const [, { rows }] = await Promise.all([
+      pool.query('SELECT cleanup_expired_records()'),
+      pool.query('SELECT expire_memberships()'),
+    ]);
+    const duration = Date.now() - start;
+    console.log(`[CRON] Complete in ${duration}ms — expired ${rows[0].expire_memberships} memberships`);
   } catch (err) {
     console.error('[CRON] Cleanup failed:', err.message);
+    // Don't rethrow — cron should keep running on next schedule
   }
-});
+};
+
+// Run at 2AM daily
+cron.schedule('0 2 * * *', runCleanup);
+
+// Also run once on startup to catch any missed window (e.g. server was down at 2AM)
+runCleanup();

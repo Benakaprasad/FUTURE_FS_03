@@ -60,7 +60,6 @@ function PendingScreen({ user }) {
         <div style={{ height:"4px", background:"linear-gradient(90deg,#FFB700,#ff8c00,#FFB700)", backgroundSize:"200% 100%", animation:"shimmer 2s linear infinite" }} />
         <div style={{ padding:"2.5rem" }}>
 
-          {/* Animated spinner as icon */}
           <div style={{ width:"72px", height:"72px", borderRadius:"50%", background:"rgba(255,183,0,0.08)", border:"2px solid rgba(255,183,0,0.25)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 1.5rem" }}>
             <div style={{ width:"32px", height:"32px", border:"3px solid rgba(255,183,0,0.2)", borderTop:"3px solid #FFB700", borderRadius:"50%", animation:"spin 1.2s linear infinite" }} />
           </div>
@@ -70,7 +69,8 @@ function PendingScreen({ user }) {
             Hi {user?.full_name || user?.username}, your application is being reviewed.
           </p>
 
-          <div style={{ background:"rgba(255,183,0,0.05)", border:"1px solid rgba(255,183,0,0.15)", borderRadius:"12px", padding:"1.25rem", marginBottom:"1.5rem" }}>
+          {/* Status message */}
+          <div style={{ background:"rgba(255,183,0,0.05)", border:"1px solid rgba(255,183,0,0.15)", borderRadius:"12px", padding:"1.25rem", marginBottom:"1.25rem" }}>
             <p style={{ fontSize:"10px", fontWeight:800, letterSpacing:"2px", color:"#FFB700", marginBottom:"0.75rem" }}>YOUR APPLICATION STATUS</p>
             <p style={{ fontSize:"0.9rem", color:"rgba(255,255,255,0.6)", lineHeight:1.8 }}>
               Thank you for submitting your trainer application to FitZone Gym. Our management team is currently reviewing your qualifications, certifications, and experience.
@@ -80,14 +80,36 @@ function PendingScreen({ user }) {
             </p>
           </div>
 
+          {/* Physical visit requirement */}
+          <div style={{ background:"rgba(0,194,255,0.05)", border:"1px solid rgba(0,194,255,0.2)", borderRadius:"12px", padding:"1.25rem", marginBottom:"1.25rem" }}>
+            <p style={{ fontSize:"10px", fontWeight:800, letterSpacing:"2px", color:"#00C2FF", marginBottom:"0.75rem" }}>⚠️ ACTION REQUIRED — VISIT OUR GYM</p>
+            <p style={{ fontSize:"0.9rem", color:"rgba(255,255,255,0.6)", lineHeight:1.8 }}>
+              To complete your verification, please visit FitZone Gym in person during working hours. Bring the following documents:
+            </p>
+            <div style={{ marginTop:"0.875rem", display:"flex", flexDirection:"column", gap:"8px" }}>
+              {[
+                { icon:"🪪", text:"Aadhar Card (original + photocopy)" },
+                { icon:"📄", text:"Proof of address (utility bill / bank statement)" },
+                { icon:"📜", text:"Original certification documents" },
+              ].map((item, i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+                  <span style={{ fontSize:"16px", flexShrink:0 }}>{item.icon}</span>
+                  <span style={{ fontSize:"0.875rem", color:"rgba(255,255,255,0.6)", lineHeight:1.5 }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Steps */}
           <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:"12px", padding:"1.25rem" }}>
             <p style={{ fontSize:"10px", fontWeight:800, letterSpacing:"2px", color:"rgba(255,255,255,0.3)", marginBottom:"1rem" }}>WHAT HAPPENS NEXT</p>
             {[
-              { icon:"🔍", label:"Review in progress",              active: true  },
-              { icon:"✅", label:"Admin approves your profile",     active: false },
-              { icon:"🚀", label:"Full dashboard access granted",   active: false },
+              { icon:"🔍", label:"Online application under review",          active: true  },
+              { icon:"🏢", label:"Visit gym office for physical verification", active: false },
+              { icon:"✅", label:"Admin approves after in-person verification",active: false },
+              { icon:"🚀", label:"Full dashboard access granted",              active: false },
             ].map((step, i) => (
-              <div key={i} style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom: i < 2 ? "0.875rem" : 0 }}>
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom: i < 3 ? "0.875rem" : 0 }}>
                 <div style={{ width:"32px", height:"32px", flexShrink:0, borderRadius:"50%", background: step.active ? "rgba(255,183,0,0.1)" : "rgba(255,255,255,0.04)", border:`1px solid ${step.active ? "rgba(255,183,0,0.3)" : "rgba(255,255,255,0.08)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px" }}>
                   {step.icon}
                 </div>
@@ -124,7 +146,7 @@ function RejectionScreen({ profile, user }) {
               Thank you for taking the time to fill out your trainer application and sharing your qualifications with us. We truly appreciate the effort you put into submitting your certifications and experience.
             </p>
             <p style={{ fontSize:"0.9rem", color:"rgba(255,255,255,0.6)", lineHeight:1.8, marginTop:"0.75rem" }}>
-              After careful review, we are unable to move forward with your application at this time. We encourage you to continue building your credentials and apply again in the future.
+              After careful review, we are unable to move forward with your application at this time. We encourage you to keep building your skills and credentials.
             </p>
           </div>
 
@@ -136,20 +158,33 @@ function RejectionScreen({ profile, user }) {
             </div>
           )}
 
-          {/* What to do */}
+          {/* Visit gym for reapplication */}
+          <div style={{ background:"rgba(255,183,0,0.05)", border:"1px solid rgba(255,183,0,0.2)", borderRadius:"12px", padding:"1.25rem", marginBottom:"1.25rem" }}>
+            <p style={{ fontSize:"10px", fontWeight:800, letterSpacing:"2px", color:"#FFB700", marginBottom:"0.75rem" }}>🏢 INTERESTED IN REAPPLYING?</p>
+            <p style={{ fontSize:"0.9rem", color:"rgba(255,255,255,0.6)", lineHeight:1.8 }}>
+              If you believe you meet our requirements or have since improved your qualifications, you are welcome to visit FitZone Gym in person to enquire about reapplication.
+            </p>
+            <p style={{ fontSize:"0.9rem", color:"rgba(255,255,255,0.6)", lineHeight:1.8, marginTop:"0.75rem" }}>
+              Please bring your <strong style={{ color:"rgba(255,255,255,0.8)" }}>Aadhar card</strong>, <strong style={{ color:"rgba(255,255,255,0.8)" }}>proof of address</strong>, and any updated <strong style={{ color:"rgba(255,255,255,0.8)" }}>certification documents</strong> for a face-to-face review with our management team.
+            </p>
+          </div>
+
+          {/* What to do next */}
           <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:"12px", padding:"1.25rem" }}>
-            <p style={{ fontSize:"10px", fontWeight:800, letterSpacing:"2px", color:"rgba(255,255,255,0.3)", marginBottom:"0.75rem" }}>WHAT YOU CAN DO</p>
+            <p style={{ fontSize:"10px", fontWeight:800, letterSpacing:"2px", color:"rgba(255,255,255,0.3)", marginBottom:"0.75rem" }}>STEPS TO REAPPLY</p>
             {[
-              "Obtain additional certifications in your specialization",
-              "Gain more hands-on training experience",
-              "Reapply once you've strengthened your qualifications",
+              "Strengthen your certifications and hands-on experience",
+              "Visit FitZone Gym office during working hours",
+              "Carry Aadhar card + address proof + updated certificates",
+              "Meet our management team for a physical verification",
             ].map((item, i) => (
-              <div key={i} style={{ display:"flex", gap:"10px", alignItems:"flex-start", marginBottom: i < 2 ? "8px" : 0 }}>
-                <span style={{ color:"rgba(255,255,255,0.25)", fontSize:"12px", marginTop:"2px", flexShrink:0 }}>→</span>
+              <div key={i} style={{ display:"flex", gap:"10px", alignItems:"flex-start", marginBottom: i < 3 ? "8px" : 0 }}>
+                <span style={{ color:"#FFB700", fontSize:"12px", marginTop:"2px", flexShrink:0, fontWeight:800 }}>{i + 1}.</span>
                 <span style={{ fontSize:"0.85rem", color:"rgba(255,255,255,0.45)", lineHeight:1.5 }}>{item}</span>
               </div>
             ))}
           </div>
+
         </div>
       </div>
     </StatusScreen>
@@ -173,7 +208,6 @@ export default function TrainerDashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
-  // Loading state
   if (loading) return (
     <div style={{ minHeight:"100vh", background:"#000", display:"flex", alignItems:"center", justifyContent:"center" }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -181,13 +215,9 @@ export default function TrainerDashboard() {
     </div>
   );
 
-  // ── Gate: pending ──
   if (profile?.status === "inactive") return <PendingScreen user={user} />;
-
-  // ── Gate: rejected ──
   if (profile?.status === "on_leave") return <RejectionScreen profile={profile} user={user} />;
 
-  // ── Active dashboard ──
   const activeMembers   = members.filter((m) => m.membership_status === "active");
   const expiringMembers = members.filter((m) => {
     if (!m.membership_end_date) return false;
@@ -217,7 +247,6 @@ export default function TrainerDashboard() {
         }
       `}</style>
 
-      {/* Profile card */}
       <div className="trainer-profile-card" style={ts.profileCard}>
         <div style={ts.profileAvatar}>{user?.full_name?.[0]?.toUpperCase() || "T"}</div>
         <div style={ts.profileInfo}>
@@ -231,7 +260,6 @@ export default function TrainerDashboard() {
         <Link className="trainer-schedule-btn" to="/trainer/schedule" style={ts.scheduleBtn}>📅 View Schedule</Link>
       </div>
 
-      {/* Stats */}
       <div className="trainer-stats-grid" style={ts.statsGrid}>
         <StatCard icon="👥" label="Assigned Members"  value={members.length}         accent="#00C2FF" />
         <StatCard icon="✅" label="Active Members"    value={activeMembers.length}   accent="#22C55E" />
@@ -239,7 +267,6 @@ export default function TrainerDashboard() {
         <StatCard icon="📅" label="Experience"        value={profile?.experience_years ? `${profile.experience_years} yrs` : "—"} accent="#A855F7" />
       </div>
 
-      {/* Expiry alert */}
       {expiringMembers.length > 0 && (
         <div className="trainer-alert" style={ts.alertBar}>
           <span>⚠️</span>
@@ -250,7 +277,6 @@ export default function TrainerDashboard() {
         </div>
       )}
 
-      {/* Members */}
       <div style={ts.sectionHeader}>
         <h3 style={ts.sectionTitle}>MY MEMBERS ({members.length})</h3>
         <Link to="/trainer/members" style={ts.viewAll}>View all →</Link>
@@ -292,7 +318,6 @@ export default function TrainerDashboard() {
         </div>
       )}
 
-      {/* Quick actions */}
       <div style={{ ...ts.sectionHeader, marginTop:"2.5rem" }}>
         <h3 style={ts.sectionTitle}>QUICK ACTIONS</h3>
       </div>

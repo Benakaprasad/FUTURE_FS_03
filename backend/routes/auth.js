@@ -12,6 +12,7 @@ const { authenticate }  = require('../middleware/auth');
 const { ROLES }         = require('../constants/roles');
 const pool = require('../config/database');
 const notify = require('../helpers/notify');
+const { redis } = require('../middleware/rateLimiter');
 
 // ── Validation Rules ─────────────────────────────────────────
 const registerRules = [
@@ -249,7 +250,10 @@ router.post('/refresh', async (req, res, next) => {
 // ── POST /api/auth/logout ─────────────────────────────────────
 router.post('/logout', authenticate, async (req, res, next) => {
   try {
-    await Token.revokeAllUserTokens(req.user.id);
+    await Promise.all([
+      Token.revokeAllUserTokens(req.user.id),
+      redis.del(`user:${req.user.id}`), // clear cache on logout
+    ]);
     res.clearCookie('refreshToken');
     res.json({ message: 'Logged out successfully' });
   } catch (err) { next(err); }
@@ -258,8 +262,18 @@ router.post('/logout', authenticate, async (req, res, next) => {
 // ── GET /api/auth/me ──────────────────────────────────────────
 router.get('/me', authenticate, async (req, res, next) => {
   try {
+    const cacheKey = `user:${req.user.id}`;
+    
+    // Try cache first
+    const cached = await redis.get(cacheKey);
+    if (cached) return res.json({ user: JSON.parse(cached) });
+
+    // Fall through to DB
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Cache for 5 minutes
+    await redis.setex(cacheKey, 300, JSON.stringify(user));
     res.json({ user });
   } catch (err) { next(err); }
 });

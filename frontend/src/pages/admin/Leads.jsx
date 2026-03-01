@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import DashLayout from "../../components/DashLayout";
-import { DataTable, Badge, Toast, Loader, ConfirmModal } from "../../components/AdminUI";
+import { DataTable, Badge, Toast, Loader, ConfirmModal } from "../../components/AdminUi";
 import api from "../../api/axios";
 
 const STATUSES = ["new", "contacted", "interested", "converted", "lost"];

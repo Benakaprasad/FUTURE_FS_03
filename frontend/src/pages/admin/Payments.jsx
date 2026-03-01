@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import DashLayout from "../../components/DashLayout";
-import { DataTable, Badge, Toast } from "../../components/AdminUI";
+import { DataTable, Badge, Toast } from "../../components/AdminUi";
 import api from "../../api/axios";
 
 export default function AdminPayments() {

@@ -470,6 +470,41 @@ const energyStyles = {
     letterSpacing: "1px",
     transition: "color 0.2s",
   },
+  nameInputWrap: {
+  width: "100%",
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  alignItems: "center",
+},
+nameInput: {
+  width: "100%",
+  maxWidth: "380px",
+  background: "rgba(255,255,255,0.04)",
+  border: "2px solid",
+  borderRadius: "12px",
+  padding: "18px 24px",
+  fontSize: "1.5rem",
+  fontFamily: "'Bebas Neue', sans-serif",
+  letterSpacing: "4px",
+  textAlign: "center",
+  color: "#fff",
+  outline: "none",
+  transition: "border-color 0.2s, box-shadow 0.3s, color 0.3s",
+  caretColor: "#FF1A1A",
+},
+letterCount: {
+  display: "flex",
+  gap: "5px",
+  alignItems: "flex-end",
+  height: "20px",
+},
+letterDot: {
+  width: "8px",
+  height: "20px",
+  borderRadius: "4px",
+  transition: "all 0.2s ease",
+},
 };
 
 // ── Goals Data ────────────────────────────────────────────────────────────────

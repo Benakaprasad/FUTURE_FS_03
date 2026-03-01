@@ -56,8 +56,14 @@ app.use(compression());
 app.use(morgan(IS_PROD ? 'combined' : 'dev'));
 
 // ── 5. Rate Limiting ──────────────────────────────────────────
-app.use(globalLimiter);
+// Apply auth limiter only to auth routes
 app.use('/api/auth', authLimiter);
+
+// Apply global limiter to everything EXCEPT auth
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/auth')) return next();
+  globalLimiter(req, res, next);
+});
 
 // ── 6. Body Parsing ───────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }));

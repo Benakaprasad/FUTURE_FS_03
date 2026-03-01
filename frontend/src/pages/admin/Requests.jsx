@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import DashLayout from "../../components/DashLayout";
-import { DataTable, Badge, Toast, ConfirmModal } from "../../components/AdminUI";
+import { DataTable, Badge, Toast, ConfirmModal } from "../../components/AdminUi";
 import api from "../../api/axios";
 
 export default function AdminRequests() {

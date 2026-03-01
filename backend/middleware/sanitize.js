@@ -5,12 +5,12 @@ const sanitizeValue = (value) => {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/'/g, '&#x27;');
+    // removed slash — breaks legitimate URLs and paths
 };
 
 const sanitizeObject = (obj) => {
-  if (!obj || typeof obj !== 'object') return obj;
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
   for (const key of Object.keys(obj)) {
     if (typeof obj[key] === 'string') {
       obj[key] = sanitizeValue(obj[key]);
@@ -21,9 +21,10 @@ const sanitizeObject = (obj) => {
   return obj;
 };
 
-const sanitize = (req, res, next) => {
-  if (req.body)  sanitizeObject(req.body);
-  if (req.query) sanitizeObject(req.query);
+const sanitize = (req, _res, next) => {
+  sanitizeObject(req.body);
+  sanitizeObject(req.query);
+  sanitizeObject(req.params);  // ← also sanitize URL params
   next();
 };
 
