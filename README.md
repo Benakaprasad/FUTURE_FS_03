@@ -56,30 +56,22 @@ FUTURE_FS_03
 │  ├─ package-lock.json
 │  ├─ package.json
 │  ├─ public
-│  │  ├─ images
-│  │  │  ├─ sessions
-│  │  │  │  ├─ boxing.jpg
-│  │  │  │  ├─ cardio-conditioning.jpg
-│  │  │  │  ├─ functional-training.jpg
-│  │  │  │  ├─ hiit.jpg
-│  │  │  │  ├─ personal-training.jpg
-│  │  │  │  ├─ strength-training.jpg
-│  │  │  │  ├─ yoga.jpg
-│  │  │  │  └─ zumba.jpg
-│  │  │  └─ trainers
-│  │  │     ├─ trainer-1.jpg
-│  │  │     ├─ trainer-2.jpg
-│  │  │     ├─ trainer-3.jpg
-│  │  │     └─ trainer-4.jpg
-│  │  ├─ vido (1).mp4
-│  │  ├─ vido (2).mp4
-│  │  ├─ vido (3).mp4
-│  │  ├─ vido (4).mp4
-│  │  ├─ vido (5).mp4
-│  │  ├─ vido (6).mp4
-│  │  ├─ vido (7).mp4
-│  │  ├─ vido (8).mp4
-│  │  └─ vido (9).mp4
+│  │  ├─ hero-loop.mp4
+│  │  └─ images
+│  │     ├─ sessions
+│  │     │  ├─ boxing.png
+│  │     │  ├─ cardio-conditioning.png
+│  │     │  ├─ functional-training.png
+│  │     │  ├─ hiit.png
+│  │     │  ├─ personal-training.png
+│  │     │  ├─ strength-training.png
+│  │     │  ├─ yoga.png
+│  │     │  └─ zumba.png
+│  │     └─ trainers
+│  │        ├─ female1.jpeg
+│  │        ├─ female2.jpeg
+│  │        ├─ male1.jpeg
+│  │        └─ male2.jpeg
 │  ├─ README.md
 │  ├─ src
 │  │  ├─ api

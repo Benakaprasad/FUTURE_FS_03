@@ -4,13 +4,16 @@ const pool = require('../config/database');
 
 const authenticate = async (req, res, next) => {
   try {
-    // 1. Get token from Authorization header
+    // 1. Get token — header first, then query param (for SSE)
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token =
+      (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null) ||
+      req.query.token ||
+      null;
+
+    if (!token) {
       return res.status(401).json({ error: 'No token provided' });
     }
-
-    const token = authHeader.split(' ')[1];
 
     // 2. Verify token
     let decoded;
@@ -30,13 +33,8 @@ const authenticate = async (req, res, next) => {
       [decoded.id]
     );
 
-    if (!rows[0]) {
-      return res.status(401).json({ error: 'User no longer exists' });
-    }
-
-    if (!rows[0].is_active) {
-      return res.status(401).json({ error: 'Account deactivated' });
-    }
+    if (!rows[0]) return res.status(401).json({ error: 'User no longer exists' });
+    if (!rows[0].is_active) return res.status(401).json({ error: 'Account deactivated' });
 
     // 4. Attach user to request
     req.user = rows[0];

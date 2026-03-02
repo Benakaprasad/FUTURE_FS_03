@@ -24,6 +24,7 @@ const assignmentRoutes         = require('./routes/assignments');
 const userRoutes               = require('./routes/users');
 const publicRoutes             = require('./routes/public');
 const paymentRoutes            = require('./routes/payments');
+const {router:notificationRoutes} = require('./routes/notifications')
 
 // Jobs
 require('./jobs/cleanupTokens');
@@ -96,6 +97,7 @@ app.use('/api/trainers',             trainerRoutes);
 app.use('/api/assignments',          assignmentRoutes);
 app.use('/api/users',                userRoutes);
 app.use('/api/payments',             paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ── 10. Serve Frontend (production) ───────────────────────────
 if (IS_PROD) {

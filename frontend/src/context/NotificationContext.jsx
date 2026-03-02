@@ -1,79 +1,85 @@
 import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
+  createContext, useContext, useState,
+  useEffect, useCallback, useRef,
 } from "react";
 import api from "../api/axios";
 import { useAuth } from "./AuthContext";
 
 const NotificationContext = createContext(null);
 
-const POLL_INTERVAL = 30_000; // 30 seconds
-
 export function NotificationProvider({ children }) {
   const { user } = useAuth();
-
   const [notifications, setNotifications] = useState([]);
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [silenced,      setSilenced]      = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("fz_notif_silenced") || "false");
-    } catch {
-      return false;
-    }
+    try { return JSON.parse(localStorage.getItem("fz_notif_silenced") || "false"); }
+    catch { return false; }
   });
 
-  const intervalRef = useRef(null);
+  const esRef  = useRef(null); // EventSource ref
+  const token  = localStorage.getItem("accessToken") ||
+                 sessionStorage.getItem("accessToken");
 
-  // ── Helpers ────────────────────────────────────────────────
   const applyNotifications = (list) => {
     setNotifications(list);
     setUnreadCount(list.filter((n) => !n.is_read).length);
   };
 
-  const reset = () => {
-    setNotifications([]);
-    setUnreadCount(0);
-  };
-
-  // ── Fetch ──────────────────────────────────────────────────
+  // ── Initial fetch from DB ──────────────────────────────────
   const fetchNotifications = useCallback(async () => {
     try {
       const { data } = await api.get("/notifications");
       applyNotifications(data.notifications || []);
-    } catch {
-      // silently fail
+    } catch {}
+  }, []);
+
+  // ── SSE connection ─────────────────────────────────────────
+  const connectSSE = useCallback(() => {
+    if (esRef.current) return; // already connected
+
+    // Pass token as query param since EventSource doesn't support headers
+    const url = `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/notifications/stream?token=${token}`;
+    const es  = new EventSource(url);
+
+    es.onmessage = (e) => {
+      try {
+        const notification = JSON.parse(e.data);
+        setNotifications((prev) => [notification, ...prev]);
+        setUnreadCount((prev) => prev + 1);
+      } catch {}
+    };
+
+    es.onerror = () => {
+      // Auto-reconnect: browser retries EventSource automatically
+      // but close and null so we can re-init cleanly
+      es.close();
+      esRef.current = null;
+      // Retry after 5s
+      setTimeout(() => { if (user) connectSSE(); }, 5000);
+    };
+
+    esRef.current = es;
+  }, [token, user]);
+
+  const disconnectSSE = useCallback(() => {
+    if (esRef.current) {
+      esRef.current.close();
+      esRef.current = null;
     }
   }, []);
 
-  // ── Start / stop polling based on auth state ───────────────
-  const startPolling = useCallback(() => {
-    // Don't double-start
-    if (intervalRef.current) return;
-    fetchNotifications(); // immediate first fetch
-    intervalRef.current = setInterval(fetchNotifications, POLL_INTERVAL);
-  }, [fetchNotifications]);
-
-  const stopPolling = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
+  // ── Start/stop based on auth ───────────────────────────────
   useEffect(() => {
     if (user) {
-      startPolling();
+      fetchNotifications(); // load history
+      connectSSE();         // open live stream
     } else {
-      stopPolling();
-      reset(); // clear stale data when logged out
+      disconnectSSE();
+      setNotifications([]);
+      setUnreadCount(0);
     }
-
-    return () => stopPolling(); // cleanup on unmount
-  }, [user, startPolling, stopPolling]);
+    return () => disconnectSSE();
+  }, [user]);
 
   // ── Actions ────────────────────────────────────────────────
   const markRead = useCallback(async (id) => {
@@ -102,21 +108,11 @@ export function NotificationProvider({ children }) {
     });
   }, []);
 
-  // ── Expose a manual refresh so any page can trigger a fetch ─
-  const refresh = fetchNotifications;
-
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        silenced,
-        fetchNotifications: refresh,
-        markRead,
-        markAllRead,
-        toggleSilence,
-      }}
-    >
+    <NotificationContext.Provider value={{
+      notifications, unreadCount, silenced,
+      fetchNotifications, markRead, markAllRead, toggleSilence,
+    }}>
       {children}
     </NotificationContext.Provider>
   );
