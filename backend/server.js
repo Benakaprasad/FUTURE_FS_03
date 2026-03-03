@@ -60,9 +60,10 @@ app.use(morgan(IS_PROD ? 'combined' : 'dev'));
 // Apply auth limiter only to auth routes
 app.use('/api/auth', authLimiter);
 
-// Apply global limiter to everything EXCEPT auth
 app.use((req, res, next) => {
+  if (!IS_PROD) return next(); // ✅ skip rate limiting in development
   if (req.path.startsWith('/api/auth')) return next();
+  if (req.path.startsWith('/api/notifications/stream')) return next();
   globalLimiter(req, res, next);
 });
 

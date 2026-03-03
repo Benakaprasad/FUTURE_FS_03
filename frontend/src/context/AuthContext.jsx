@@ -7,35 +7,51 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ── Restore session on mount / page refresh ───────────────
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) { setLoading(false); return; }
-    api.get("/auth/me")
-      .then(({ data }) => setUser(data.user))
-      .catch(() => {
-        localStorage.removeItem("accessToken");
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
+    const token = sessionStorage.getItem("accessToken"); // ✅ was localStorage
+
+    if (token) {
+      // Token exists in this tab — validate it
+      api.get("/auth/me")
+        .then(({ data }) => setUser(data.user))
+        .catch(() => {
+          sessionStorage.removeItem("accessToken");      // ✅ was localStorage
+          setUser(null);
+        })
+        .finally(() => setLoading(false));
+    } else {
+      // No token in this tab — try to restore from httpOnly cookie
+      api.post("/auth/refresh")
+        .then(({ data }) => {
+          sessionStorage.setItem("accessToken", data.accessToken); // ✅
+          setUser(data.user);
+        })
+        .catch(() => setUser(null)) // no cookie = not logged in
+        .finally(() => setLoading(false));
+    }
   }, []);
 
+  // ── Login ─────────────────────────────────────────────────
   const login = useCallback(async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("accessToken", data.accessToken);
+    sessionStorage.setItem("accessToken", data.accessToken); // ✅ was localStorage
     setUser(data.user);
     return data.user;
   }, []);
 
+  // ── Register ──────────────────────────────────────────────
   const register = useCallback(async (payload) => {
     const { data } = await api.post("/auth/register", payload);
-    localStorage.setItem("accessToken", data.accessToken);
+    sessionStorage.setItem("accessToken", data.accessToken); // ✅ was localStorage
     setUser(data.user);
     return data.user;
   }, []);
 
+  // ── Logout ────────────────────────────────────────────────
   const logout = useCallback(async () => {
-    try { await api.post("/auth/logout"); } catch (_) {}
-    localStorage.removeItem("accessToken");
+    try { await api.post("/auth/logout"); } catch (_) {} // clears httpOnly cookie
+    sessionStorage.removeItem("accessToken");            // ✅ was localStorage
     setUser(null);
     window.location.href = "/login";
   }, []);

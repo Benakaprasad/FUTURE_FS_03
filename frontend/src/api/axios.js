@@ -7,7 +7,7 @@ const api = axios.create({
 
 // Attach access token to every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
+  const token = sessionStorage.getItem("accessToken"); // ✅ was localStorage
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -49,14 +49,14 @@ api.interceptors.response.use(
             { withCredentials: true }
           );
           const newToken = data.accessToken;
-          localStorage.setItem("accessToken", newToken);
+          sessionStorage.setItem("accessToken", newToken); // ✅ was localStorage
           api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
           processQueue(null, newToken);
           original.headers.Authorization = `Bearer ${newToken}`;
           return api(original);
         } catch (refreshErr) {
           processQueue(refreshErr, null);
-          localStorage.removeItem("accessToken");
+          sessionStorage.removeItem("accessToken");        // ✅ was localStorage
           window.location.href = "/login";
           return Promise.reject(refreshErr);
         } finally {
@@ -65,7 +65,7 @@ api.interceptors.response.use(
       }
 
       // Other 401 — not expired, just unauthorized
-      localStorage.removeItem("accessToken");
+      sessionStorage.removeItem("accessToken");            // ✅ was localStorage
       window.location.href = "/login";
     }
 

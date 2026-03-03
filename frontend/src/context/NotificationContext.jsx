@@ -38,7 +38,7 @@ export function NotificationProvider({ children }) {
     if (esRef.current) return; // already connected
 
     // Pass token as query param since EventSource doesn't support headers
-    const url = `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/notifications/stream?token=${token}`;
+    const url = `${import.meta.env.VITE_API_URL || "http://localhost:3000/api"}/notifications/stream?token=${token}`;
     const es  = new EventSource(url);
 
     es.onmessage = (e) => {

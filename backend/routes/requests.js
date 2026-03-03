@@ -5,14 +5,24 @@ const router   = express.Router();
 const Request    = require('../models/Request');
 const Member     = require('../models/Member');
 const Customer   = require('../models/Customer');
-const { authenticate }  = require('../middleware/auth');
-const { authorize }     = require('../middleware/role');
-const { validate }      = require('../middleware/validate');
-const { ROLE_GROUPS }   = require('../constants/roles');
-const { MEMBERSHIP_TYPES } = require('../constants/statuses');
+const { authenticate }     = require('../middleware/auth');
+const { authorize }        = require('../middleware/role');
+const { validate }         = require('../middleware/validate');
+const { ROLE_GROUPS, ROLES } = require('../constants/roles');  // ✅ added ROLES
+const { MEMBERSHIP_TYPES }   = require('../constants/statuses');
 const pool = require('../config/database');
 
 router.use(authenticate);
+
+// ✅ /my BEFORE / and /:id
+router.get('/my', authorize(ROLES.CUSTOMER), async (req, res, next) => {
+  try {
+    const customer = await Customer.findByUserId(req.user.id);
+    if (!customer) return res.status(404).json({ error: 'Customer profile not found' });
+    const requests = await Request.findByCustomerId(customer.id);
+    res.json({ requests });
+  } catch (err) { next(err); }
+});
 
 // GET /api/requests — staff/manager/admin
 router.get('/',
@@ -26,16 +36,6 @@ router.get('/',
   }
 );
 
-// GET /api/requests/my — customer sees own requests
-router.get('/my', authorize('customer'), async (req, res, next) => {
-  try {
-    const customer = await Customer.findByUserId(req.user.id);
-    if (!customer) return res.status(404).json({ error: 'Customer profile not found' });
-    const requests = await Request.findByCustomerId(customer.id);
-    res.json({ requests });
-  } catch (err) { next(err); }
-});
-
 // GET /api/requests/:id
 router.get('/:id',
   authorize(ROLE_GROUPS.INTERNAL_STAFF),
@@ -48,46 +48,51 @@ router.get('/:id',
   }
 );
 
-// POST /api/requests — customer submits membership request
-router.post('/', authorize('customer'), [
-  body('membership_type').isIn(MEMBERSHIP_TYPES).withMessage('Invalid membership type'),
-  body('message').optional().trim().isLength({ max: 500 }),
-  body('preferred_trainer_id').optional().isInt(),
-], validate, async (req, res, next) => {
-  try {
-    const customer = await Customer.findByUserId(req.user.id);
-    if (!customer) return res.status(404).json({ error: 'Customer profile not found' });
+// POST /api/requests — customer submits request
+router.post('/',
+  authorize(ROLES.CUSTOMER),  // ✅ ROLES.CUSTOMER instead of plain string
+  [
+    body('membership_type').optional().isIn(MEMBERSHIP_TYPES),
+    body('request_type').optional().trim(),
+    body('notes').optional().trim().isLength({ max: 500 }),
+    body('message').optional().trim().isLength({ max: 500 }),
+    body('preferred_trainer_id').optional().isInt(),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const customer = await Customer.findByUserId(req.user.id);
+      if (!customer) return res.status(404).json({ error: 'Customer profile not found' });
 
-    const request = await Request.create({
-      customer_id:          customer.id,
-      preferred_trainer_id: req.body.preferred_trainer_id || null,
-      membership_type:      req.body.membership_type,
-      message:              req.body.message,
-    });
-
-    await Customer.updateStatus(customer.id, 'pending_approval');
-
-    res.status(201).json({ message: 'Membership request submitted', request });
-  } catch (err) {
-    // Partial unique index violation — already has open request
-    if (err.code === '23505') {
-      return res.status(409).json({
-        error: 'You already have a pending request. Wait for it to be reviewed.',
+      const request = await Request.create({
+        customer_id:          customer.id,
+        preferred_trainer_id: req.body.preferred_trainer_id || null,
+        membership_type:      req.body.membership_type || null,
+        message:              req.body.notes || req.body.message || null,
+        request_type:         req.body.request_type || null,  // ✅ added
       });
+
+      await Customer.updateStatus(customer.id, 'pending_approval');
+      res.status(201).json({ message: 'Request submitted', request });
+    } catch (err) {
+      if (err.code === '23505') {
+        return res.status(409).json({ error: 'You already have a pending request.' });
+      }
+      next(err);
     }
-    next(err);
   }
-});
+);
 
 // PATCH /api/requests/:id/approve — manager/admin
-// Full transaction: approve request + create member + update customer status
 router.patch('/:id/approve',
-  authorize(ROLE_GROUPS.DECISION_MAKER), [
+  authorize(ROLE_GROUPS.DECISION_MAKER),
+  [
     body('admin_notes').optional().trim(),
     body('start_date').notEmpty().isISO8601().withMessage('Valid start date required'),
     body('end_date').optional().isISO8601(),
     body('amount_paid').optional().isFloat({ min: 0 }),
-  ], validate,
+  ],
+  validate,
   async (req, res, next) => {
     const client = await pool.connect();
     try {
@@ -147,9 +152,11 @@ router.patch('/:id/approve',
 
 // PATCH /api/requests/:id/reject
 router.patch('/:id/reject',
-  authorize(ROLE_GROUPS.DECISION_MAKER), [
+  authorize(ROLE_GROUPS.DECISION_MAKER),
+  [
     body('admin_notes').optional().trim(),
-  ], validate,
+  ],
+  validate,
   async (req, res, next) => {
     try {
       const request = await Request.findById(req.params.id);

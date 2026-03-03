@@ -48,14 +48,20 @@ class Request {
     return rows;
   }
 
-  static async create({ customer_id, preferred_trainer_id, membership_type, message }) {
+  // ✅ request_type added
+  static async create({ customer_id, preferred_trainer_id, membership_type, message, request_type }) {
     const { rows } = await pool.query(
       `INSERT INTO requests
-         (customer_id, preferred_trainer_id, membership_type, message)
-       VALUES ($1, $2, $3, $4)
+         (customer_id, preferred_trainer_id, membership_type, message, request_type)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [customer_id, preferred_trainer_id || null,
-       membership_type || null, message || null]
+      [
+        customer_id,
+        preferred_trainer_id || null,
+        membership_type      || null,
+        message              || null,
+        request_type         || null,   // ✅
+      ]
     );
     return rows[0];
   }

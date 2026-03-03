@@ -4,13 +4,47 @@ const router   = express.Router();
 
 const Member           = require('../models/Member');
 const Customer         = require('../models/Customer');
-const { authenticate } = require('../middleware/auth');
-const { authorize }    = require('../middleware/role');
-const { validate }     = require('../middleware/validate');
-const { ROLE_GROUPS }  = require('../constants/roles');
+const { authenticate }       = require('../middleware/auth');
+const { authorize }          = require('../middleware/role');
+const { validate }           = require('../middleware/validate');
+const { ROLE_GROUPS, ROLES } = require('../constants/roles');  // ✅ added ROLES
 const { MEMBERSHIP_TYPES, MEMBER_STATUSES } = require('../constants/statuses');
+const pool = require('../config/database');  // ✅ added pool import
 
 router.use(authenticate);
+
+// ✅ /my BEFORE /expiring, / and /:id
+router.get('/my', authorize(ROLES.CUSTOMER), async (req, res, next) => {
+  try {
+    const customer = await Customer.findByUserId(req.user.id);
+    if (!customer) return res.status(404).json({ error: 'Customer profile not found' });
+
+    const { rows } = await pool.query(
+      `SELECT m.*,
+              m.membership_type AS plan_type,
+              u.full_name AS trainer_name
+       FROM members m
+       LEFT JOIN assignments a ON a.member_id = m.id AND a.status = 'active'
+       LEFT JOIN users u ON u.id = a.trainer_id
+       WHERE m.customer_id = $1
+       ORDER BY m.created_at DESC`,
+      [customer.id]
+    );
+    res.json({ members: rows });
+  } catch (err) { next(err); }
+});
+
+// ✅ /expiring BEFORE /:id
+router.get('/expiring',
+  authorize(ROLE_GROUPS.DECISION_MAKER),
+  async (req, res, next) => {
+    try {
+      const days    = parseInt(req.query.days) || 7;
+      const members = await Member.getExpiringSoon(days);
+      res.json({ members });
+    } catch (err) { next(err); }
+  }
+);
 
 // GET /api/members — internal staff
 router.get('/',
@@ -23,30 +57,7 @@ router.get('/',
   }
 );
 
-// GET /api/members/my — customer sees own membership
-router.get('/my', authorize('customer'), async (req, res, next) => {
-  try {
-    const customer = await Customer.findByUserId(req.user.id);
-    if (!customer) return res.status(404).json({ error: 'Customer profile not found' });
-    const member = await Member.findByCustomerId(customer.id);
-    if (!member) return res.status(404).json({ error: 'No active membership found' });
-    res.json({ member });
-  } catch (err) { next(err); }
-});
-
-// GET /api/members/expiring
-router.get('/expiring',
-  authorize(ROLE_GROUPS.DECISION_MAKER),
-  async (req, res, next) => {
-    try {
-      const days    = parseInt(req.query.days) || 7;
-      const members = await Member.getExpiringSoon(days);
-      res.json({ members });
-    } catch (err) { next(err); }
-  }
-);
-
-// GET /api/members/:id
+// ✅ /:id LAST
 router.get('/:id',
   authorize(ROLE_GROUPS.INTERNAL_STAFF),
   async (req, res, next) => {
@@ -60,14 +71,16 @@ router.get('/:id',
 
 // POST /api/members — manual walk-in creation (manager/admin)
 router.post('/',
-  authorize(ROLE_GROUPS.DECISION_MAKER), [
+  authorize(ROLE_GROUPS.DECISION_MAKER),
+  [
     body('customer_id').notEmpty().isInt(),
     body('membership_type').isIn(MEMBERSHIP_TYPES),
     body('start_date').notEmpty().isISO8601(),
     body('end_date').optional().isISO8601(),
     body('amount_paid').optional().isFloat({ min: 0 }),
     body('admission_notes').optional().trim(),
-  ], validate,
+  ],
+  validate,
   async (req, res, next) => {
     try {
       const { customer_id, membership_type, start_date, end_date,
@@ -90,7 +103,6 @@ router.post('/',
       });
 
       await Customer.updateStatus(customer_id, 'active');
-
       res.status(201).json({ message: 'Member created', member });
     } catch (err) { next(err); }
   }
@@ -98,9 +110,11 @@ router.post('/',
 
 // PATCH /api/members/:id/status
 router.patch('/:id/status',
-  authorize(ROLE_GROUPS.DECISION_MAKER), [
+  authorize(ROLE_GROUPS.DECISION_MAKER),
+  [
     body('status').isIn(MEMBER_STATUSES),
-  ], validate,
+  ],
+  validate,
   async (req, res, next) => {
     try {
       const member = await Member.updateStatus(req.params.id, req.body.status);
@@ -117,10 +131,7 @@ router.delete('/:id',
     try {
       const member = await Member.findById(req.params.id);
       if (!member) return res.status(404).json({ error: 'Member not found' });
-      // ON DELETE RESTRICT — DB will throw if assignments exist
-      await require('../config/database').query(
-        `DELETE FROM members WHERE id=$1`, [req.params.id]
-      );
+      await pool.query(`DELETE FROM members WHERE id=$1`, [req.params.id]);
       res.json({ message: 'Member deleted' });
     } catch (err) {
       if (err.code === '23503') {
