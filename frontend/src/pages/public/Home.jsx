@@ -81,6 +81,13 @@ const SESSIONS = [
   },
 ];
 
+// ── Carousel constants ─────────────────────────────────────────────────────
+const ITEMS = [...SESSIONS, ...SESSIONS, ...SESSIONS];
+const CARD_WIDTH = 300;
+const CARD_GAP = 24;
+const CARD_STEP = CARD_WIDTH + CARD_GAP;
+const TOTAL_WIDTH = SESSIONS.length * CARD_STEP;
+
 const TRAINERS = [
   {
     name: "Arjun Reddy",
@@ -242,6 +249,396 @@ const ScrollCard = ({ children, direction = "left", delay = 0 }) => {
     </div>
   );
 };
+
+function SplitWord({ word, progress, delay = 0, color }) {
+  const letters = word.split("");
+  return (
+    <span style={{ display: "inline-block", overflow: "visible" }}>
+      {letters.map((ch, i) => {
+        const lp = Math.max(0, Math.min(1, (progress - delay) * 3 - i * 0.08));
+        const tx = (i < letters.length / 2 ? -1 : 1) * lp * (40 + i * 6);
+        const opacity = 1 - lp;
+        return (
+          <span key={i} style={{
+            display: "inline-block",
+            transform: `translateX(${tx}px) translateY(${-lp * 30}px) scale(${1 - lp * 0.3})`,
+            opacity,
+            transition: "none",
+            color: color || "inherit",
+          }}>{ch === " " ? "\u00a0" : ch}</span>
+        );
+      })}
+    </span>
+  );
+}
+
+function SessionCard({ session, isActive }) {
+  const cardRef = useRef(null);
+  const [tilt, setTilt]         = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width  / 2;
+    const cy = rect.top  + rect.height / 2;
+    const dx = (e.clientX - cx) / (rect.width  / 2);
+    const dy = (e.clientY - cy) / (rect.height / 2);
+    setTilt({ x: -dy * 10, y: dx * 10 });
+  };
+  const handleMouseEnter = () => setIsHovered(true);
+  const handleMouseLeave = () => { setIsHovered(false); setTilt({ x: 0, y: 0 }); };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        background: isActive
+          ? "linear-gradient(160deg, rgba(28,28,28,0.95) 0%, rgba(8,8,8,0.98) 100%)"
+          : "linear-gradient(160deg, rgba(18,18,18,0.92) 0%, rgba(4,4,4,0.96) 100%)",
+        border: `1px solid ${isActive ? session.color + "70" : "rgba(255,255,255,0.06)"}`,
+        borderRadius: "22px",
+        overflow: "hidden",
+        boxShadow: isActive
+          ? `0 32px 80px rgba(0,0,0,0.8), 0 0 50px ${session.color}22, inset 0 1px 0 rgba(255,255,255,0.07)`
+          : isHovered
+          ? `0 20px 60px rgba(0,0,0,0.7), 0 0 25px ${session.color}12`
+          : "0 12px 40px rgba(0,0,0,0.55)",
+        transition: isHovered
+          ? "box-shadow 0.2s, border-color 0.2s"
+          : "all 0.45s cubic-bezier(0.4,0,0.2,1)",
+        position: "relative",
+        transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${isHovered ? 1.025 : 1})`,
+        transformStyle: "preserve-3d",
+        willChange: "transform",
+      }}
+    >
+      {/* Shimmer highlight */}
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 10,
+        pointerEvents: "none", borderRadius: "22px",
+        background: isHovered
+          ? `radial-gradient(circle at ${50 + tilt.y * 3}% ${50 - tilt.x * 3}%, rgba(255,255,255,0.07) 0%, transparent 62%)`
+          : "none",
+        transition: "background 0.1s",
+      }} />
+
+      {/* Top accent bar */}
+      <div style={{
+        height: "3px",
+        background: `linear-gradient(90deg, ${session.color}, ${session.color}44, transparent)`,
+        opacity: isActive ? 1 : isHovered ? 0.7 : 0.35,
+        transition: "opacity 0.35s",
+      }} />
+
+      {/* Image */}
+      <div style={{ width: "100%", height: "180px", position: "relative", overflow: "hidden" }}>
+        <img
+          src={session.image} alt={session.title}
+          style={{
+            width: "100%", height: "100%", objectFit: "cover",
+            transform: isActive ? "scale(1.08)" : isHovered ? "scale(1.04)" : "scale(1)",
+            transition: "transform 0.65s cubic-bezier(0.4,0,0.2,1)",
+          }}
+        />
+        {/* Gradient overlay */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.92) 100%)",
+        }} />
+        {/* Color wash on active */}
+        {isActive && (
+          <div style={{
+            position: "absolute", inset: 0,
+            background: `linear-gradient(135deg, ${session.color}18, transparent 60%)`,
+          }} />
+        )}
+        {/* Tag pill */}
+        <div style={{
+          position: "absolute", bottom: "12px", left: "14px",
+          fontSize: "9px", fontWeight: 800, letterSpacing: "2.5px",
+          textTransform: "uppercase", color: session.color,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(12px)",
+          border: `1px solid ${session.color}55`,
+          padding: "4px 11px", borderRadius: "100px",
+          boxShadow: isActive ? `0 0 12px ${session.color}40` : "none",
+          transition: "box-shadow 0.3s",
+        }}>{session.tag}</div>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: "1.2rem 1.3rem 1.4rem" }}>
+        <h3 style={{
+          fontSize: "1.15rem", fontWeight: 900, letterSpacing: "1.5px",
+          color: "#fff", marginBottom: "0.45rem", lineHeight: 1.1,
+          textTransform: "uppercase",
+          textShadow: isActive ? `0 0 30px ${session.color}50` : "none",
+          transition: "text-shadow 0.4s",
+        }}>{session.title}</h3>
+
+        <p style={{
+          color: "rgba(255,255,255,0.38)",
+          fontSize: "0.78rem", lineHeight: 1.68, marginBottom: "1rem",
+        }}>{session.desc}</p>
+
+        {/* Footer row */}
+        <div style={{
+          display: "flex", alignItems: "center",
+          justifyContent: "space-between",
+          paddingTop: "0.75rem",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
+        }}>
+          <span style={{
+            fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px",
+            color: isActive ? session.color : "rgba(255,255,255,0.2)",
+            textTransform: "uppercase", transition: "color 0.3s",
+          }}>Learn more</span>
+
+          <div style={{
+            width: "32px", height: "32px", borderRadius: "50%",
+            background: isActive
+              ? `linear-gradient(135deg, ${session.color}, ${session.color}bb)`
+              : `${session.color}12`,
+            border: `1px solid ${session.color}45`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "13px", fontWeight: 700,
+            color: isActive ? "#fff" : session.color,
+            boxShadow: isActive ? `0 0 20px ${session.color}55` : "none",
+            transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
+            transform: isHovered ? "translateX(3px)" : "none",
+          }}>→</div>
+        </div>
+      </div>
+
+      {/* Bottom glow line */}
+      {isActive && (
+        <div style={{
+          position: "absolute", bottom: 0, left: "15%", right: "15%", height: "1px",
+          background: `linear-gradient(90deg, transparent, ${session.color}, transparent)`,
+          boxShadow: `0 0 24px 6px ${session.color}45`,
+        }} />
+      )}
+    </div>
+  );
+}
+
+
+function SessionsCarousel({ progress, hasEntered }) {
+  const animRef      = useRef(null);
+  const offsetRef    = useRef(TOTAL_WIDTH);
+  const [, setTick]  = useState(0);
+  const [isPaused, setIsPaused]   = useState(false);
+  const [activeIdx, setActiveIdx] = useState(null);
+  const speedRef     = useRef(0.55);
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(900);
+  const [slamDone, setSlamDone]   = useState(false);
+  const [dragStart, setDragStart] = useState(null);
+
+  useEffect(() => {
+    if (hasEntered && !slamDone) {
+      const t = setTimeout(() => setSlamDone(true), 700);
+      return () => clearTimeout(t);
+    }
+  }, [hasEntered, slamDone]);
+
+  useEffect(() => {
+    const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const animate = useCallback(() => {
+    if (!isPaused) {
+      offsetRef.current += speedRef.current;
+      if (offsetRef.current >= TOTAL_WIDTH * 2) offsetRef.current -= TOTAL_WIDTH;
+      setTick(t => t + 1);
+    }
+    animRef.current = requestAnimationFrame(animate);
+  }, [isPaused]);
+
+  useEffect(() => {
+    animRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [animate]);
+
+  // Drag-to-scrub
+  const getClientX = (e) => e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+  const onDragStart = (e) => { setDragStart(getClientX(e)); setIsPaused(true); };
+  const onDragMove  = (e) => {
+    if (dragStart == null) return;
+    const x     = getClientX(e);
+    const delta = dragStart - x;
+    offsetRef.current += delta * 1.2;
+    if (offsetRef.current < TOTAL_WIDTH)      offsetRef.current += TOTAL_WIDTH;
+    if (offsetRef.current >= TOTAL_WIDTH * 2) offsetRef.current -= TOTAL_WIDTH;
+    setDragStart(x);
+  };
+  const onDragEnd = () => { setDragStart(null); setIsPaused(false); };
+
+  const getCardStyle = (screenX, idx) => {
+    const center   = containerWidth / 2;
+    const dist     = (screenX + CARD_WIDTH / 2 - center) / (containerWidth / 2);
+    const clamped  = Math.max(-1.3, Math.min(1.3, dist));
+    const depth    = clamped * clamped;
+    const scale    = 0.68 + depth * 0.38;
+    const blurAmt  = (1 - depth) * 3;
+    const brightness = 0.32 + depth * 0.78;
+    const rotY     = -clamped * 20;
+    const ty       = depth * -22;
+    const isActive = activeIdx === idx;
+    return {
+      transform: `perspective(1000px) translateY(${ty}px) rotateY(${rotY}deg) scale(${isActive ? scale * 1.04 : scale})`,
+      filter: `brightness(${isActive ? 1.35 : brightness}) blur(${isActive ? 0 : blurAmt}px)`,
+      zIndex: Math.round(depth * 10),
+      transition: isActive ? "filter 0.2s, transform 0.2s" : "filter 0.12s, transform 0.04s",
+      willChange: "transform, filter",
+    };
+  };
+
+  const cScale = 0.90 + progress * 0.10;
+  const cTY    = (1 - progress) * 44;
+  const slamTX = hasEntered && !slamDone ? 140 : 0;
+
+  return (
+    <div style={{
+      transform: `scale(${cScale}) translateY(${cTY}px)`,
+      transformOrigin: "center center",
+      transition: "transform 0.08s linear",
+    }}>
+      {/* Edge masks */}
+      <div style={{
+        position: "absolute", left: 0, top: 0, bottom: 0, width: "220px",
+        background: "linear-gradient(90deg, #000 15%, transparent)",
+        zIndex: 20, pointerEvents: "none",
+      }} />
+      <div style={{
+        position: "absolute", right: 0, top: 0, bottom: 0, width: "220px",
+        background: "linear-gradient(270deg, #000 15%, transparent)",
+        zIndex: 20, pointerEvents: "none",
+      }} />
+
+      {/* Track */}
+      <div
+        ref={containerRef}
+        style={{
+          position: "relative", height: "440px",
+          perspective: "1000px", perspectiveOrigin: "50% 44%",
+          cursor: dragStart != null ? "grabbing" : "grab",
+        }}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => { setIsPaused(false); setActiveIdx(null); setDragStart(null); }}
+        onMouseDown={onDragStart}
+        onMouseMove={onDragMove}
+        onMouseUp={onDragEnd}
+        onTouchStart={onDragStart}
+        onTouchMove={onDragMove}
+        onTouchEnd={onDragEnd}
+      >
+        <div style={{
+          position: "absolute", top: "50%", left: 0,
+          display: "flex", gap: `${CARD_GAP}px`,
+          transform: `translateX(${-offsetRef.current + slamTX}px) translateY(-50%)`,
+          opacity: hasEntered ? 1 : 0,
+          transition: hasEntered && !slamDone
+            ? "transform 0.7s cubic-bezier(0.16,1,0.3,1), opacity 0.45s ease"
+            : "none",
+          willChange: "transform",
+          userSelect: "none",
+        }}>
+          {ITEMS.map((session, i) => {
+            const cardLeft = i * CARD_STEP - offsetRef.current;
+            return (
+              <div
+                key={i}
+                onMouseEnter={() => setActiveIdx(i)}
+                onMouseLeave={() => setActiveIdx(null)}
+                style={{
+                  width: `${CARD_WIDTH}px`, flexShrink: 0,
+                  cursor: "pointer",
+                  ...getCardStyle(cardLeft, i),
+                }}
+              >
+                <SessionCard session={session} isActive={activeIdx === i} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div style={{
+        display: "flex", justifyContent: "center", alignItems: "center",
+        gap: "10px", marginTop: "2.2rem",
+        opacity: progress > 0.55 ? Math.min(1, (progress - 0.55) / 0.35) : 0,
+        transition: "opacity 0.4s",
+      }}>
+
+        {/* Pause / Play — labeled pill */}
+        <button
+          onClick={() => setIsPaused(p => !p)}
+          style={{
+            display: "flex", alignItems: "center", gap: "7px",
+            padding: "8px 18px", borderRadius: "100px",
+            background: isPaused
+              ? "linear-gradient(135deg, #FF1A1A, #991111)"
+              : "rgba(255,255,255,0.06)",
+            border: `1px solid ${isPaused ? "transparent" : "rgba(255,255,255,0.1)"}`,
+            cursor: "pointer", color: "#fff",
+            fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px",
+            boxShadow: isPaused ? "0 0 24px rgba(255,26,26,0.45)" : "none",
+            transition: "all 0.25s ease",
+          }}
+        >
+          <span style={{ fontSize: "10px" }}>{isPaused ? "▶" : "⏸"}</span>
+          <span>{isPaused ? "RESUME" : "PAUSE"}</span>
+        </button>
+
+        {/* Divider */}
+        <div style={{ width: "1px", height: "22px", background: "rgba(255,255,255,0.08)" }} />
+
+        {/* Speed */}
+        <div style={{ display: "flex", gap: "4px" }}>
+          {[
+            { spd: 0.25, label: "1×" },
+            { spd: 0.55, label: "2×" },
+            { spd: 1.1,  label: "3×" },
+          ].map(({ spd, label }, i) => {
+            const active = speedRef.current === spd;
+            return (
+              <button key={i} onClick={() => { speedRef.current = spd; }}
+                style={{
+                  padding: "7px 14px", borderRadius: "100px",
+                  cursor: "pointer",
+                  fontSize: "11px", fontWeight: 800, letterSpacing: "0.5px",
+                  background: active ? "rgba(255,26,26,0.14)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${active ? "#FF1A1A" : "rgba(255,255,255,0.08)"}`,
+                  color: active ? "#FF1A1A" : "rgba(255,255,255,0.3)",
+                  transition: "all 0.2s ease",
+                  boxShadow: active ? "0 0 12px rgba(255,26,26,0.3)" : "none",
+                }}
+              >{label}</button>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div style={{ width: "1px", height: "22px", background: "rgba(255,255,255,0.08)" }} />
+
+        {/* Drag hint */}
+        <span style={{
+          fontSize: "10px", letterSpacing: "2px",
+          color: "rgba(255,255,255,0.18)", fontWeight: 600,
+        }}>DRAG TO SCRUB</span>
+      </div>
+    </div>
+  );
+}
+
 
 const StatCard = ({ stat, index, active }) => {
   const count = useCountUp(stat.value, 2000 + index * 200, active);
@@ -902,6 +1299,10 @@ export default function Home() {
   const videoRef = useRef(null);
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [phraseVisible, setPhraseVisible] = useState(true);
+  const sessionsSectionRef = useRef(null);
+  const [sessionsScrollProgress, setSessionsScrollProgress] = useState(0);
+  const [sessionsEntered, setSessionsEntered] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   const [statsRef, statsInView] = useInView(0.3);
 
@@ -915,12 +1316,36 @@ export default function Home() {
   }, 4000);
   return () => clearInterval(interval);
 }, []);
+
   // Scroll
   useEffect(() => {
     const fn = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
+
+  useEffect(() => {
+  const check = () => setIsDesktop(window.innerWidth > 768);
+  check();
+  window.addEventListener("resize", check);
+  return () => window.removeEventListener("resize", check);
+}, []);
+// ── REPLACE the sessions scroll useEffect in Home.jsx ────────────────────────
+
+useEffect(() => {
+  if (!isDesktop) return;
+  const handleScroll = () => {
+    if (!sessionsSectionRef.current) return;
+    const rect          = sessionsSectionRef.current.getBoundingClientRect();
+    const sectionHeight = sessionsSectionRef.current.offsetHeight;
+    const scrollable    = sectionHeight - window.innerHeight;
+    const raw           = Math.max(0, Math.min(1, -rect.top / scrollable));
+    setSessionsScrollProgress(raw);
+    if (raw > 0.1 && !sessionsEntered) setSessionsEntered(true);
+  };
+  window.addEventListener("scroll", handleScroll, { passive: true });
+  return () => window.removeEventListener("scroll", handleScroll);
+}, [isDesktop, sessionsEntered]);
 
   // Init video A
   useEffect(() => {
@@ -988,6 +1413,8 @@ export default function Home() {
           from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+
+        @keyframes glow { 0%,100%{opacity:0.5} 50%{opacity:1} }
 
         .hero-phrase {
           animation: phraseIn 0.6s cubic-bezier(0.22,1,0.36,1) forwards;
@@ -1197,122 +1624,169 @@ export default function Home() {
       />
 
       {/* ════════════════════════════════════════════
-          SESSIONS
+          SESSIONS — 3D Carousel
       ════════════════════════════════════════════ */}
-      <section id="sessions" style={s.section}>
-        <div style={s.sectionInner}>
-          <div style={s.sectionHeader}>
-            <span style={s.sectionTag}>WHAT WE OFFER</span>
-            <h2 style={s.sectionTitle}>
-              SESSIONS BUILT FOR<br />
-              <span style={s.redText}>EVERY BODY.</span>
-            </h2>
-            <p style={s.sectionSub}>
-              From first-timers to seasoned athletes — every session is designed to push you further.
-            </p>
-          </div>
+      <section
+        id="sessions"
+        ref={sessionsSectionRef}
+        style={{
+          ...s.section,
+          overflowX: "hidden",
+          position: "relative",
+          width: "100%",
+          background: "linear-gradient(180deg, #000 0%, #060606 100%)",
+          minHeight: isDesktop ? "160vh" : "auto",
+        }}
+      >
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          backgroundImage: "linear-gradient(rgba(255,26,26,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,26,26,0.022) 1px,transparent 1px)",
+          backgroundSize: "64px 64px",
+        }} />
 
-          <div style={s.sessionsGrid}>
-            {SESSIONS.map((session, i) => (
-              <ScrollCard key={i} direction={i % 2 === 0 ? "left" : "right"} delay={i * 0.05}>
-                <div
-                  className="session-card"
-                  style={{
-                    ...s.sessionCard,
-                    "--card-color": session.color,
-                    "--card-glow": session.color + "33",
-                    transition: "all 0.35s ease",
-                  }}
-                >
-                  {/* ── Image ── */}
-                  <div style={s.sessionImgWrap}>
-                    <img
-                      src={session.image}
-                      alt={session.title}
-                      style={s.sessionImg}
-                      onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
-                    />
-                    {/* Placeholder — shown when image file is missing */}
-                    <div style={{ ...s.sessionImgPlaceholder, borderColor: session.color + "50", display: "none" }}>
-                      <span style={{ fontSize: "2rem", color: session.color }}>＋</span>
-                      <span style={s.sessionPlaceholderTitle}>ADD IMAGE HERE</span>
-                      <span style={s.sessionPlaceholderPath}>{session.imageAlt}</span>
-                    </div>
-                  </div>
-                  {/* ── Body ── */}
-                  <div style={s.sessionBody}>
-                    <div style={{ ...s.sessionTag, color: session.color, borderColor: session.color + "40", background: session.color + "10" }}>
-                      {session.tag}
-                    </div>
-                    <h3 style={s.sessionTitle}>{session.title}</h3>
-                    <p style={s.sessionDesc}>{session.desc}</p>
-                    <div style={{ height: "3px", marginTop: "1rem", borderRadius: "2px", background: session.color, opacity: 0.5 }} />
-                  </div>
-                </div>
-              </ScrollCard>
-            ))}
-          </div>
-        </div>
-      </section>
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          background: `radial-gradient(ellipse 80% 50% at 50% 80%, rgba(255,26,26,${0.04 + sessionsScrollProgress * 0.1}), transparent)`,
+        }} />
 
-      {/* ════════════════════════════════════════════
-          TRAINERS
-      ════════════════════════════════════════════ */}
-      <section id="trainers" style={{ ...s.section, background: "#050505" }}>
-        <div style={s.sectionInner}>
-          <div style={s.sectionHeader}>
-            <span style={s.sectionTag}>THE TEAM</span>
-            <h2 style={s.sectionTitle}>
-              COACHES WHO<br />
-              <span style={s.redText}>PUSH YOU FURTHER.</span>
-            </h2>
-            <p style={s.sectionSub}>
-              Certified. Experienced. Committed to your transformation.
-            </p>
-          </div>
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1,
+          opacity: 0.018,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+        }} />
 
-          <div style={s.trainersGrid}>
-            {TRAINERS.map((trainer, i) => (
-              <ScrollCard key={i} direction={i % 2 === 0 ? "left" : "right"} delay={i * 0.1}>
-                <div
-                  className="trainer-card"
-                  style={{
-                    ...s.trainerCard,
-                    "--trainer-color": trainer.color,
-                    transition: "all 0.35s ease",
-                  }}
-                >
-                  {/* ── Trainer Image ── */}
-                  <div style={s.trainerImgWrap}>
-                    <img
-                      src={trainer.image}
-                      alt={trainer.name}
-                      style={s.trainerImg}
-                      onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
-                    />
-                    {/* Placeholder — shown when image file is missing */}
-                    <div style={{ ...s.trainerImgPlaceholder, borderColor: trainer.color + "50", display: "none" }}>
-                      <span style={{ fontSize: "2.5rem", color: trainer.color }}>＋</span>
-                      <span style={s.trainerPlaceholderTitle}>ADD PHOTO HERE</span>
-                      <span style={s.trainerPlaceholderPath}>{trainer.imageAlt}</span>
-                    </div>
-                  </div>
-                  <div style={{ ...s.trainerAccent, background: trainer.color }} />
-                  <h3 style={s.trainerName}>{trainer.name}</h3>
-                  <p style={{ ...s.trainerRole, color: trainer.color }}>{trainer.role}</p>
-                  <div style={s.trainerMeta}>
-                    <span style={s.trainerBadge}>{trainer.exp}</span>
-                    <span style={s.trainerBadge}>{trainer.cert}</span>
-                  </div>
-                  <p style={s.trainerSpec}>
-                    <span style={{ color: "rgba(255,255,255,0.4)" }}>Specialization: </span>
-                    {trainer.spec}
-                  </p>
-                </div>
-              </ScrollCard>
-            ))}
+        {isDesktop ? (
+          <div style={{
+            position: "sticky", top: 0,
+            height: "100vh", width: "100%",
+            display: "flex", flexDirection: "column", justifyContent: "center",
+          }}>
+            <div style={{
+              textAlign: "center", paddingBottom: "1.75rem",
+              opacity: Math.max(0, 1 - sessionsScrollProgress * 1.8),
+              transform: `translateY(${-sessionsScrollProgress * 60}px)`,
+              pointerEvents: sessionsScrollProgress > 0.55 ? "none" : "auto",
+              position: "relative", zIndex: 5,
+            }}>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: "10px",
+                marginBottom: "1.25rem",
+                opacity: Math.max(0, 1 - sessionsScrollProgress * 2.4),
+                background: "rgba(255,26,26,0.07)",
+                border: "1px solid rgba(255,26,26,0.18)",
+                padding: "6px 18px", borderRadius: "100px",
+              }}>
+                <span style={{
+                  width: "6px", height: "6px", borderRadius: "50%",
+                  background: "#FF1A1A", animation: "pulse 2s infinite",
+                  display: "inline-block",
+                }} />
+                <span style={{
+                  fontSize: "10px", fontWeight: 800,
+                  letterSpacing: "4px", color: "#FF1A1A",
+                }}>WHAT WE OFFER</span>
+              </div>
+
+              <h2 style={{
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: "clamp(3rem, 6vw, 5.5rem)",
+                color: "#fff", letterSpacing: "2px", lineHeight: 0.92,
+                marginBottom: "0", textAlign: "center",
+              }}>
+                <SplitWord word="SESSIONS" progress={sessionsScrollProgress} delay={0 * 0.04} />
+                {" "}
+                <SplitWord word="BUILT" progress={sessionsScrollProgress} delay={1 * 0.04} />
+                {" "}
+                <SplitWord word="FOR" progress={sessionsScrollProgress} delay={2 * 0.04} />
+                <br />
+                <span style={{
+                  background: "linear-gradient(135deg, #FF1A1A 20%, #FF6B00 100%)",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}>
+                  <SplitWord word="EVERY" progress={sessionsScrollProgress} delay={0.1 + 0 * 0.04} />
+                  {" "}
+                  <SplitWord word="BODY." progress={sessionsScrollProgress} delay={0.1 + 1 * 0.04} />
+                </span>
+              </h2>
+
+              <p style={{
+                color: "rgba(255,255,255,0.35)", fontSize: "0.95rem", lineHeight: 1.65,
+                opacity: Math.max(0, 1 - sessionsScrollProgress * 2.4),
+                maxWidth: "440px", margin: "1.1rem auto 0",
+              }}>
+                From first-timers to seasoned athletes — every session is designed to push you further.
+              </p>
+
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                marginTop: "1.5rem",
+                opacity: Math.max(0, 1 - sessionsScrollProgress * 2.4),
+              }}>
+                {SESSIONS.map((sess, i) => (
+                  <div key={i} style={{
+                    width: "6px", height: "6px", borderRadius: "50%",
+                    background: sess.color, opacity: 0.6,
+                    boxShadow: `0 0 6px ${sess.color}80`,
+                  }} />
+                ))}
+                <span style={{
+                  fontSize: "10px", fontWeight: 700, letterSpacing: "2px",
+                  color: "rgba(255,255,255,0.2)", marginLeft: "4px",
+                }}>{SESSIONS.length} PROGRAMS</span>
+              </div>
+            </div>
+
+            <div style={{
+              position: "relative", zIndex: 4,
+              opacity: Math.min(1, Math.max(0, (sessionsScrollProgress - 0.15) / 0.55)),
+            }}>
+              <SessionsCarousel progress={sessionsScrollProgress} hasEntered={sessionsEntered} />
+            </div>
+
+            <div style={{
+              position: "absolute", bottom: "1.75rem", left: "50%",
+              transform: "translateX(-50%)",
+              opacity: Math.max(0, 1 - sessionsScrollProgress * 4),
+              display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
+              pointerEvents: "none",
+            }}>
+              <div style={s.scrollMouse}><div style={s.scrollWheel} /></div>
+              <span style={s.scrollText}>SCROLL</span>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={s.sectionInner}>
+            <div style={s.sectionHeader}>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                background: "rgba(255,26,26,0.07)",
+                border: "1px solid rgba(255,26,26,0.18)",
+                padding: "5px 16px", borderRadius: "100px",
+                marginBottom: "1.25rem",
+              }}>
+                <span style={{
+                  width: "6px", height: "6px", borderRadius: "50%",
+                  background: "#FF1A1A", display: "inline-block",
+                }} />
+                <span style={{
+                  fontSize: "10px", fontWeight: 800,
+                  letterSpacing: "4px", color: "#FF1A1A",
+                }}>WHAT WE OFFER</span>
+              </div>
+              <h2 style={s.sectionTitle}>
+                SESSIONS BUILT FOR<br />
+                <span style={s.redText}>EVERY BODY.</span>
+              </h2>
+              <p style={s.sectionSub}>
+                From first-timers to seasoned athletes — every session is designed to push you further.
+              </p>
+            </div>
+            <div style={{ position: "relative" }}>
+              <SessionsCarousel progress={1} hasEntered={true} />
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ════════════════════════════════════════════
@@ -1960,11 +2434,6 @@ const s = {
   },
 
   // SESSIONS
-  sessionsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: "1.5rem",
-  },
   sessionCard: {
     background: "rgba(255,255,255,0.02)",
     border: "1px solid rgba(255,255,255,0.06)",
@@ -2311,40 +2780,6 @@ const s = {
     height: "100%",
     objectFit: "cover",
     display: "block",
-  },
-  sessionImgPlaceholder: {
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "6px",
-    border: "2px dashed",
-    borderRadius: "10px",
-    background: "rgba(255,255,255,0.02)",
-  },
-  sessionPlaceholderTitle: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: "1rem",
-    letterSpacing: "3px",
-    color: "rgba(255,255,255,0.5)",
-  },
-  sessionPlaceholderPath: {
-    fontSize: "10px",
-    color: "rgba(255,255,255,0.25)",
-    textAlign: "center",
-    padding: "0 1rem",
-    wordBreak: "break-all",
-  },
-  sessionBody: {
-    padding: "0",
-  },
-  sessionColorBar: {
-    height: "3px",
-    borderRadius: "2px",
-    marginTop: "1rem",
-    opacity: 0.5,
   },
 
   // TRAINER IMAGE PLACEHOLDER
