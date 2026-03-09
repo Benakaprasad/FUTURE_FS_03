@@ -14,7 +14,19 @@ const pool = require('../config/database');
 const notify = require('../helpers/notify');
 const { redis } = require('../middleware/rateLimiter');
 
-// ── Validation Rules ─────────────────────────────────────────
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+// ── Cookie options (DRY) ──────────────────────────────────────────────────────
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure:   IS_PROD,
+  sameSite: IS_PROD ? 'lax' : 'strict', // 'lax' works across subdomains in prod
+  maxAge:   7 * 24 * 60 * 60 * 1000,    // 7 days
+  // In production, set domain to share cookie across subdomains:
+  // domain: IS_PROD ? '.fitzoneGym.in' : undefined,
+};
+
+// ── Validation Rules ──────────────────────────────────────────────────────────
 const registerRules = [
   body('username')
     .trim().notEmpty().withMessage('Username required')
@@ -39,12 +51,11 @@ const loginRules = [
   body('password').notEmpty().withMessage('Password required'),
 ];
 
-// ── POST /api/auth/register ───────────────────────────────────
+// ── POST /api/auth/register ───────────────────────────────────────────────────
 router.post('/register', registerRules, validate, async (req, res, next) => {
   try {
     const { username, email, password, full_name, phone } = req.body;
 
-    // Only customers and trainers can self-register
     const requestedRole = req.body.role || ROLES.CUSTOMER;
     const allowedRoles  = [ROLES.CUSTOMER, ROLES.TRAINER];
 
@@ -52,7 +63,6 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
       return res.status(403).json({ error: 'Cannot self-register with that role' });
     }
 
-    // Check duplicates
     const [existingEmail, existingUsername] = await Promise.all([
       User.findByEmail(email),
       User.findByUsername(username),
@@ -60,73 +70,59 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
     if (existingEmail)    return res.status(409).json({ error: 'Email already registered' });
     if (existingUsername) return res.status(409).json({ error: 'Username already taken' });
 
-    // Create user with correct role
     const user = await User.create({
-      username, email, password,
-      role: requestedRole,
-      full_name, phone,
+      username, email, password, role: requestedRole, full_name, phone,
     });
 
-    // Create role-specific profile
     if (requestedRole === ROLES.TRAINER) {
-      await notify.trainerRegistered(user);   
-    await pool.query(
-    `INSERT INTO trainers 
-       (user_id, status, specialization, experience_years, certifications, bio, availability, hourly_rate)
-     VALUES ($1, 'inactive', $2, $3, $4, $5, $6, $7)`,
-    [
-      user.id,
-      req.body.specialization    || null,
-      req.body.experience_years  || null,
-      req.body.certifications    || null,
-      req.body.bio               || null,
-      req.body.availability      || null,
-      req.body.hourly_rate       || null,
-    ]
-  );
-  } else {
-      // Customer profile created immediately
+      await notify.trainerRegistered(user);
+      await pool.query(
+        `INSERT INTO trainers
+           (user_id, status, specialization, experience_years, certifications, bio, availability, hourly_rate)
+         VALUES ($1, 'inactive', $2, $3, $4, $5, $6, $7)`,
+        [
+          user.id,
+          req.body.specialization   || null,
+          req.body.experience_years || null,
+          req.body.certifications   || null,
+          req.body.bio              || null,
+          req.body.availability     || null,
+          req.body.hourly_rate      || null,
+        ]
+      );
+    } else {
       await notify.customerRegistered(user);
       await Customer.create(user.id);
     }
 
-    // Link any existing leads with this email
     await Lead.linkToUser(email, user.id);
 
-    // Generate tokens
     const accessToken  = Token.generateAccessToken(user);
-    const refreshToken = await Token.createRefreshToken(
-      user.id, req.ip, req.headers['user-agent']
-    );
+    const refreshToken = await Token.createRefreshToken(user.id, req.ip, req.headers['user-agent']);
 
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge:   7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('refreshToken', refreshToken, refreshCookieOptions);
 
     res.status(201).json({
       message: 'Registration successful',
       user: {
-        id:       user.id,
-        username: user.username,
-        email:    user.email,
-        role:     user.role,
+        id:        user.id,
+        username:  user.username,
+        email:     user.email,
+        role:      user.role,
+        full_name: user.full_name || null,
       },
       accessToken,
     });
   } catch (err) { next(err); }
 });
 
-// ── POST /api/auth/login ──────────────────────────────────────
+// ── POST /api/auth/login ──────────────────────────────────────────────────────
 router.post('/login', loginRules, validate, async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const ipAddress = req.ip;
     const userAgent = req.headers['user-agent'];
 
-    // Check brute force — block after 5 failed attempts in 15 mins
     const failedAttempts = await User.countRecentFailedAttempts(email, ipAddress);
     if (failedAttempts >= 5) {
       return res.status(429).json({
@@ -134,46 +130,36 @@ router.post('/login', loginRules, validate, async (req, res, next) => {
       });
     }
 
-    // Find user
     const user = await User.findByEmail(email);
     if (!user) {
       await User.recordLoginAttempt(email, ipAddress, false, userAgent);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check password
     const isMatch = await User.comparePassword(password, user.password);
     if (!isMatch) {
       await User.recordLoginAttempt(email, ipAddress, false, userAgent);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check active
     if (!user.is_active) {
       return res.status(401).json({ error: 'Account deactivated. Contact admin.' });
     }
 
-    // Record successful login
     await User.recordLoginAttempt(email, ipAddress, true, userAgent);
 
-    // Generate tokens
     const accessToken  = Token.generateAccessToken(user);
     const refreshToken = await Token.createRefreshToken(user.id, ipAddress, userAgent);
 
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge:   7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('refreshToken', refreshToken, refreshCookieOptions);
 
     res.json({
       message: 'Login successful',
       user: {
-        id:       user.id,
-        username: user.username,
-        email:    user.email,
-        role:     user.role,
+        id:        user.id,
+        username:  user.username,
+        email:     user.email,
+        role:      user.role,
         full_name: user.full_name,
       },
       accessToken,
@@ -181,7 +167,9 @@ router.post('/login', loginRules, validate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── POST /api/auth/refresh ────────────────────────────────────
+// ── POST /api/auth/refresh ────────────────────────────────────────────────────
+// KEY FIX: now returns `user` object alongside `accessToken`
+// This is what AuthContext uses to restore user state on page load
 router.post('/refresh', async (req, res, next) => {
   try {
     const rawToken = req.cookies?.refreshToken;
@@ -189,28 +177,23 @@ router.post('/refresh', async (req, res, next) => {
       return res.status(401).json({ error: 'No refresh token' });
     }
 
-    // Find token in DB
     const tokenRecord = await Token.findRefreshToken(rawToken);
     if (!tokenRecord) {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
-    // Check expiry
     if (new Date(tokenRecord.expires_at) < new Date()) {
       return res.status(401).json({ error: 'Refresh token expired' });
     }
 
-    // Check revoked
     if (tokenRecord.is_revoked) {
       return res.status(401).json({ error: 'Refresh token revoked' });
     }
 
-    // Check user still active
     if (!tokenRecord.is_active) {
       return res.status(401).json({ error: 'Account deactivated' });
     }
 
-    // Rotate token (detects reuse attacks)
     let newRefreshToken;
     try {
       newRefreshToken = await Token.rotateRefreshToken(
@@ -221,7 +204,7 @@ router.post('/refresh', async (req, res, next) => {
       );
     } catch (err) {
       if (err.message === 'REUSE_DETECTED') {
-        res.clearCookie('refreshToken');
+        res.clearCookie('refreshToken', refreshCookieOptions);
         return res.status(401).json({
           error: 'Token reuse detected. Please login again.',
         });
@@ -229,50 +212,51 @@ router.post('/refresh', async (req, res, next) => {
       throw err;
     }
 
-    // Generate new access token
     const accessToken = Token.generateAccessToken({
       id:       tokenRecord.user_id,
       role:     tokenRecord.role,
       username: tokenRecord.username,
     });
 
-    res.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge:   7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('refreshToken', newRefreshToken, refreshCookieOptions);
 
-    res.json({ accessToken });
+    // ✅ FIXED: return user object so AuthContext can restore user state
+    res.json({
+      accessToken,
+      user: {
+        id:        tokenRecord.user_id,
+        username:  tokenRecord.username,
+        email:     tokenRecord.email,     // ensure your Token.findRefreshToken JOIN includes email
+        role:      tokenRecord.role,
+        full_name: tokenRecord.full_name || null, // ensure JOIN includes full_name
+      },
+    });
   } catch (err) { next(err); }
 });
 
-// ── POST /api/auth/logout ─────────────────────────────────────
+// ── POST /api/auth/logout ─────────────────────────────────────────────────────
 router.post('/logout', authenticate, async (req, res, next) => {
   try {
     await Promise.all([
       Token.revokeAllUserTokens(req.user.id),
-      redis.del(`user:${req.user.id}`), // clear cache on logout
+      redis.del(`user:${req.user.id}`),
     ]);
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', refreshCookieOptions);
     res.json({ message: 'Logged out successfully' });
   } catch (err) { next(err); }
 });
 
-// ── GET /api/auth/me ──────────────────────────────────────────
+// ── GET /api/auth/me ──────────────────────────────────────────────────────────
 router.get('/me', authenticate, async (req, res, next) => {
   try {
     const cacheKey = `user:${req.user.id}`;
-    
-    // Try cache first
+
     const cached = await redis.get(cacheKey);
     if (cached) return res.json({ user: JSON.parse(cached) });
 
-    // Fall through to DB
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Cache for 5 minutes
     await redis.setex(cacheKey, 300, JSON.stringify(user));
     res.json({ user });
   } catch (err) { next(err); }

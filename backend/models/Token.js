@@ -38,17 +38,23 @@ class Token {
   }
 
   static async findRefreshToken(rawToken) {
-    const tokenHash = this.hashToken(rawToken);
-    const { rows }  = await pool.query(
-      `SELECT rt.*, u.id AS user_id, u.role, u.username,
-              u.is_active, u.is_email_verified
-       FROM refresh_tokens rt
-       JOIN users u ON rt.user_id = u.id
-       WHERE rt.token_hash = $1`,
-      [tokenHash]
-    );
-    return rows[0] || null;
-  }
+  const tokenHash = this.hashToken(rawToken);
+  const { rows }  = await pool.query(
+    `SELECT rt.*,
+            u.id       AS user_id,
+            u.role,
+            u.username,
+            u.email,
+            u.full_name,
+            u.is_active,
+            u.is_email_verified
+     FROM refresh_tokens rt
+     JOIN users u ON rt.user_id = u.id
+     WHERE rt.token_hash = $1`,
+    [tokenHash]
+  );
+  return rows[0] || null;
+}
 
   static async rotateRefreshToken(oldRawToken, userId, ipAddress, userAgent) {
     const client = await require('../config/database').connect();
