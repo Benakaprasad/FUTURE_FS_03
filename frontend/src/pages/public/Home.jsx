@@ -898,389 +898,1028 @@ letterDot: {
 },
 };
 
-// ── Goals Data ────────────────────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
+const STANDARD_PHRASES = [
+  "TRAIN HARD",
+  "PUSH LIMITS",
+  "BURN STRONGER",
+  "NO EXCUSES",
+  "EVERY REP COUNTS",
+];
+const BONUS_PHRASES = [
+  "PAIN IS TEMPORARY GLORY IS FOREVER",
+  "OUTWORK EVERYONE IN THE ROOM",
+  "CHAMPIONS ARE BUILT NOT BORN",
+  "THE ONLY BAD WORKOUT IS THE ONE YOU SKIPPED",
+  "EARN YOUR REST EVERY SINGLE DAY",
+];
+const MAX_WPM = 100;
+const FAST_WPM = 80;          // threshold for streak + fast-typer experience
+const BONUS_WPM_GATE = 60;    // minimum WPM to unlock bonus phrases
+
+const RANKS = [
+  { label: "ELITE",      min: 100, color: "#FF1A1A", icon: "🔴", msg: "You type like you train. Absolutely relentless." },
+  { label: "PRO",        min: 80,  color: "#FF6B00", icon: "🟠", msg: "Fast hands. That's real FitZone energy." },
+  { label: "SOLID",      min: 60,  color: "#FFB800", icon: "🟡", msg: "Good pace. Keep showing up like this." },
+  { label: "WARMING UP", min: 0,   color: "rgba(255,255,255,0.4)", icon: "⚪", msg: "Every rep counts — including the slow ones." },
+];
+const getRank = (wpm) => RANKS.find(r => wpm >= r.min) ?? RANKS[RANKS.length - 1];
+
 const GOALS = [
-  {
-    id: "weight",
-    label: "Lose Weight",
-    icon: "🔥",
-    headline: "We'll burn it together.",
-    plan: "Cardio + HIIT program — 4x per week",
-    color: "#FF6B00",
-  },
-  {
-    id: "muscle",
-    label: "Build Muscle",
-    icon: "💪",
-    headline: "Let's build something real.",
-    plan: "Strength Training — 5x per week",
-    color: "#FF1A1A",
-  },
-  {
-    id: "active",
-    label: "Stay Active",
-    icon: "⚡",
-    headline: "Move more. Feel better.",
-    plan: "Mixed program — 3x per week",
-    color: "#FFB800",
-  },
-  {
-    id: "flex",
-    label: "Improve Flexibility",
-    icon: "🧘",
-    headline: "Stretch your limits.",
-    plan: "Yoga + Functional — 4x per week",
-    color: "#A855F7",
-  },
-  {
-    id: "stress",
-    label: "Reduce Stress",
-    icon: "🌊",
-    headline: "Your escape is here.",
-    plan: "Yoga + Zumba — 3x per week",
-    color: "#00C2FF",
-  },
-  {
-    id: "sport",
-    label: "Sport Performance",
-    icon: "🥊",
-    headline: "Train like an athlete.",
-    plan: "Boxing + Conditioning — 5x per week",
-    color: "#22C55E",
-  },
+  { id: "weight", label: "Lose Weight",        icon: "🔥", headline: "We'll burn it together.",     plan: "Cardio + HIIT — 4x per week",        color: "#FF6B00" },
+  { id: "muscle", label: "Build Muscle",        icon: "💪", headline: "Let's build something real.", plan: "Strength Training — 5x per week",     color: "#FF1A1A" },
+  { id: "active", label: "Stay Active",         icon: "⚡", headline: "Move more. Feel better.",     plan: "Mixed program — 3x per week",         color: "#FFB800" },
+  { id: "flex",   label: "Improve Flexibility", icon: "🧘", headline: "Stretch your limits.",        plan: "Yoga + Functional — 4x per week",     color: "#A855F7" },
+  { id: "stress", label: "Reduce Stress",       icon: "🌊", headline: "Your escape is here.",        plan: "Yoga + Zumba — 3x per week",          color: "#00C2FF" },
+  { id: "sport",  label: "Sport Performance",   icon: "🥊", headline: "Train like an athlete.",      plan: "Boxing + Conditioning — 5x per week", color: "#22C55E" },
 ];
 
-// ── EnergyShakeSection Component ──────────────────────────────────────────────
-function EnergyShakeSection({
-  energy, setEnergy,
-  selectedGoal, setSelectedGoal,
-  goalStep, setGoalStep,
-  shakeSupported, setShakeSupported,
-  shakeHint, setShakeHint,
-}) {
-  const isFull = energy >= 95;
-  const lastShakeRef = React.useRef(null);
-  const decayRef     = React.useRef(null);
-  const activeGoal   = GOALS.find((g) => g.id === selectedGoal);
+// ─── Audio ────────────────────────────────────────────────────────────────────
+function createAudio() {
+  let ctx = null;
+  const c = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); return ctx; };
+  const play = (freq, type = "sine", dur = 0.06, gain = 0.07, delay = 0) => {
+    try {
+      const ac = c(), o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type = type; o.frequency.setValueAtTime(freq, ac.currentTime + delay);
+      g.gain.setValueAtTime(gain, ac.currentTime + delay);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + delay + dur);
+      o.start(ac.currentTime + delay); o.stop(ac.currentTime + delay + dur);
+    } catch {}
+  };
+  return {
+    key:    () => play(700, "sine", 0.04, 0.05),
+    wrong:  () => play(200, "sawtooth", 0.08, 0.06),
+    streak: () => { play(900, "sine", 0.08, 0.07); play(1100, "sine", 0.08, 0.07, 0.06); },
+    phrase: () => { [500,700,900,1100].forEach((f,i) => play(f,"sine",0.15,0.08,i*0.07)); },
+    bonus:  () => { [800,1000,1300].forEach((f,i) => play(f,"sine",0.2,0.09,i*0.06)); },
+    full:   () => { [500,700,900,1200,1500].forEach((f,i) => play(f,"sine",0.25,0.1,i*0.08)); },
+  };
+}
 
-  // Detect mobile vs desktop
-  const [isMobile, setIsMobile] = React.useState(false);
-  React.useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768 || "ontouchstart" in window);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+// ─── Particle Burst ───────────────────────────────────────────────────────────
+function ParticleBurst({ trigger, color = "#FFB800", count = 12 }) {
+  const [particles, setParticles] = useState([]);
+  const prev = useRef(trigger);
+  useEffect(() => {
+    if (trigger === prev.current) return;
+    prev.current = trigger;
+    setParticles(Array.from({ length: count }, (_, i) => ({
+      id: Date.now() + i,
+      angle: (i / count) * 360 + Math.random() * 15,
+      dist: 24 + Math.random() * 40,
+      size: 2 + Math.random() * 3,
+    })));
+    setTimeout(() => setParticles([]), 700);
+  }, [trigger, count]);
+  if (!particles.length) return null;
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
+      {particles.map(p => {
+        const rad = (p.angle * Math.PI) / 180;
+        return (
+          <div key={p.id} style={{
+            position: "absolute", top: "50%", left: "50%",
+            width: p.size, height: p.size, borderRadius: "50%", background: color,
+            animation: "particleFly 0.65s ease-out forwards",
+            "--tx": `${Math.cos(rad) * p.dist}px`,
+            "--ty": `${Math.sin(rad) * p.dist}px`,
+          }} />
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Post-Game Summary ────────────────────────────────────────────────────────
+function Summary({ stats, onContinue }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setTimeout(() => setMounted(true), 60); }, []);
+
+  const rank       = getRank(stats.peakWpm);
+  const isFast     = stats.peakWpm >= FAST_WPM;
+  const accGrade   = stats.accuracy >= 98 ? "S" : stats.accuracy >= 92 ? "A" : stats.accuracy >= 82 ? "B" : stats.accuracy >= 70 ? "C" : "D";
+  const gradeColor = accGrade === "S" ? "#FFD700" : accGrade === "A" ? "#22C55E" : accGrade === "B" ? "#FFB800" : accGrade === "C" ? "#FF6B00" : "#FF1A1A";
+
+  return (
+    <div style={{
+      maxWidth: 520, width: "100%", margin: "0 auto",
+      opacity: mounted ? 1 : 0, transform: mounted ? "none" : "translateY(28px)",
+      transition: "opacity 0.5s ease, transform 0.5s ease",
+    }}>
+      {/* Header */}
+      <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "1rem" }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: rank.color, display: "inline-block", animation: "pulse 2s infinite" }} />
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "4px", color: rank.color, fontFamily: "'DM Sans',sans-serif" }}>SESSION COMPLETE</span>
+        </div>
+
+        {/* Rank badge — big and proud for fast typers */}
+        <div style={{
+          display: "inline-flex", flexDirection: "column", alignItems: "center",
+          gap: 4, marginBottom: "1rem",
+          padding: isFast ? "1.25rem 2.5rem" : "0.75rem 2rem",
+          background: isFast ? `${rank.color}12` : "rgba(255,255,255,0.03)",
+          border: `${isFast ? 2 : 1}px solid ${isFast ? rank.color + "40" : "rgba(255,255,255,0.08)"}`,
+          borderRadius: 14,
+          boxShadow: isFast ? `0 0 40px ${rank.color}20` : "none",
+          transition: "all 0.4s",
+        }}>
+          {isFast && <span style={{ fontSize: "2rem", marginBottom: 4 }}>{rank.icon}</span>}
+          <span style={{
+            fontFamily: "'Bebas Neue',sans-serif",
+            fontSize: isFast ? "3.5rem" : "2.2rem",
+            letterSpacing: "4px", color: rank.color, lineHeight: 1,
+          }}>{rank.label}</span>
+          {isFast && (
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: "'DM Sans',sans-serif", letterSpacing: "1px", marginTop: 4 }}>
+              {rank.msg}
+            </span>
+          )}
+        </div>
+
+        {!isFast && (
+          <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans',sans-serif" }}>
+            {rank.msg}
+          </p>
+        )}
+      </div>
+
+      {/* Stats grid */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isFast ? "1fr 1px 1fr 1px 1fr 1px 1fr" : "1fr 1px 1fr 1px 1fr",
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden",
+        marginBottom: "1.25rem",
+      }}>
+        {[
+          { v: stats.peakWpm,       l: "PEAK WPM",  col: getRank(stats.peakWpm).color },
+          { v: `${stats.accuracy}%`, l: "ACCURACY",  col: stats.accuracy >= 90 ? "#22C55E" : stats.accuracy >= 75 ? "#FFB800" : "#FF1A1A" },
+          { v: stats.phrasesTyped,  l: "PHRASES",   col: "#fff" },
+          ...(isFast ? [{ v: stats.bestStreak, l: "BEST STREAK", col: stats.bestStreak >= 5 ? "#FFD700" : "#FFB800" }] : []),
+        ].map(({ v, l, col }, i, arr) => (
+          <React.Fragment key={l}>
+            <div style={{ padding: "1rem 0", textAlign: "center" }}>
+              <div style={{
+                fontFamily: "'Bebas Neue',sans-serif", fontSize: "2rem",
+                color: col, lineHeight: 1,
+                animation: "fadeUp 0.4s ease forwards",
+              }}>{v}</div>
+              <div style={{ fontSize: 8, letterSpacing: "2px", color: "rgba(255,255,255,0.18)", fontWeight: 700, fontFamily: "'DM Sans',sans-serif", marginTop: 3 }}>{l}</div>
+            </div>
+            {i < arr.length - 1 && <div style={{ background: "rgba(255,255,255,0.05)", width: 1 }} />}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* Accuracy grade — letter grade for fast typers, just bar for slow */}
+      {isFast ? (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 16,
+          padding: "0.85rem 1.25rem",
+          background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 10, marginBottom: "1.25rem",
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 8,
+            background: `${gradeColor}18`, border: `2px solid ${gradeColor}55`,
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.8rem", color: gradeColor }}>{accGrade}</span>
+          </div>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "2px", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans',sans-serif", marginBottom: 3 }}>ACCURACY GRADE</p>
+            <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.55)", fontFamily: "'DM Sans',sans-serif" }}>
+              {accGrade === "S" ? "Flawless. Every key, every time." :
+               accGrade === "A" ? "Sharp. Almost no wasted keystrokes." :
+               accGrade === "B" ? "Solid. A few slips but mostly clean." :
+               accGrade === "C" ? "Accuracy needs work — slow down to speed up." :
+               "Focus on accuracy first, speed will follow."}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: "1.25rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+            <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,.13)", fontFamily: "'DM Sans',sans-serif" }}>ACCURACY</span>
+            <span style={{ fontSize: 9, color: stats.accuracy >= 90 ? "#22C55E" : "#FFB800", fontFamily: "'DM Sans',sans-serif", fontWeight: 700 }}>{stats.accuracy}%</span>
+          </div>
+          <div style={{ height: 2, background: "rgba(255,255,255,.05)", borderRadius: 2 }}>
+            <div style={{ height: "100%", borderRadius: 2, width: `${stats.accuracy}%`, background: stats.accuracy >= 90 ? "#22C55E" : "#FFB800" }} />
+          </div>
+        </div>
+      )}
+
+      {/* Streak highlight for fast typers */}
+      {isFast && stats.bestStreak >= 3 && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "0.75rem 1.25rem",
+          background: "rgba(255,184,0,0.06)", border: "1px solid rgba(255,184,0,0.2)",
+          borderRadius: 10, marginBottom: "1.25rem",
+          animation: "fadeUp 0.4s ease 0.2s both",
+        }}>
+          <span style={{ fontSize: "1.1rem" }}>⚡</span>
+          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 700, color: "#FFB800", letterSpacing: "1px" }}>
+            {stats.bestStreak} WORD STREAK AT 80+ WPM
+            {stats.bestStreak >= 8 ? " — UNSTOPPABLE" : stats.bestStreak >= 5 ? " — ON FIRE" : " — KEEP IT UP"}
+          </span>
+        </div>
+      )}
+
+      {/* Taunt for fast typers who could do better */}
+      {isFast && stats.accuracy < 90 && (
+        <div style={{
+          padding: "0.75rem 1.25rem",
+          background: "rgba(255,26,26,0.04)", border: "1px solid rgba(255,26,26,0.15)",
+          borderRadius: 10, marginBottom: "1.25rem",
+          animation: "fadeUp 0.4s ease 0.3s both",
+        }}>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "'DM Sans',sans-serif", lineHeight: 1.5 }}>
+            Fast but sloppy. Your accuracy held your score back — {stats.accuracy}% cost you {Math.round((100 - stats.accuracy) / 5)} energy points.
+          </p>
+        </div>
+      )}
+
+      {/* CTA */}
+      <button onClick={onContinue} style={{
+        width: "100%", padding: "16px",
+        background: isFast ? `linear-gradient(135deg, ${rank.color}, ${rank.color}bb)` : "linear-gradient(135deg,#FF1A1A,#991111)",
+        boxShadow: isFast ? `0 6px 28px ${rank.color}40` : "0 6px 28px rgba(255,26,26,0.35)",
+        border: "none", borderRadius: 8, cursor: "pointer",
+        color: "#fff", fontWeight: 800, fontSize: "1rem", letterSpacing: "0.5px",
+        fontFamily: "'DM Sans',sans-serif",
+        transition: "transform 0.15s, box-shadow 0.15s",
+      }}
+        onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = "none"; }}
+      >
+        {isFast ? "Pick Your Goal →" : "Build My Program →"}
+      </button>
+
+      <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: "0.75rem", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif" }}>
+        Energy score: {stats.finalScore}% · {stats.phrasesTyped} phrase{stats.phrasesTyped !== 1 ? "s" : ""} completed
+      </p>
+    </div>
+  );
+}
+
+// ─── Typing Mechanic ──────────────────────────────────────────────────────────
+function TypingMechanic({ setEnergy, onFinish, audioRef }) {
+  const [phraseIdx, setPhraseIdx]     = useState(0);
+  const [typed, setTyped]             = useState("");
+  const [totalTyped, setTotalTyped]   = useState(0);
+  const [errors, setErrors]           = useState(0);
+  const [phraseDone, setPhraseDone]   = useState([]);
+  const [phraseBurst, setPhraseBurst] = useState(0);
+  const [wrongFlash, setWrongFlash]   = useState(false);
+  const [wpm, setWpm]                 = useState(0);
+  const [acc, setAcc]                 = useState(100);
+  const [score, setScore]             = useState(0);
+
+  // Phrase transition: "idle" | "out" | "flash" | "in"
+  const [txState, setTxState]             = useState("idle");
+  const [nextPhraseIdx, setNextPhraseIdx] = useState(null);
+  const [displayIdx, setDisplayIdx]       = useState(0);
+  const isTransitioning                   = txState !== "idle";
+
+  // Bonus lock state
+  const [bonusLocked, setBonusLocked]     = useState(false); // shown after phrase 5 if WPM too low
+  const [lockedWpm, setLockedWpm]         = useState(0);     // WPM they hit on the last phrase
+
+  // Streak tracking
+  const [streak, setStreak]           = useState(0);
+  const [bestStreak, setBestStreak]   = useState(0);
+  const [streakFlash, setStreakFlash] = useState(false);
+  const peakWpmRef    = useRef(0);
+  const stampRef      = useRef([]);
+  const wordStampsRef = useRef([]);
+  const phraseStartRef = useRef(Date.now()); // when current phrase typing began
+  const phraseWpmRef   = useRef(0);          // clean WPM for phrase 5 gate check
+
+  const allPhrases     = [...STANDARD_PHRASES, ...BONUS_PHRASES];
+  const currentPhrase  = allPhrases[Math.min(displayIdx, allPhrases.length - 1)];
+  const isBonus        = displayIdx >= STANDARD_PHRASES.length;
+  const bonusCompleted = phraseDone.filter(i => i >= STANDARD_PHRASES.length).length;
+  const nextIsBonus    = nextPhraseIdx != null && nextPhraseIdx >= STANDARD_PHRASES.length;
+
+  const computeScore = useCallback((cWpm, cAcc, done) => {
+    const std   = done.filter(i => i < STANDARD_PHRASES.length).length;
+    const bonus = done.filter(i => i >= STANDARD_PHRASES.length).length;
+    const base  = std * 20 + bonus * 10;
+    const live  = (Math.min(cWpm, MAX_WPM) / MAX_WPM) * (cAcc / 100) * (isBonus ? 10 : 20);
+    return Math.min(100, Math.floor(base + live));
+  }, [isBonus]);
+
+  // Per-word WPM — measures speed of each individual word typed
+  const getWordWpm = useCallback(() => {
+    const now = Date.now();
+    const recent = wordStampsRef.current.filter(t => now - t < 4000);
+    if (recent.length < 2) return wpm;
+    const elapsed = (now - recent[0]) / 1000 / 60; // minutes
+    return Math.round(recent.length / elapsed);
+  }, [wpm]);
+
+  const handleKey = useCallback((e) => {
+    if (e.key === " ") e.preventDefault();
+    if (isTransitioning) return; // block all input during phrase transition
+    if (e.key === "Backspace") { setTyped(p => p.slice(0, -1)); return; }
+    if (e.key.length !== 1) return;
+
+    const ch       = e.key.toUpperCase();
+    const expected = currentPhrase[typed.length];
+    if (!expected) return;
+
+    setTotalTyped(t => t + 1);
+    const now = Date.now();
+    // Start phrase timer on first character
+    if (typed.length === 0) phraseStartRef.current = now;
+    stampRef.current = [...stampRef.current.filter(t => now - t < 3000), now];
+
+    if (ch !== expected) {
+      setErrors(err => err + 1);
+      setWrongFlash(true);
+      setTimeout(() => setWrongFlash(false), 140);
+      audioRef.current?.wrong();
+      if (navigator.vibrate) navigator.vibrate(20);
+      // Wrong key breaks streak
+      setStreak(0);
+      return;
+    }
+
+    audioRef.current?.key();
+    if (navigator.vibrate) navigator.vibrate(6);
+
+    setTyped(prev => {
+      const next = prev + ch;
+
+      // Word boundary — space or end of phrase
+      const nextChar = currentPhrase[next.length];
+      const wordComplete = nextChar === " " || next.length === currentPhrase.length;
+
+      if (wordComplete || next.length === currentPhrase.length) {
+        // Record word completion timestamp
+        const wordNow = Date.now();
+        wordStampsRef.current = [...wordStampsRef.current.filter(t => wordNow - t < 6000), wordNow];
+
+        // Compute word-level WPM
+        const wordWpm = getWordWpm();
+        const isFastWord = wordWpm >= FAST_WPM;
+
+        if (isFastWord) {
+          setStreak(s => {
+            const newS = s + 1;
+            setBestStreak(b => Math.max(b, newS));
+            if (newS > 1) {
+              audioRef.current?.streak();
+              setStreakFlash(true);
+              setTimeout(() => setStreakFlash(false), 300);
+              if (navigator.vibrate) navigator.vibrate([10, 5, 10]);
+            }
+            return newS;
+          });
+        } else {
+          setStreak(0);
+        }
+      }
+
+      if (next.length === currentPhrase.length) {
+        // Compute clean WPM for this phrase: words / minutes elapsed
+        const phraseElapsed = (Date.now() - phraseStartRef.current) / 60000;
+        const phraseWords   = currentPhrase.trim().split(" ").length;
+        const cleanPhraseWpm = phraseElapsed > 0 ? Math.round(phraseWords / phraseElapsed) : 0;
+        phraseWpmRef.current = cleanPhraseWpm;
+        if (cleanPhraseWpm > peakWpmRef.current) peakWpmRef.current = cleanPhraseWpm;
+
+        const newDone    = [...phraseDone, phraseIdx];
+        const nextIdx    = phraseIdx + 1;
+        const std        = newDone.filter(i => i < STANDARD_PHRASES.length).length;
+        const bon        = newDone.filter(i => i >= STANDARD_PHRASES.length).length;
+        const newScore   = Math.min(100, std * 20 + bon * 10);
+        const allStdDone = nextIdx >= STANDARD_PHRASES.length && !isBonus;
+        const meetsGate  = cleanPhraseWpm >= BONUS_WPM_GATE; // gate uses THIS phrase's clean WPM
+        const isDone     = newScore >= 100 || (nextIdx >= allPhrases.length);
+
+        setPhraseDone(newDone);
+        setPhraseBurst(b => b + 1);
+        setScore(newScore);
+        setEnergy(newScore);
+        setPhraseIdx(nextIdx);
+        if (navigator.vibrate) navigator.vibrate([20,10,20,10,20]);
+
+        // After phrase 5 — check bonus gate
+        if (allStdDone && !meetsGate) {
+          audioRef.current?.phrase();
+          setTxState("out");
+          setTimeout(() => {
+            setLockedWpm(cleanPhraseWpm); // show THIS phrase's actual WPM
+            setBonusLocked(true);
+            setTxState("idle");
+            setTyped("");
+          }, 300);
+          return next;
+        }
+
+        // Normal transition: out → flash → in
+        setTxState("out");
+        setNextPhraseIdx(nextIdx);
+
+        setTimeout(() => {
+          setTxState("flash");
+          if (nextIdx === STANDARD_PHRASES.length) audioRef.current?.bonus();
+          else if (!isDone) audioRef.current?.phrase();
+        }, 250);
+
+        setTimeout(() => {
+          if (isDone) {
+            audioRef.current?.full();
+            const finalAcc = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
+            onFinish({ peakWpm: peakWpmRef.current, accuracy: finalAcc, phrasesTyped: newDone.length, bestStreak, finalScore: newScore });
+            return;
+          }
+          setDisplayIdx(nextIdx);
+          setNextPhraseIdx(null);
+          setTxState("in");
+        }, 500);
+
+        setTimeout(() => {
+          if (!isDone) { setTxState("idle"); setTyped(""); }
+        }, 750);
+
+        return next;
+      }
+      return next;
+    });
+  }, [typed, currentPhrase, phraseIdx, phraseDone, allPhrases.length, errors, totalTyped, bestStreak, getWordWpm, setEnergy, onFinish]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [handleKey]);
+
+  // Live WPM + score tick
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const now    = Date.now();
+      const recent = stampRef.current.filter(t => now - t < 5000).length;
+      const cWpm   = Math.round((recent / 5) * 12);
+      const cAcc   = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
+      setWpm(cWpm);
+      setAcc(cAcc);
+      if (cWpm > peakWpmRef.current) peakWpmRef.current = cWpm;
+      const liveScore = computeScore(cWpm, cAcc, phraseDone);
+      setScore(liveScore);
+      setEnergy(liveScore);
+    }, 150);
+    return () => clearInterval(iv);
+  }, [totalTyped, errors, phraseDone, computeScore, setEnergy]);
+
+  const accColor    = acc >= 90 ? "#22C55E" : acc >= 75 ? "#FFB800" : "#FF1A1A";
+  const wpmColor    = wpm > 80 ? "#FF1A1A" : wpm > 50 ? "#FFB800" : wpm > 20 ? "#FF6B00" : "rgba(255,255,255,.2)";
+  const scoreColor  = score > 70 ? "#FF1A1A" : score > 40 ? "#FFB800" : "#FF6B00";
+  const streakColor = streak >= 5 ? "#FFD700" : streak >= 3 ? "#FFB800" : "#FF6B00";
+  const stdDone     = phraseDone.filter(i => i < STANDARD_PHRASES.length).length;
+
+  return (
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 18 }}>
+
+      {/* Phrase progress track */}
+      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        {STANDARD_PHRASES.map((_, i) => (
+          <div key={i} style={{
+            flex: 1, height: 4, borderRadius: 2,
+            background: phraseDone.includes(i) ? "#FF1A1A"
+              : phraseIdx === i ? "rgba(255,26,26,0.3)"
+              : "rgba(255,255,255,0.06)",
+            transition: "background 0.3s",
+            boxShadow: phraseDone.includes(i) ? "0 0 8px rgba(255,26,26,0.35)" : "none",
+          }} />
+        ))}
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.18)", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif", whiteSpace: "nowrap" }}>
+          {stdDone}/5
+        </span>
+      </div>
+
+      {/* Bonus unlock banner */}
+      {isBonus && !bonusLocked && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderRadius: 8,
+          background: "rgba(255,184,0,0.07)", border: "1px solid rgba(255,184,0,0.22)",
+          animation: "fadeUp 0.3s ease forwards",
+        }}>
+          <span style={{ fontSize: "1rem" }}>🔓</span>
+          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 800, letterSpacing: "2px", color: "#FFB800" }}>
+            BONUS PHRASE {bonusCompleted + 1} — +10 ENERGY
+          </span>
+        </div>
+      )}
+
+      {/* ── BONUS GATE CARD ── */}
+      {bonusLocked ? (
+        <div style={{
+          padding: "1.5rem", borderRadius: 16,
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          animation: "fadeUp 0.35s ease forwards",
+          display: "flex", flexDirection: "column", gap: 12,
+        }}>
+          {/* Label + WPM hint */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 800, letterSpacing: "3px", color: "rgba(255,255,255,0.3)" }}>
+              BONUS PHRASES
+            </span>
+            <span style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: "1px",
+              color: "#FFB800", fontFamily: "'DM Sans',sans-serif",
+              background: "rgba(255,184,0,0.08)", border: "1px solid rgba(255,184,0,0.2)",
+              padding: "3px 10px", borderRadius: 100,
+            }}>
+              🔒 {lockedWpm} / 60 WPM
+            </span>
+          </div>
+
+          {/* Thin WPM progress bar */}
+          <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, position: "relative" }}>
+            <div style={{
+              height: "100%", borderRadius: 2,
+              width: `${Math.min(100, (lockedWpm / 60) * 100)}%`,
+              background: lockedWpm >= 50 ? "#FF6B00" : "#FF4400",
+              transition: "width 0.5s ease",
+            }} />
+            <div style={{ position: "absolute", top: -2, right: 0, width: 2, height: 7, background: "#FFB800", borderRadius: 1 }} />
+          </div>
+
+          {/* Two equal CTAs */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
+            <button
+              onClick={() => {
+                setBonusLocked(false);
+                setPhraseIdx(STANDARD_PHRASES.length - 1);
+                setDisplayIdx(STANDARD_PHRASES.length - 1);
+                setTyped("");
+                setTxState("idle");
+                phraseStartRef.current = Date.now(); // fresh timer — judge this attempt only
+              }}
+              style={{
+                padding: "12px 0", border: "1.5px solid rgba(255,26,26,0.4)",
+                borderRadius: 8, cursor: "pointer", background: "rgba(255,26,26,0.08)",
+                color: "#fff", fontWeight: 800, fontSize: "0.85rem", letterSpacing: "0.5px",
+                fontFamily: "'DM Sans',sans-serif", transition: "all 0.15s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,26,26,0.15)"; e.currentTarget.style.borderColor = "rgba(255,26,26,0.7)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,26,26,0.08)"; e.currentTarget.style.borderColor = "rgba(255,26,26,0.4)"; }}
+            >⚡ Try for 60 WPM</button>
+
+            <button
+              onClick={() => {
+                const finalAcc = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
+                onFinish({ peakWpm: peakWpmRef.current, accuracy: finalAcc, phrasesTyped: phraseDone.length, bestStreak, finalScore: score });
+              }}
+              style={{
+                padding: "12px 0", border: "1.5px solid rgba(255,255,255,0.1)",
+                borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,0.04)",
+                color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.5px",
+                fontFamily: "'DM Sans',sans-serif", transition: "all 0.15s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = "rgba(255,255,255,0.6)"; }}
+            >Pick My Goal →</button>
+          </div>
+        </div>
+      ) : (
+      <div style={{
+        padding: "1.5rem",
+        background: txState === "flash"
+          ? (nextIsBonus ? "rgba(255,184,0,0.08)" : "rgba(34,197,94,0.06)")
+          : wrongFlash ? "rgba(255,26,26,0.05)" : "rgba(255,255,255,0.02)",
+        border: `1px solid ${
+          txState === "flash" ? (nextIsBonus ? "rgba(255,184,0,0.5)" : "rgba(34,197,94,0.4)")
+          : wrongFlash ? "rgba(255,26,26,0.4)"
+          : isBonus ? "rgba(255,184,0,0.14)" : "rgba(255,255,255,0.06)"}`,
+        borderRadius: 16, position: "relative", overflow: "hidden",
+        transition: "border-color 0.15s, background 0.15s",
+      }}>
+        <ParticleBurst trigger={phraseBurst} color={isBonus ? "#FFB800" : "#FF1A1A"} count={14} />
+
+        {/* Completion flash overlay */}
+        {txState === "flash" && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+            flexDirection: "column", gap: 8, zIndex: 2,
+            background: nextIsBonus ? "rgba(255,184,0,0.06)" : "rgba(34,197,94,0.05)",
+            animation: "fadeUp 0.2s ease forwards",
+          }}>
+            <span style={{ fontSize: "2rem", animation: "bounceIn 0.25s ease forwards" }}>
+              {nextIsBonus ? "🔓" : "✓"}
+            </span>
+            <span style={{
+              fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.2rem", letterSpacing: "4px",
+              color: nextIsBonus ? "#FFB800" : "#22C55E",
+            }}>
+              {nextIsBonus ? "BONUS UNLOCKED" : "PHRASE COMPLETE"}
+            </span>
+          </div>
+        )}
+
+        <div style={{ marginBottom: "0.75rem" }}>
+          <span style={{
+            fontSize: 9, fontWeight: 800, letterSpacing: "3px",
+            color: isBonus ? "#FFB800" : "rgba(255,255,255,0.18)",
+            fontFamily: "'DM Sans',sans-serif",
+          }}>
+            {isBonus ? `BONUS ${bonusCompleted + 1}` : `PHRASE ${displayIdx + 1} OF ${STANDARD_PHRASES.length}`}
+          </span>
+        </div>
+
+        {/* Characters — with fly-out / fly-in transform */}
+        <div style={{
+          display: "flex", flexWrap: "wrap", gap: "1px 0", lineHeight: 1,
+          transform: txState === "out" ? "translateX(-60px)" : txState === "in" ? "translateX(0)" : "none",
+          opacity: txState === "out" ? 0 : txState === "flash" ? 0 : 1,
+          transition: txState === "out" ? "transform 0.22s ease-in, opacity 0.22s ease-in"
+                    : txState === "in"  ? "transform 0.25s ease-out, opacity 0.25s ease-out"
+                    : "none",
+          // "in" starts off-right
+          ...(txState === "in" ? { transform: "translateX(0)", animation: "slideInRight 0.25s ease-out forwards" } : {}),
+        }}>
+          {currentPhrase.split("").map((ch, i) => {
+            const isTyped   = i < typed.length;
+            const isCurrent = i === typed.length && txState === "idle";
+            const isSpace   = ch === " ";
+            return (
+              <span key={i} style={{
+                fontFamily: "'Bebas Neue',sans-serif",
+                fontSize: isCurrent ? "2.3rem" : "1.75rem",
+                letterSpacing: "3px",
+                color: isTyped ? "#22C55E" : isCurrent ? "#FFB800" : "rgba(255,255,255,0.22)",
+                textShadow: isTyped ? "0 0 8px rgba(34,197,94,0.3)" : isCurrent ? "0 0 16px rgba(255,184,0,0.55)" : "none",
+                transition: "font-size 0.1s, color 0.07s",
+                animation: isCurrent ? "pulseAmber 0.85s ease-in-out infinite" : "none",
+                display: "inline-block", width: isSpace ? "0.55rem" : "auto",
+              }}>{isSpace ? "\u00A0" : ch}</span>
+            );
+          })}
+        </div>
+
+        {/* Next key */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: "1rem" }}>
+          <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,0.13)", fontFamily: "'DM Sans',sans-serif" }}>NEXT</span>
+          <div style={{
+            width: 36, height: 36, background: "rgba(255,184,0,0.07)",
+            border: "1.5px solid rgba(255,184,0,0.3)", borderRadius: 7,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 0 10px rgba(255,184,0,0.18)",
+          }}>
+            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.35rem", color: "#FFB800", animation: "pulseAmber 0.85s ease-in-out infinite" }}>
+              {currentPhrase[typed.length] === " " ? "⎵" : (currentPhrase[typed.length] ?? "✓")}
+            </span>
+          </div>
+          {wrongFlash && (
+            <span style={{ fontSize: 11, color: "#FF1A1A", fontWeight: 800, fontFamily: "'DM Sans',sans-serif", letterSpacing: "1px" }}>✗ WRONG KEY</span>
+          )}
+        </div>
+      </div>
+      )} {/* end bonusLocked ? ... : ( ... ) */}
+
+      {/* Live stats grid — streak column only shows if active */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: streak > 0 ? "1fr 1px 1fr 1px 1fr 1px 1fr 1px 1fr" : "1fr 1px 1fr 1px 1fr 1px 1fr",
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, overflow: "hidden",
+      }}>
+        {[
+          { v: wpm,        l: "WPM",      col: wpmColor },
+          { v: `${acc}%`,  l: "ACCURACY", col: accColor },
+          { v: errors,     l: "ERRORS",   col: errors > 0 ? "#FF1A1A" : "rgba(255,255,255,.18)" },
+          { v: `${score}`, l: "ENERGY",   col: scoreColor },
+          ...(streak > 0 ? [{ v: `${streak}🔥`, l: "STREAK", col: streakColor }] : []),
+        ].map(({ v, l, col }, i, arr) => (
+          <React.Fragment key={l}>
+            <div style={{
+              padding: "0.85rem 0", textAlign: "center",
+              background: l === "STREAK" && streakFlash ? `${streakColor}12` : "transparent",
+              transition: "background 0.2s",
+            }}>
+              <div style={{
+                fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.75rem",
+                color: col, transition: "color .25s", lineHeight: 1,
+                transform: l === "STREAK" && streakFlash ? "scale(1.15)" : "scale(1)",
+                transition: "transform 0.15s, color 0.25s",
+              }}>{v}</div>
+              <div style={{ fontSize: 8, letterSpacing: "2px", color: "rgba(255,255,255,.15)", fontWeight: 700, fontFamily: "'DM Sans',sans-serif", marginTop: 3 }}>{l}</div>
+            </div>
+            {i < arr.length - 1 && <div style={{ background: "rgba(255,255,255,0.05)", width: 1 }} />}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* Accuracy bar */}
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+          <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,.13)", fontFamily: "'DM Sans',sans-serif" }}>ACCURACY</span>
+          <span style={{ fontSize: 9, letterSpacing: "1px", color: accColor, fontFamily: "'DM Sans',sans-serif", fontWeight: 700, transition: "color .3s" }}>{acc}%</span>
+        </div>
+        <div style={{ height: 2, background: "rgba(255,255,255,.04)", borderRadius: 2 }}>
+          <div style={{ height: "100%", borderRadius: 2, width: `${acc}%`, background: accColor, transition: "width .2s, background .3s" }} />
+        </div>
+      </div>
+
+      {/* Bonus gate progress — only visible on phrase 5 */}
+      {phraseIdx === STANDARD_PHRASES.length - 1 && !bonusLocked && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+            <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,.13)", fontFamily: "'DM Sans',sans-serif" }}>
+              BONUS UNLOCK SPEED
+            </span>
+            <span style={{
+              fontSize: 9, letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif", fontWeight: 700,
+              color: wpm >= BONUS_WPM_GATE ? "#22C55E" : "rgba(255,184,0,0.6)",
+              transition: "color .3s",
+            }}>
+              {wpm >= BONUS_WPM_GATE ? "✓ UNLOCKED" : `${wpm} / ${BONUS_WPM_GATE} WPM`}
+            </span>
+          </div>
+          <div style={{ height: 2, background: "rgba(255,255,255,.04)", borderRadius: 2, position: "relative" }}>
+            <div style={{
+              height: "100%", borderRadius: 2,
+              width: `${Math.min(100, (wpm / BONUS_WPM_GATE) * 100)}%`,
+              background: wpm >= BONUS_WPM_GATE ? "#22C55E" : "#FFB800",
+              transition: "width .2s, background .3s",
+            }} />
+          </div>
+        </div>
+      )}
+
+      <p style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,.1)", letterSpacing: "1.5px", fontFamily: "'DM Sans',sans-serif" }}>
+        COMPLETE 5 PHRASES · BONUS PHRASES UNLOCK AFTER · ACCURACY COUNTS
+      </p>
+    </div>
+  );
+}
+
+// ─── Goal Selector ────────────────────────────────────────────────────────────
+function GoalSelector({ onBack }) {
+  const [selectedGoal, setSelectedGoal] = useState(null);
+  const [mounted, setMounted] = useState(false);
+  const activeGoal = GOALS.find(g => g.id === selectedGoal);
+  useEffect(() => { setTimeout(() => setMounted(true), 50); }, []);
+
+  return (
+    <div style={{ maxWidth: 640, margin: "0 auto", width: "100%", padding: "0 1rem" }}>
+      <div style={{
+        textAlign: "center", marginBottom: "2rem",
+        opacity: mounted ? 1 : 0, transform: mounted ? "none" : "translateY(20px)",
+        transition: "opacity 0.5s ease, transform 0.5s ease",
+      }}>
+        <span style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          background: "rgba(255,26,26,0.07)", border: "1px solid rgba(255,26,26,0.18)",
+          padding: "5px 16px", borderRadius: 100, marginBottom: "1rem",
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF1A1A", display: "inline-block", animation: "pulse 2s infinite" }} />
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "4px", color: "#FF1A1A", fontFamily: "'DM Sans',sans-serif" }}>WHAT'S YOUR GOAL?</span>
+        </span>
+        <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(2rem,5vw,3.5rem)", letterSpacing: "2px", color: "#fff", lineHeight: 1.05, marginBottom: "0.5rem" }}>
+          {selectedGoal ? activeGoal.headline.toUpperCase() : "PICK YOUR PROGRAM."}
+        </h2>
+        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.9rem", fontFamily: "'DM Sans',sans-serif" }}>
+          {selectedGoal ? `Suggested: ${activeGoal.plan}` : "We'll build your perfect program around it."}
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
+        {GOALS.map((goal, i) => (
+          <button key={goal.id}
+            onClick={() => setSelectedGoal(goal.id === selectedGoal ? null : goal.id)}
+            style={{
+              position: "relative", padding: "1rem 0.75rem", borderRadius: 12, cursor: "pointer",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+              border: selectedGoal === goal.id ? `2px solid ${goal.color}` : "2px solid rgba(255,255,255,0.07)",
+              background: selectedGoal === goal.id ? goal.color + "15" : "rgba(255,255,255,0.025)",
+              color: selectedGoal === goal.id ? "#fff" : "rgba(255,255,255,0.55)",
+              boxShadow: selectedGoal === goal.id ? `0 0 24px ${goal.color}30` : "none",
+              transform: mounted ? (selectedGoal === goal.id ? "translateY(-4px) scale(1.02)" : "translateY(0)") : "translateY(16px)",
+              opacity: mounted ? 1 : 0,
+              transition: `all 0.25s ease, opacity 0.4s ease ${i * 0.06}s, transform 0.4s ease ${i * 0.06}s`,
+              fontFamily: "'DM Sans',sans-serif",
+            }}
+            onMouseEnter={e => { if (selectedGoal !== goal.id) { e.currentTarget.style.borderColor = `${goal.color}44`; e.currentTarget.style.transform = "translateY(-2px)"; }}}
+            onMouseLeave={e => { if (selectedGoal !== goal.id) { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.transform = "translateY(0)"; }}}
+          >
+            <span style={{ fontSize: "1.6rem" }}>{goal.icon}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.2 }}>{goal.label}</span>
+            {selectedGoal === goal.id && (
+              <span style={{ position: "absolute", top: 8, right: 8, width: 18, height: 18, borderRadius: "50%", background: goal.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 800, animation: "fadeCheckIn 0.2s ease forwards" }}>✓</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {selectedGoal && (
+        <div style={{ animation: "fadeUp 0.35s ease forwards" }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: "1rem",
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+            borderLeft: `3px solid ${activeGoal.color}`, borderRadius: 12, padding: "1rem 1.5rem", marginBottom: "1.25rem",
+          }}>
+            <span style={{ fontSize: "1.5rem" }}>{activeGoal.icon}</span>
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "3px", color: "rgba(255,255,255,0.3)", marginBottom: 4, fontFamily: "'DM Sans',sans-serif" }}>YOUR PROGRAM</p>
+              <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "#fff", fontFamily: "'DM Sans',sans-serif" }}>{activeGoal.plan}</p>
+            </div>
+          </div>
+          <a href={`/register?goal=${selectedGoal}`} style={{
+            display: "block", width: "100%", padding: "16px", textAlign: "center",
+            background: `linear-gradient(135deg,${activeGoal.color},${activeGoal.color}cc)`,
+            boxShadow: `0 6px 28px ${activeGoal.color}40`,
+            color: "#fff", textDecoration: "none", fontWeight: 800, fontSize: "1rem",
+            letterSpacing: "0.5px", borderRadius: 8, fontFamily: "'DM Sans',sans-serif",
+            transition: "transform 0.15s, box-shadow 0.15s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 10px 36px ${activeGoal.color}55`; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `0 6px 28px ${activeGoal.color}40`; }}
+          >Start My {activeGoal.label} Journey →</a>
+          <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: "0.75rem", fontFamily: "'DM Sans',sans-serif" }}>
+            First session free · No joining fee this month
+          </p>
+        </div>
+      )}
+
+      <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.2)", fontSize: 13, cursor: "pointer", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif", transition: "color 0.2s" }}
+          onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.5)"}
+          onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
+        >← Back</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+ function EnergyShakeSection() {
+  const [phase, setPhase]       = useState("invite");   // invite | typing | summary | goals
+  const [energy, setEnergy]     = useState(0);
+  const [summaryStats, setSummaryStats] = useState(null);
+  const audioRef = useRef(null);
+  const isFull   = energy >= 100;
+
+  useEffect(() => { audioRef.current = createAudio(); }, []);
+
+  const handleFinish = useCallback((stats) => {
+    setSummaryStats(stats);
+    setPhase("summary");
   }, []);
 
-  // DESKTOP: Type-your-name fills the bar
-  const [userName, setUserName] = React.useState("");
-  const MAX_NAME_LENGTH = 12;
+  const barColor = energy < 30 ? "#FF6B00" : energy < 60 ? "#FFB800" : energy < 90 ? "#FF4400" : "#FF1A1A";
 
-  const handleNameType = (e) => {
-    const val = e.target.value.replace(/[^a-zA-Z ]/g, "");
-    if (val.length > MAX_NAME_LENGTH) return;
-    setUserName(val);
-    const pct = Math.min(Math.round((val.length / MAX_NAME_LENGTH) * 100), 100);
-    setEnergy(pct);
-    if (val.length >= MAX_NAME_LENGTH) setShakeHint("done");
-    else setShakeHint(val.length > 0 ? "typing" : "idle");
-  };
-
-  const getMobileLabel = () => {
-    if (energy === 0)  return "Zero energy. Let's fix that.";
-    if (energy < 30)   return "Warming up...";
-    if (energy < 60)   return "Getting there! Keep shaking!";
-    if (energy < 90)   return "🔥 Almost there! Don't stop!";
-    if (energy < 100)  return "💥 One more shake!";
-    return "MAXIMUM ENERGY UNLOCKED! 🔥";
-  };
-
-  const getDesktopLabel = () => {
-    if (userName.length === 0) return "Type your name — each letter charges your energy.";
-    if (userName.length < 4)   return `Hey ${userName}... keep going.`;
-    if (userName.length < 8)   return `${userName}, feeling it yet? 🔥`;
-    if (userName.length < MAX_NAME_LENGTH) return `Almost there, ${userName}!`;
-    return `${userName.trim()}, YOUR ZONE IS READY. 🔥`;
-  };
-  const barColor = energy < 30
-  ? "#FF6B00"
-  : energy < 60
-  ? "#FFB800"
-  : energy < 90
-  ? "#FF4400"
-  : "#FF1A1A";
   return (
     <section style={{
-      ...energyStyles.section,
+      padding: "7rem 2rem", position: "relative", overflow: "hidden",
       background: isFull
-        ? "linear-gradient(180deg, #0d0000 0%, #1a0000 50%, #0d0000 100%)"
-        : "linear-gradient(180deg, #000 0%, #060606 100%)",
-      transition: "background 1.2s ease",
+        ? "linear-gradient(180deg,#0d0000 0%,#160000 50%,#0d0000 100%)"
+        : "linear-gradient(180deg,#000 0%,#060606 100%)",
+      transition: "background 1.4s ease",
+      minHeight: phase === "typing" ? 700 : "auto",
+      display: "flex", alignItems: "center", justifyContent: "center",
     }}>
-      {isFull && <div style={energyStyles.glow} />}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700;800&display=swap');
+        @keyframes pulseAmber  { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.9)} }
+        @keyframes fadeCheckIn { from{opacity:0;transform:scale(0.3)} to{opacity:1;transform:scale(1)} }
+        @keyframes fadeUp      { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulse       { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes particleFly {
+          0%   { transform:translate(-50%,-50%) scale(1); opacity:1; }
+          100% { transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(0); opacity:0; }
+        }
+        @keyframes slideInRight {
+          from { transform:translateX(50px); opacity:0; }
+          to   { transform:translateX(0);    opacity:1; }
+        }
+        @keyframes bounceIn {
+          0%   { transform:scale(0.4); opacity:0; }
+          60%  { transform:scale(1.2); opacity:1; }
+          100% { transform:scale(1); }
+        }
+      `}</style>
 
-      {/* ── Phase 1: Energy Meter ── */}
-      {!goalStep && (
-        <div style={energyStyles.inner}>
+      {isFull && (
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 60% at 50% 50%,rgba(255,26,26,0.07),transparent)", animation: "pulse 3s ease infinite" }} />
+      )}
 
-          {/* Label */}
-          <div style={energyStyles.eyebrow}>
-            <span style={energyStyles.eyebrowDot} />
-            <span style={energyStyles.eyebrowText}>ENERGY CHECK</span>
+      {/* ── INVITE ── */}
+      {phase === "invite" && (
+        <div style={{ maxWidth: 560, width: "100%", textAlign: "center", animation: "fadeUp 0.5s ease forwards" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "1.25rem" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FF1A1A", animation: "pulse 2s infinite", display: "inline-block" }} />
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "4px", color: "#FF1A1A", fontFamily: "'DM Sans',sans-serif" }}>ENERGY CHECK</span>
           </div>
-
-          <h2 style={{
-            ...energyStyles.title,
-            color: isFull ? "#FF1A1A" : "#fff",
-            textShadow: isFull ? "0 0 60px rgba(255,26,26,0.4)" : "none",
-            transition: "all 0.5s ease",
-          }}>
-            {isFull ? "THAT'S FITZONE ENERGY." : "HOW MUCH ENERGY DID YOU BRING?"}
+          <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(2.4rem,5.5vw,4rem)", letterSpacing: "2px", color: "#fff", lineHeight: 1.02, marginBottom: "0.75rem" }}>
+            HOW BAD DO<br />
+            <span style={{ background: "linear-gradient(135deg,#FF1A1A,#FF6B00)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>YOU WANT IT?</span>
           </h2>
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.95rem", lineHeight: 1.65, maxWidth: 400, margin: "0 auto 2rem", fontFamily: "'DM Sans',sans-serif" }}>
+            Type 5 FitZone phrases. Speed × accuracy fills the bar — then we build your program.
+          </p>
 
-          <p style={energyStyles.sub}>{isMobile ? getMobileLabel() : getDesktopLabel()}</p>
-
-          {/* Big number */}
-          <div
-            style={{
-              ...energyStyles.numberWrap,
-              transform: shakeHint === "shaking" ? "scale(1.08)" : "scale(1)",
-              transition: "transform 0.15s ease",
-            }}
-          >
-            <span style={{
-              ...energyStyles.number,
-              color: isFull ? "#FF1A1A" : "#fff",
-              textShadow: isFull
-                ? "0 0 80px rgba(255,26,26,0.7)"
-                : shakeHint === "shaking"
-                ? "0 0 40px rgba(255,100,0,0.5)"
-                : "none",
-            }}>
-              {energy}
-            </span>
-            <span style={energyStyles.numberPct}>%</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: "2.5rem", padding: "1.25rem", background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, textAlign: "left" }}>
+            {STANDARD_PHRASES.map((p, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 9, color: "rgba(255,26,26,0.45)", fontWeight: 800, fontFamily: "'DM Sans',sans-serif", letterSpacing: "1px", minWidth: 14, textAlign: "right" }}>{i + 1}</span>
+                <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.1rem", letterSpacing: "3px", color: "rgba(255,255,255,0.15)" }}>{p}</span>
+              </div>
+            ))}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+              <span style={{ fontSize: "0.8rem", minWidth: 14, textAlign: "right" }}>🔓</span>
+              <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.72rem", letterSpacing: "2px", color: "rgba(255,184,0,0.28)", fontWeight: 700 }}>BONUS PHRASES UNLOCK AFTER — +10 ENERGY EACH</span>
+            </div>
           </div>
 
-          {/* Progress bar */}
-          <div style={energyStyles.barWrap}>
-            <div style={energyStyles.barTrack}>
-              <div style={{
-                ...energyStyles.barFill,
-                width: `${energy}%`,
-                background: barColor,
-                boxShadow: energy > 0
-                  ? "0 0 20px rgba(255,26,26,0.5)"
-                  : "none",
-              }} />
-              {/* Animated pulse at tip */}
-              {energy > 0 && energy < 100 && (
-                <div style={{
-                  ...energyStyles.barTip,
-                  left: `${energy}%`,
-                }} />
-              )}
-            </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+            <button onClick={() => setPhase("typing")} style={{
+              padding: "14px 36px", background: "linear-gradient(135deg,#FF1A1A,#991111)",
+              border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", fontWeight: 800,
+              fontSize: "0.95rem", letterSpacing: "1px", boxShadow: "0 6px 28px rgba(255,26,26,0.35)",
+              fontFamily: "'DM Sans',sans-serif", transition: "transform 0.15s, box-shadow 0.15s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 36px rgba(255,26,26,0.45)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 6px 28px rgba(255,26,26,0.35)"; }}
+            >⚡ Let's Go →</button>
+            <button onClick={() => setPhase("goals")} style={{
+              padding: "14px 24px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)",
+              borderRadius: 8, cursor: "pointer", color: "rgba(255,255,255,0.4)", fontWeight: 600,
+              fontSize: "0.9rem", fontFamily: "'DM Sans',sans-serif", transition: "color 0.2s, border-color 0.2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.65)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.4)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)"; }}
+            >Skip → View Plans</button>
+          </div>
+          <p style={{ marginTop: "1rem", fontSize: 11, color: "rgba(255,255,255,0.13)", letterSpacing: "1.5px", fontFamily: "'DM Sans',sans-serif" }}>~60 SECONDS · TOTALLY OPTIONAL</p>
+        </div>
+      )}
 
-            {/* Tick marks */}
-            <div style={energyStyles.ticks}>
-              {[0, 25, 50, 75, 100].map((v) => (
-                <div key={v} style={energyStyles.tick}>
-                  <div style={{
-                    ...energyStyles.tickLine,
-                    background: energy >= v ? "#FF1A1A" : "rgba(255,255,255,0.1)",
-                  }} />
-                  <span style={{
-                    ...energyStyles.tickLabel,
-                    color: energy >= v ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.2)",
-                  }}>{v}%</span>
+      {/* ── TYPING ── */}
+      {phase === "typing" && (
+        <div style={{ maxWidth: 660, width: "100%", animation: "fadeUp 0.4s ease forwards" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "0.5rem" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FF1A1A", animation: "pulse 2s infinite", display: "inline-block" }} />
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "4px", color: "#FF1A1A", fontFamily: "'DM Sans',sans-serif" }}>ENERGY CHECK</span>
+              </div>
+              <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", letterSpacing: "2px", color: "#fff", transition: "all 0.5s" }}>
+                TYPE TO CHARGE
+              </h2>
+            </div>
+            <button onClick={() => setPhase("goals")} style={{
+              flexShrink: 0, marginTop: 4, padding: "8px 16px", borderRadius: 100,
+              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+              cursor: "pointer", color: "rgba(255,255,255,0.35)", fontSize: 11, fontWeight: 700,
+              letterSpacing: "1.5px", fontFamily: "'DM Sans',sans-serif", transition: "color 0.2s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.6)"}
+              onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.35)"}
+            >SKIP →</button>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: "1.25rem" }}>
+            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(4rem,12vw,7rem)", letterSpacing: "-4px", lineHeight: 1, color: "#fff", transition: "all 0.3s" }}>
+              {Math.floor(energy)}
+            </span>
+            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.5rem,4vw,2.5rem)", color: "rgba(255,255,255,0.3)", marginTop: 8 }}>%</span>
+          </div>
+
+          <div style={{ marginBottom: "2rem" }}>
+            <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 3 }}>
+              <div style={{ height: "100%", borderRadius: 3, width: `${energy}%`, background: barColor, boxShadow: energy > 0 ? `0 0 12px ${barColor}50` : "none", transition: "width 0.15s, background 0.4s" }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 7 }}>
+              {[0,25,50,75,100].map(v => (
+                <div key={v} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                  <div style={{ width: 1, height: 4, background: energy >= v ? "#FF1A1A" : "rgba(255,255,255,0.07)" }} />
+                  <span style={{ fontSize: 9, letterSpacing: "1px", color: energy >= v ? "rgba(255,255,255,0.38)" : "rgba(255,255,255,0.12)", fontFamily: "'DM Sans',sans-serif" }}>{v}%</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* ── Interaction block — Mobile: shake / Desktop: type name ── */}
-          {!isFull && (
-            <div style={energyStyles.shakeBox}>
-              {isMobile ? (
-                /* ─── MOBILE: Shake ─── */
-                <>
-                  <div style={{
-                    ...energyStyles.phoneIcon,
-                    animation: shakeHint === "shaking"
-                      ? "shakePhone 0.15s ease infinite"
-                      : "shakePhoneIdle 2s ease-in-out infinite",
-                  }}>
-                    📱
-                  </div>
-                  <p style={energyStyles.shakeText}>
-                    {shakeHint === "shaking"
-                      ? "YES! KEEP SHAKING! 🔥"
-                      : "SHAKE YOUR PHONE LIKE YOU MEAN IT"}
-                  </p>
-                  <p style={energyStyles.shakeSubText}>
-                    The harder you shake, the faster it fills
-                  </p>
-
-                  {/* iOS permission button */}
-                  {shakeSupported &&
-                   typeof DeviceMotionEvent !== "undefined" &&
-                   typeof DeviceMotionEvent.requestPermission === "function" &&
-                   energy === 0 && (
-                    <button onClick={requestShakePermission} style={energyStyles.permBtn}>
-                      Allow Motion Access →
-                    </button>
-                  )}
-                </>
-              ) : (
-                /* ─── DESKTOP: Type your name ─── */
-                <>
-                  <p style={energyStyles.shakeText}>
-                    {shakeHint === "done"
-                      ? `${userName.trim()}, YOUR ZONE IS READY. 🔥`
-                      : "TYPE YOUR NAME TO UNLOCK YOUR ZONE"}
-                  </p>
-                  <p style={energyStyles.shakeSubText}>
-                    {shakeHint === "idle" || shakeHint === "typing"
-                      ? getDesktopLabel()
-                      : ""}
-                  </p>
-
-                  {/* Name input */}
-                  <div style={energyStyles.nameInputWrap}>
-                    <input
-                      type="text"
-                      value={userName}
-                      onChange={handleNameType}
-                      placeholder="Enter your name..."
-                      maxLength={MAX_NAME_LENGTH}
-                      autoComplete="off"
-                      style={{
-                        ...energyStyles.nameInput,
-                        borderColor: energy > 0
-                          ? `rgba(255,26,26,${0.3 + (energy / 100) * 0.7})`
-                          : "rgba(255,255,255,0.1)",
-                        boxShadow: energy > 0
-                          ? `0 0 ${energy / 3}px rgba(255,26,26,${energy / 200})`
-                          : "none",
-                        color: energy >= 100 ? "#FF1A1A" : "#fff",
-                      }}
-                    />
-                    {/* Letter counter */}
-                    <div style={energyStyles.letterCount}>
-                      {Array.from({ length: MAX_NAME_LENGTH }).map((_, i) => (
-                        <div key={i} style={{
-                          ...energyStyles.letterDot,
-                          background: i < userName.length
-                            ? "#FF1A1A"
-                            : "rgba(255,255,255,0.1)",
-                          transform: i < userName.length ? "scaleY(1)" : "scaleY(0.5)",
-                        }} />
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          <TypingMechanic setEnergy={setEnergy} onFinish={handleFinish} audioRef={audioRef} />
         </div>
       )}
 
-      {/* ── Phase 2: Goal Selector ── */}
-      {goalStep && (
-        <div style={{ ...energyStyles.inner, animation: "fadeUp 0.6s ease forwards" }}>
-          <div style={energyStyles.eyebrow}>
-            <span style={energyStyles.eyebrowDot} />
-            <span style={energyStyles.eyebrowText}>ENERGY LOCKED IN</span>
-          </div>
-
-          <h2 style={{ ...energyStyles.title, color: "#fff" }}>
-            {selectedGoal
-              ? activeGoal?.headline.toUpperCase()
-              : "WHAT'S YOUR GOAL?"}
-          </h2>
-
-          <p style={energyStyles.sub}>
-            {selectedGoal
-              ? `Suggested: ${activeGoal?.plan}`
-              : "Pick one. We'll build your perfect program."}
-          </p>
-
-          {/* Goal chips */}
-          <div style={energyStyles.goalGrid}>
-            {GOALS.map((goal) => (
-              <button
-                key={goal.id}
-                onClick={() => setSelectedGoal(
-                  goal.id === selectedGoal ? null : goal.id
-                )}
-                style={{
-                  ...energyStyles.goalChip,
-                  border: selectedGoal === goal.id
-                    ? `2px solid ${goal.color}`
-                    : "2px solid rgba(255,255,255,0.08)",
-                  background: selectedGoal === goal.id
-                    ? goal.color + "18"
-                    : "rgba(255,255,255,0.03)",
-                  color: selectedGoal === goal.id
-                    ? "#fff"
-                    : "rgba(255,255,255,0.6)",
-                  boxShadow: selectedGoal === goal.id
-                    ? `0 0 20px ${goal.color}40`
-                    : "none",
-                  transform: selectedGoal === goal.id
-                    ? "translateY(-3px)"
-                    : "none",
-                }}
-              >
-                <span style={energyStyles.goalIcon}>{goal.icon}</span>
-                <span style={energyStyles.goalLabel}>{goal.label}</span>
-                {selectedGoal === goal.id && (
-                  <span style={{
-                    ...energyStyles.goalCheck,
-                    background: goal.color,
-                  }}>✓</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* CTA */}
-          {selectedGoal && (
-            <div style={{ animation: "fadeUp 0.4s ease forwards", marginTop: "2.5rem" }}>
-              <div style={energyStyles.planPreview}>
-                <span style={{ color: activeGoal?.color, fontSize: "1.5rem" }}>
-                  {activeGoal?.icon}
-                </span>
-                <div>
-                  <p style={energyStyles.planPreviewLabel}>YOUR RECOMMENDED PLAN</p>
-                  <p style={energyStyles.planPreviewText}>{activeGoal?.plan}</p>
-                </div>
-              </div>
-              <a
-                href={`/register?goal=${selectedGoal}`}
-                style={{
-                  ...energyStyles.ctaBtn,
-                  background: `linear-gradient(135deg, ${activeGoal?.color}, ${activeGoal?.color}bb)`,
-                  boxShadow: `0 8px 30px ${activeGoal?.color}50`,
-                }}
-              >
-                Start My {activeGoal?.label} Journey →
-              </a>
-              <p style={energyStyles.ctaNote}>
-                Free first session · No joining fee this month
-              </p>
-            </div>
-          )}
-
-          {/* Back link */}
-          <button
-            onClick={() => { setGoalStep(false); setEnergy(0); setSelectedGoal(null); }}
-            style={energyStyles.backBtn}
-          >
-            ← Recharge energy
-          </button>
+      {/* ── SUMMARY ── */}
+      {phase === "summary" && summaryStats && (
+        <div style={{ width: "100%", animation: "fadeUp 0.5s ease forwards" }}>
+          <Summary stats={summaryStats} onContinue={() => setPhase("goals")} />
         </div>
+      )}
+
+      {/* ── GOALS ── */}
+      {phase === "goals" && (
+        <GoalSelector onBack={() => { setPhase("invite"); setEnergy(0); setSummaryStats(null); }} />
       )}
     </section>
   );
@@ -1289,11 +1928,6 @@ function EnergyShakeSection({
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [energy, setEnergy] = useState(0);
-  const [selectedGoal, setSelectedGoal] = useState(null);
-  const [goalStep, setGoalStep] = useState(false);
-  const [shakeSupported, setShakeSupported] = useState(false);
-  const [shakeHint, setShakeHint] = useState("idle"); // idle | shaking | done
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", message: "" });
   const [formSent, setFormSent] = useState(false);
   const videoRef = useRef(null);
@@ -1359,7 +1993,6 @@ useEffect(() => {
     setFormSent(true);
   }, []);
 
-  const isFull = energy >= 95;
 
   return (
     <div style={s.root}>
@@ -1414,7 +2047,7 @@ useEffect(() => {
           to   { opacity: 1; transform: translateY(0); }
         }
 
-        @keyframes glow { 0%,100%{opacity:0.5} 50%{opacity:1} }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
         .hero-phrase {
           animation: phraseIn 0.6s cubic-bezier(0.22,1,0.36,1) forwards;
@@ -1607,22 +2240,7 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════
-          ENERGY METER — SHAKE + GOAL SELECTOR
-      ════════════════════════════════════════════ */}
-      <EnergyShakeSection
-        energy={energy}
-        setEnergy={setEnergy}
-        selectedGoal={selectedGoal}
-        setSelectedGoal={setSelectedGoal}
-        goalStep={goalStep}
-        setGoalStep={setGoalStep}
-        shakeSupported={shakeSupported}
-        setShakeSupported={setShakeSupported}
-        shakeHint={shakeHint}
-        setShakeHint={setShakeHint}
-      />
-
+      <EnergyShakeSection />
       {/* ════════════════════════════════════════════
           SESSIONS — 3D Carousel
       ════════════════════════════════════════════ */}
@@ -1788,6 +2406,64 @@ useEffect(() => {
           </div>
         )}
       </section>
+
+      {/* ════════════════════════════════════════════
+    TRAINERS
+════════════════════════════════════════════ */}
+<section id="trainers" style={{ ...s.section, background: "#050505" }}>
+  <div style={s.sectionInner}>
+    <div style={s.sectionHeader}>
+      <span style={s.sectionTag}>MEET THE TEAM</span>
+      <h2 style={s.sectionTitle}>
+        COACHED BY THE<br />
+        <span style={s.redText}>BEST.</span>
+      </h2>
+      <p style={s.sectionSub}>
+        Our certified trainers bring years of experience and real results to every session.
+      </p>
+    </div>
+
+    <div style={s.trainersGrid}>
+      {TRAINERS.map((trainer, i) => (
+        <ScrollCard key={i} direction={i % 2 === 0 ? "left" : "right"} delay={i * 0.1}>
+          <div
+            className="trainer-card"
+            style={{
+              ...s.trainerCard,
+              "--trainer-color": trainer.color,
+              transition: "all 0.35s ease",
+            }}
+          >
+            <div style={{ ...s.trainerAccent, background: trainer.color }} />
+
+            {/* Trainer Image */}
+            <div style={s.trainerImgWrap}>
+              <img
+                src={trainer.image}
+                alt={trainer.name}
+                style={s.trainerImg}
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            </div>
+
+            <h3 style={s.trainerName}>{trainer.name}</h3>
+            <p style={{ ...s.trainerRole, color: trainer.color }}>{trainer.role}</p>
+
+            <div style={s.trainerMeta}>
+              <span style={s.trainerBadge}>⏱ {trainer.exp}</span>
+              <span style={s.trainerBadge}>🎓 {trainer.cert}</span>
+            </div>
+
+            <p style={s.trainerSpec}>
+              <span style={{ color: trainer.color, fontWeight: 700 }}>Speciality: </span>
+              {trainer.spec}
+            </p>
+          </div>
+        </ScrollCard>
+      ))}
+    </div>
+  </div>
+</section>
 
       {/* ════════════════════════════════════════════
           PLANS
@@ -2031,8 +2707,8 @@ useEffect(() => {
             <div style={s.logo}>
               <div style={s.logoBox}>FZ</div>
               <div>
-                <div style={s.logoName}>IRON PULSE</div>
-                <div style={s.logoSub}>FITNESS STUDIO</div>
+                <div style={s.logoName}>FITZONE</div>
+                <div style={s.logoSub}>GYM</div>
               </div>
             </div>
             <p style={s.footerTagline}>"Train Hard. Transform Strong."</p>
