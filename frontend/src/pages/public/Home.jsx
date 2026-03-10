@@ -83,7 +83,7 @@ const SESSIONS = [
 
 // ── Carousel constants ─────────────────────────────────────────────────────
 const ITEMS = [...SESSIONS, ...SESSIONS, ...SESSIONS];
-const CARD_WIDTH = 300;
+const CARD_WIDTH = 320;
 const CARD_GAP = 24;
 const CARD_STEP = CARD_WIDTH + CARD_GAP;
 const TOTAL_WIDTH = SESSIONS.length * CARD_STEP;
@@ -300,7 +300,7 @@ function SessionCard({ session, isActive }) {
           ? "linear-gradient(160deg, rgba(28,28,28,0.95) 0%, rgba(8,8,8,0.98) 100%)"
           : "linear-gradient(160deg, rgba(18,18,18,0.92) 0%, rgba(4,4,4,0.96) 100%)",
         border: `1px solid ${isActive ? session.color + "70" : "rgba(255,255,255,0.06)"}`,
-        borderRadius: "22px",
+        borderRadius: "20px",
         overflow: "hidden",
         boxShadow: isActive
           ? `0 32px 80px rgba(0,0,0,0.8), 0 0 50px ${session.color}22, inset 0 1px 0 rgba(255,255,255,0.07)`
@@ -319,7 +319,7 @@ function SessionCard({ session, isActive }) {
       {/* Shimmer highlight */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 10,
-        pointerEvents: "none", borderRadius: "22px",
+        pointerEvents: "none", borderRadius: "20px",
         background: isHovered
           ? `radial-gradient(circle at ${50 + tilt.y * 3}% ${50 - tilt.x * 3}%, rgba(255,255,255,0.07) 0%, transparent 62%)`
           : "none",
@@ -335,7 +335,7 @@ function SessionCard({ session, isActive }) {
       }} />
 
       {/* Image */}
-      <div style={{ width: "100%", height: "180px", position: "relative", overflow: "hidden" }}>
+      <div style={{ width: "100%", height: "200px", position: "relative", overflow: "hidden" }}>
         <img
           src={session.image} alt={session.title}
           style={{
@@ -359,7 +359,7 @@ function SessionCard({ session, isActive }) {
         {/* Tag pill */}
         <div style={{
           position: "absolute", bottom: "12px", left: "14px",
-          fontSize: "9px", fontWeight: 800, letterSpacing: "2.5px",
+          fontSize: "9px", fontWeight: 800, letterSpacing: "1.5px",
           textTransform: "uppercase", color: session.color,
           background: "rgba(0,0,0,0.6)",
           backdropFilter: "blur(12px)",
@@ -371,9 +371,9 @@ function SessionCard({ session, isActive }) {
       </div>
 
       {/* Body */}
-      <div style={{ padding: "1.2rem 1.3rem 1.4rem" }}>
+      <div style={{ padding: "1.4rem 1.5rem 1.6rem" }}>
         <h3 style={{
-          fontSize: "1.15rem", fontWeight: 900, letterSpacing: "1.5px",
+          fontSize: "1.1rem", fontWeight: 800, letterSpacing: "0.5px",
           color: "#fff", marginBottom: "0.45rem", lineHeight: 1.1,
           textTransform: "uppercase",
           textShadow: isActive ? `0 0 30px ${session.color}50` : "none",
@@ -381,15 +381,15 @@ function SessionCard({ session, isActive }) {
         }}>{session.title}</h3>
 
         <p style={{
-          color: "rgba(255,255,255,0.38)",
-          fontSize: "0.78rem", lineHeight: 1.68, marginBottom: "1rem",
+          color: "rgba(255,255,255,0.48)",
+          fontSize: "0.82rem", lineHeight: 1.75, marginBottom: "1.1rem",
         }}>{session.desc}</p>
 
         {/* Footer row */}
         <div style={{
           display: "flex", alignItems: "center",
           justifyContent: "space-between",
-          paddingTop: "0.75rem",
+          paddingTop: "0.9rem",
           borderTop: "1px solid rgba(255,255,255,0.05)",
         }}>
           <span style={{
@@ -438,6 +438,7 @@ function SessionsCarousel({ progress, hasEntered }) {
   const [containerWidth, setContainerWidth] = useState(900);
   const [slamDone, setSlamDone]   = useState(false);
   const [dragStart, setDragStart] = useState(null);
+  const hoveredIdxRef = useRef(null);
 
   useEffect(() => {
     if (hasEntered && !slamDone) {
@@ -485,15 +486,15 @@ function SessionsCarousel({ progress, hasEntered }) {
     const dist     = (screenX + CARD_WIDTH / 2 - center) / (containerWidth / 2);
     const clamped  = Math.max(-1.3, Math.min(1.3, dist));
     const depth    = clamped * clamped;
-    const scale    = 0.68 + depth * 0.38;
-    const blurAmt  = (1 - depth) * 3;
+    const scale    = 0.72 + depth * 0.34;
+    const blurAmt  = (1 - depth) * 1.8;
     const brightness = 0.32 + depth * 0.78;
     const rotY     = -clamped * 20;
     const ty       = depth * -22;
-    const isActive = activeIdx === idx;
+    const isActive = activeIdx === idx || hoveredIdxRef.current === idx;
     return {
       transform: `perspective(1000px) translateY(${ty}px) rotateY(${rotY}deg) scale(${isActive ? scale * 1.04 : scale})`,
-      filter: `brightness(${isActive ? 1.35 : brightness}) blur(${isActive ? 0 : blurAmt}px)`,
+      filter: `brightness(${isActive ? 1.4 : brightness}) blur(${isActive ? 0 : blurAmt}px)`,
       zIndex: Math.round(depth * 10),
       transition: isActive ? "filter 0.2s, transform 0.2s" : "filter 0.12s, transform 0.04s",
       willChange: "transform, filter",
@@ -512,26 +513,26 @@ function SessionsCarousel({ progress, hasEntered }) {
     }}>
       {/* Edge masks */}
       <div style={{
-        position: "absolute", left: 0, top: 0, bottom: 0, width: "220px",
-        background: "linear-gradient(90deg, #000 15%, transparent)",
-        zIndex: 20, pointerEvents: "none",
-      }} />
-      <div style={{
-        position: "absolute", right: 0, top: 0, bottom: 0, width: "220px",
-        background: "linear-gradient(270deg, #000 15%, transparent)",
-        zIndex: 20, pointerEvents: "none",
-      }} />
+      position: "absolute", left: 0, top: 0, bottom: 0, width: "180px",
+      background: "linear-gradient(90deg, #000 0%, rgba(0,0,0,0.85) 40%, transparent 100%)",
+      zIndex: 20, pointerEvents: "none",
+    }} />
+    <div style={{
+      position: "absolute", right: 0, top: 0, bottom: 0, width: "180px",
+      background: "linear-gradient(270deg, #000 0%, rgba(0,0,0,0.85) 40%, transparent 100%)",
+      zIndex: 20, pointerEvents: "none",
+    }} />
 
       {/* Track */}
       <div
         ref={containerRef}
         style={{
-          position: "relative", height: "440px",
+          position: "relative", height: "460px",
           perspective: "1000px", perspectiveOrigin: "50% 44%",
           cursor: dragStart != null ? "grabbing" : "grab",
         }}
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => { setIsPaused(false); setActiveIdx(null); setDragStart(null); }}
+        onMouseEnter={() => { setActiveIdx(i); hoveredIdxRef.current = i; }}
+        onMouseLeave={() => { setActiveIdx(null); hoveredIdxRef.current = null; }}
         onMouseDown={onDragStart}
         onMouseMove={onDragMove}
         onMouseUp={onDragEnd}
