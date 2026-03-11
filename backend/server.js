@@ -7,10 +7,18 @@ const morgan       = require('morgan');
 const compression  = require('compression');
 const cookieParser = require('cookie-parser');
 const hpp          = require('hpp');
+const { v4: uuidv4 } = require('uuid');
 const { sanitize } = require('./middleware/sanitize');
 const path         = require('path');
 
-const { globalLimiter, authLimiter } = require('./middleware/rateLimiter');
+const {
+  globalLimiter,
+  authLimiter,
+  writeLimiter,
+  paymentLimiter,
+  publicLimiter,
+  redis,
+} = require('./middleware/rateLimiter');
 
 // Routes
 const authRoutes               = require('./routes/auth');
@@ -29,9 +37,6 @@ const { router: notificationRoutes } = require('./routes/notifications');
 // Jobs
 require('./jobs/cleanupTokens');
 
-// DB (adjust path to your actual db/prisma/mongoose connection export)
-// const db = require('./db');
-
 const PORT       = process.env.PORT     || 3000;
 const IS_PROD    = process.env.NODE_ENV === 'production';
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -41,13 +46,19 @@ let isShuttingDown = false;
 
 const app = express();
 
-// ── Trust Nginx Proxy ─────────────────────────────────────────
-// Required so req.ip / rate-limiters see the real client IP
-// (not 127.0.0.1) when sitting behind Nginx.
+// ── Trust Render / Nginx Proxy ────────────────────────────────
 app.set('trust proxy', 1);
 
+// ── Request ID & Response Time ────────────────────────────────
+app.use((req, res, next) => {
+  req.id = req.headers['x-request-id'] || uuidv4();
+  res.setHeader('X-Request-ID', req.id);
+  const start = Date.now();
+  res.on('finish', () => res.setHeader('X-Response-Time', `${Date.now() - start}ms`));
+  next();
+});
+
 // ── Readiness Gate ────────────────────────────────────────────
-// Reject new requests during shutdown so Nginx can drain cleanly.
 app.use((req, res, next) => {
   if (isShuttingDown) {
     res.set('Connection', 'close');
@@ -78,11 +89,20 @@ app.use(compression());
 app.use(morgan(IS_PROD ? 'combined' : 'dev'));
 
 // ── 5. Rate Limiting ──────────────────────────────────────────
+// 5a. Auth — strict brute-force protection (10 req / 15 min, failures only)
 app.use('/api/auth', authLimiter);
 
+// 5b. Public — unauthenticated routes (60 req / 10 min)
+app.use('/api/public', publicLimiter);
+
+// 5c. Payments — high-value operations (20 req / 1 hour)
+app.use('/api/payments', paymentLimiter);
+
+// 5d. Sensitive writes — trainer applications (30 req / 10 min)
+app.use('/api/trainer-applications', writeLimiter);
+
+// 5e. Global catch-all (300 req / 5 min) — SSE stream excluded
 app.use((req, res, next) => {
-  if (!IS_PROD) return next();
-  if (req.path.startsWith('/api/auth')) return next();
   if (req.path.startsWith('/api/notifications/stream')) return next();
   globalLimiter(req, res, next);
 });
@@ -97,9 +117,17 @@ app.use(sanitize);
 app.use(hpp());
 
 // ── 8. Health / Readiness Checks ─────────────────────────────
-// /health  → for Nginx upstream checks & monitoring dashboards
-// /ready   → for orchestrators (PM2, k8s) — returns 503 during shutdown
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
+  let redisStatus = IS_PROD ? 'unreachable' : 'skipped';
+  if (IS_PROD) {
+    try {
+      await redis.ping();
+      redisStatus = 'connected';
+    } catch {
+      redisStatus = 'unreachable';
+    }
+  }
+
   res.status(200).json({
     success:     true,
     status:      'healthy',
@@ -107,6 +135,7 @@ app.get('/health', (_req, res) => {
     environment: process.env.NODE_ENV || 'development',
     uptime:      Math.floor(process.uptime()),
     memory:      process.memoryUsage(),
+    redis:       redisStatus,
   });
 });
 
@@ -134,10 +163,10 @@ app.use('/api/notifications',        notificationRoutes);
 // ── 10. Serve Frontend (production) ───────────────────────────
 if (IS_PROD) {
   app.use(express.static(path.join(__dirname, '../frontend/dist'), {
-    maxAge: '7d',         // Let Nginx / CDN cache static assets
+    maxAge: '7d',
     etag:   true,
   }));
-  app.get('*', (_req, res) => {
+  app.get('/{*path}', (_req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
   });
 }
@@ -145,9 +174,7 @@ if (IS_PROD) {
 // ── 11. 404 (dev only) ────────────────────────────────────────
 if (!IS_PROD) {
   app.use((req, res) => {
-    res.status(404).json({
-      error: `Route ${req.method} ${req.originalUrl} not found`,
-    });
+    res.status(404).json({ error: `Route ${req.method} ${req.originalUrl} not found` });
   });
 }
 
@@ -180,23 +207,14 @@ const server = app.listen(PORT, () => {
 });
 
 // ── 14. Graceful Shutdown ─────────────────────────────────────
-// How it works:
-//   1. Signal received (SIGTERM from PM2/systemd, SIGINT from Ctrl-C)
-//   2. Mark server as shutting down → new requests get 503
-//   3. Stop accepting new TCP connections
-//   4. Wait up to SHUTDOWN_TIMEOUT for in-flight requests to finish
-//   5. Close DB / other resources
-//   6. Exit cleanly (code 0) or forcefully (code 1) on timeout
-
 const SHUTDOWN_TIMEOUT = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '10000', 10);
 
 async function gracefulShutdown(signal) {
-  if (isShuttingDown) return; // prevent double-trigger
+  if (isShuttingDown) return;
   isShuttingDown = true;
 
   console.log(`\n[shutdown] Received ${signal}. Starting graceful shutdown…`);
 
-  // 1. Stop accepting new connections
   server.close(async (err) => {
     if (err) {
       console.error('[shutdown] Error closing HTTP server:', err);
@@ -205,42 +223,33 @@ async function gracefulShutdown(signal) {
     }
 
     try {
-      // 2. Close your DB connection here, e.g.:
-      //    await db.disconnect();         // Mongoose
-      //    await prisma.$disconnect();    // Prisma
-      //    await pool.end();              // pg / mysql2
-      console.log('[shutdown] Database connections closed.');
-    } catch (dbErr) {
-      console.error('[shutdown] Error closing DB connections:', dbErr);
+      // Uncomment whichever applies to your DB:
+      // await prisma.$disconnect();   // Prisma
+      // await pool.end();             // pg / mysql2
+      // await db.disconnect();        // Mongoose
+      if (IS_PROD) await redis.quit();
+      console.log('[shutdown] Connections closed.');
+    } catch (closeErr) {
+      console.error('[shutdown] Error closing connections:', closeErr);
     }
 
     console.log('[shutdown] Clean exit. Goodbye 👋');
     process.exit(err ? 1 : 0);
   });
 
-  // Force-exit if connections are still open after timeout
   setTimeout(() => {
     console.error(`[shutdown] Timeout (${SHUTDOWN_TIMEOUT}ms) exceeded — forcing exit.`);
     process.exit(1);
-  }, SHUTDOWN_TIMEOUT).unref(); // .unref() so this timer doesn't keep the loop alive on its own
+  }, SHUTDOWN_TIMEOUT).unref();
 }
 
-// Handle keep-alive connections so server.close() can finish promptly
-server.on('connection', (socket) => {
-  socket.on('close', () => {}); // no-op, just ensure Node tracks the socket
-});
-
-// Keep-alive header trick: tell clients to close connections when shutting down
 server.on('request', (req, res) => {
-  if (isShuttingDown) {
-    res.setHeader('Connection', 'close');
-  }
+  if (isShuttingDown) res.setHeader('Connection', 'close');
 });
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM')); // PM2 / systemd stop
-process.on('SIGINT',  () => gracefulShutdown('SIGINT'));  // Ctrl-C in terminal
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
-// Catch unhandled promise rejections — log and exit so the process manager restarts cleanly
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[unhandledRejection]', { reason, promise });
   gracefulShutdown('unhandledRejection');
