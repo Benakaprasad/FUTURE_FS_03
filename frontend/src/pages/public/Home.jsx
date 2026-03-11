@@ -274,17 +274,17 @@ function SplitWord({ word, progress, delay = 0, color }) {
 
 function SessionCard({ session, isActive }) {
   const cardRef = useRef(null);
-  const [tilt, setTilt]         = useState({ x: 0, y: 0 });
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
 
   const handleMouseMove = (e) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
-    const cx = rect.left + rect.width  / 2;
-    const cy = rect.top  + rect.height / 2;
-    const dx = (e.clientX - cx) / (rect.width  / 2);
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = (e.clientX - cx) / (rect.width / 2);
     const dy = (e.clientY - cy) / (rect.height / 2);
-    setTilt({ x: -dy * 10, y: dx * 10 });
+    setTilt({ x: -dy * 6, y: dx * 6 });
   };
   const handleMouseEnter = () => setIsHovered(true);
   const handleMouseLeave = () => { setIsHovered(false); setTilt({ x: 0, y: 0 }); };
@@ -296,141 +296,174 @@ function SessionCard({ session, isActive }) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
-        background: isActive
-          ? "linear-gradient(160deg, rgba(28,28,28,0.95) 0%, rgba(8,8,8,0.98) 100%)"
-          : "linear-gradient(160deg, rgba(18,18,18,0.92) 0%, rgba(4,4,4,0.96) 100%)",
-        border: `1px solid ${isActive ? session.color + "70" : "rgba(255,255,255,0.06)"}`,
-        borderRadius: "20px",
-        overflow: "hidden",
-        boxShadow: isActive
-          ? `0 32px 80px rgba(0,0,0,0.8), 0 0 50px ${session.color}22, inset 0 1px 0 rgba(255,255,255,0.07)`
-          : isHovered
-          ? `0 20px 60px rgba(0,0,0,0.7), 0 0 25px ${session.color}12`
-          : "0 12px 40px rgba(0,0,0,0.55)",
-        transition: isHovered
-          ? "box-shadow 0.2s, border-color 0.2s"
-          : "all 0.45s cubic-bezier(0.4,0,0.2,1)",
-        position: "relative",
-        transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${isHovered ? 1.025 : 1})`,
-        transformStyle: "preserve-3d",
-        willChange: "transform",
-      }}
+      position: "relative",
+      width: "100%",
+      height: "380px",
+      cursor: "pointer",
+      transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+      transition: isHovered ? "transform 0.15s ease" : "transform 0.45s cubic-bezier(0.4,0,0.2,1)",
+      willChange: "transform",
+    }}
     >
-      {/* Shimmer highlight */}
-      <div style={{
-        position: "absolute", inset: 0, zIndex: 10,
-        pointerEvents: "none", borderRadius: "20px",
-        background: isHovered
-          ? `radial-gradient(circle at ${50 + tilt.y * 3}% ${50 - tilt.x * 3}%, rgba(255,255,255,0.07) 0%, transparent 62%)`
-          : "none",
-        transition: "background 0.1s",
-      }} />
-
-      {/* Top accent bar */}
-      <div style={{
-        height: "3px",
-        background: `linear-gradient(90deg, ${session.color}, ${session.color}44, transparent)`,
-        opacity: isActive ? 1 : isHovered ? 0.7 : 0.35,
-        transition: "opacity 0.35s",
-      }} />
-
-      {/* Image */}
-      <div style={{ width: "100%", height: "200px", position: "relative", overflow: "hidden" }}>
-        <img
-          src={session.image} alt={session.title}
-          style={{
-            width: "100%", height: "100%", objectFit: "cover",
-            transform: isActive ? "scale(1.08)" : isHovered ? "scale(1.04)" : "scale(1)",
-            transition: "transform 0.65s cubic-bezier(0.4,0,0.2,1)",
-          }}
-        />
-        {/* Gradient overlay */}
-        <div style={{
+      {/* ── Background Image — always visible ── */}
+      <img
+        src={session.image}
+        alt={session.title}
+        style={{
           position: "absolute", inset: 0,
-          background: "linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.92) 100%)",
-        }} />
-        {/* Color wash on active */}
-        {isActive && (
-          <div style={{
-            position: "absolute", inset: 0,
-            background: `linear-gradient(135deg, ${session.color}18, transparent 60%)`,
-          }} />
-        )}
-        {/* Tag pill */}
-        <div style={{
-          position: "absolute", bottom: "12px", left: "14px",
-          fontSize: "9px", fontWeight: 800, letterSpacing: "1.5px",
-          textTransform: "uppercase", color: session.color,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(12px)",
-          border: `1px solid ${session.color}55`,
-          padding: "4px 11px", borderRadius: "100px",
-          boxShadow: isActive ? `0 0 12px ${session.color}40` : "none",
-          transition: "box-shadow 0.3s",
-        }}>{session.tag}</div>
-      </div>
+          width: "100%", height: "100%",
+          objectFit: "cover",
+          transform: isHovered ? "scale(1.08)" : "scale(1.0)",
+          transition: "transform 0.6s cubic-bezier(0.4,0,0.2,1)",
+          willChange: "transform",
+        }}
+      />
 
-      {/* Body */}
-      <div style={{ padding: "1.4rem 1.5rem 1.6rem" }}>
+      {/* ── Base gradient — always dark at bottom ── */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: isHovered
+          ? "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.92) 100%)"
+          : "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.96) 100%)",
+        transition: "background 0.4s ease",
+      }} />
+
+      {/* ── Color tint overlay on hover ── */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `linear-gradient(135deg, ${session.color}22, transparent 60%)`,
+        opacity: isHovered ? 1 : 0,
+        transition: "opacity 0.4s ease",
+      }} />
+
+      {/* ── Top left — tag pill, always visible ── */}
+      <div style={{
+        position: "absolute", top: 16, left: 16,
+        fontSize: "9px", fontWeight: 800,
+        letterSpacing: "2px", textTransform: "uppercase",
+        color: session.color,
+        background: "rgba(0,0,0,0.55)",
+        backdropFilter: "blur(12px)",
+        border: `1px solid ${session.color}55`,
+        padding: "5px 12px", borderRadius: "100px",
+        boxShadow: isHovered ? `0 0 14px ${session.color}40` : "none",
+        transition: "box-shadow 0.3s",
+        zIndex: 3,
+      }}>{session.tag}</div>
+
+      {/* ── Top right — arrow icon, appears on hover ── */}
+      <div style={{
+        position: "absolute", top: 14, right: 14,
+        width: "34px", height: "34px", borderRadius: "50%",
+        background: isHovered ? session.color : "rgba(255,255,255,0.08)",
+        border: `1px solid ${isHovered ? session.color : "rgba(255,255,255,0.15)"}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: "14px", color: "#fff",
+        transform: isHovered ? "rotate(-45deg) scale(1.1)" : "rotate(0deg) scale(1)",
+        transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
+        boxShadow: isHovered ? `0 0 20px ${session.color}60` : "none",
+        zIndex: 3,
+      }}>→</div>
+
+      {/* ── Bottom content — slides up on hover ── */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        padding: "1.5rem",
+        transform: isHovered ? "translateY(0)" : "translateY(12px)",
+        transition: "transform 0.4s cubic-bezier(0.4,0,0.2,1)",
+        zIndex: 3,
+      }}>
+
+        {/* Accent line */}
+        <div style={{
+          width: isHovered ? "40px" : "20px",
+          height: "2px",
+          background: session.color,
+          borderRadius: "2px",
+          marginBottom: "10px",
+          transition: "width 0.4s ease",
+          boxShadow: `0 0 8px ${session.color}80`,
+        }} />
+
+        {/* Title — always visible */}
         <h3 style={{
-          fontSize: "1.1rem", fontWeight: 800, letterSpacing: "0.5px",
-          color: "#fff", marginBottom: "0.45rem", lineHeight: 1.1,
-          textTransform: "uppercase",
-          textShadow: isActive ? `0 0 30px ${session.color}50` : "none",
-          transition: "text-shadow 0.4s",
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "1.55rem",
+          fontWeight: 400,
+          letterSpacing: "2px",
+          color: "#fff",
+          lineHeight: 1.05,
+          marginBottom: isHovered ? "0.6rem" : "0",
+          textShadow: "0 2px 12px rgba(0,0,0,0.8)",
+          transition: "margin 0.3s ease",
         }}>{session.title}</h3>
 
-        <p style={{
-          color: "rgba(255,255,255,0.48)",
-          fontSize: "0.82rem", lineHeight: 1.75, marginBottom: "1.1rem",
-        }}>{session.desc}</p>
-
-        {/* Footer row */}
+        {/* Description — slides in on hover */}
         <div style={{
-          display: "flex", alignItems: "center",
-          justifyContent: "space-between",
-          paddingTop: "0.9rem",
-          borderTop: "1px solid rgba(255,255,255,0.05)",
+          overflow: "hidden",
+          maxHeight: isHovered ? "80px" : "0px",
+          opacity: isHovered ? 1 : 0,
+          transition: "max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease",
         }}>
-          <span style={{
-            fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px",
-            color: isActive ? session.color : "rgba(255,255,255,0.2)",
-            textTransform: "uppercase", transition: "color 0.3s",
-          }}>Learn more</span>
+          <p style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: "0.8rem",
+            lineHeight: 1.7,
+            color: "rgba(255,255,255,0.72)",
+            marginBottom: "1rem",
+          }}>{session.desc}</p>
 
+          {/* Bottom row */}
           <div style={{
-            width: "32px", height: "32px", borderRadius: "50%",
-            background: isActive
-              ? `linear-gradient(135deg, ${session.color}, ${session.color}bb)`
-              : `${session.color}12`,
-            border: `1px solid ${session.color}45`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "13px", fontWeight: 700,
-            color: isActive ? "#fff" : session.color,
-            boxShadow: isActive ? `0 0 20px ${session.color}55` : "none",
-            transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
-            transform: isHovered ? "translateX(3px)" : "none",
-          }}>→</div>
+            display: "flex", alignItems: "center",
+            justifyContent: "space-between",
+          }}>
+            <span style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: "10px", fontWeight: 800,
+              letterSpacing: "2px", color: session.color,
+              textTransform: "uppercase",
+            }}>Learn More</span>
+
+            <div style={{
+              display: "flex", gap: "4px",
+            }}>
+              {[...Array(3)].map((_, i) => (
+                <div key={i} style={{
+                  width: "4px", height: "4px", borderRadius: "50%",
+                  background: i === 0 ? session.color : "rgba(255,255,255,0.2)",
+                }} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Bottom glow line */}
-      {isActive && (
-        <div style={{
-          position: "absolute", bottom: 0, left: "15%", right: "15%", height: "1px",
-          background: `linear-gradient(90deg, transparent, ${session.color}, transparent)`,
-          boxShadow: `0 0 24px 6px ${session.color}45`,
-        }} />
-      )}
+      {/* ── Bottom accent glow line ── */}
+      <div style={{
+        position: "absolute", bottom: 0, left: "10%", right: "10%", height: "1px",
+        background: `linear-gradient(90deg, transparent, ${session.color}, transparent)`,
+        boxShadow: `0 0 20px 4px ${session.color}50`,
+        opacity: isHovered ? 1 : 0,
+        transition: "opacity 0.4s ease",
+      }} />
+
+      {/* ── Shimmer on hover ── */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `radial-gradient(circle at ${50 + tilt.y * 5}% ${50 - tilt.x * 5}%, rgba(255,255,255,0.06) 0%, transparent 65%)`,
+        opacity: isHovered ? 1 : 0,
+        transition: "opacity 0.2s",
+        pointerEvents: "none",
+        zIndex: 2,
+      }} />
     </div>
   );
 }
 
-
 function SessionsCarousel({ progress, hasEntered }) {
   const animRef      = useRef(null);
   const offsetRef    = useRef(TOTAL_WIDTH);
-  const [, setTick]  = useState(0);
   const [isPaused, setIsPaused]   = useState(false);
   const [activeIdx, setActiveIdx] = useState(null);
   const speedRef     = useRef(0.55);
@@ -439,6 +472,7 @@ function SessionsCarousel({ progress, hasEntered }) {
   const [slamDone, setSlamDone]   = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const hoveredIdxRef = useRef(null);
+  const trackRef = useRef(null);
 
   useEffect(() => {
     if (hasEntered && !slamDone) {
@@ -457,7 +491,10 @@ function SessionsCarousel({ progress, hasEntered }) {
     if (!isPaused) {
       offsetRef.current += speedRef.current;
       if (offsetRef.current >= TOTAL_WIDTH * 2) offsetRef.current -= TOTAL_WIDTH;
-      setTick(t => t + 1);
+      if (trackRef.current) {
+  const tx = hasEntered && !slamDone ? 140 : 0;
+  trackRef.current.style.transform = `translateX(${-offsetRef.current + tx}px) translateY(-50%)`;
+}
     }
     animRef.current = requestAnimationFrame(animate);
   }, [isPaused]);
@@ -486,17 +523,21 @@ function SessionsCarousel({ progress, hasEntered }) {
     const dist     = (screenX + CARD_WIDTH / 2 - center) / (containerWidth / 2);
     const clamped  = Math.max(-1.3, Math.min(1.3, dist));
     const depth    = clamped * clamped;
-    const scale    = 0.72 + depth * 0.34;
+    const scale = 0.82 + depth * 0.22;
     const blurAmt  = (1 - depth) * 1.8;
     const brightness = 0.32 + depth * 0.78;
-    const rotY     = -clamped * 20;
-    const ty       = depth * -22;
+    const rotY = -clamped * 12;
+    const ty = depth * -14;
     const isActive = activeIdx === idx || hoveredIdxRef.current === idx;
+    const lockedBrightness = isActive ? 1.4 : brightness;
+    const lockedBlur       = isActive ? 0   : blurAmt;
     return {
       transform: `perspective(1000px) translateY(${ty}px) rotateY(${rotY}deg) scale(${isActive ? scale * 1.04 : scale})`,
-      filter: `brightness(${isActive ? 1.4 : brightness}) blur(${isActive ? 0 : blurAmt}px)`,
+      filter: `brightness(${lockedBrightness}) blur(${lockedBlur}px)`,
       zIndex: Math.round(depth * 10),
-      transition: isActive ? "filter 0.2s, transform 0.2s" : "filter 0.12s, transform 0.04s",
+      transition: isActive
+  ? "filter 0.35s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)"
+  : "filter 0.35s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)",
       willChange: "transform, filter",
     };
   };
@@ -531,8 +572,7 @@ function SessionsCarousel({ progress, hasEntered }) {
           perspective: "1000px", perspectiveOrigin: "50% 44%",
           cursor: dragStart != null ? "grabbing" : "grab",
         }}
-        onMouseEnter={() => { setActiveIdx(i); hoveredIdxRef.current = i; }}
-        onMouseLeave={() => { setActiveIdx(null); hoveredIdxRef.current = null; }}
+        onMouseLeave={() => { setIsPaused(false); setActiveIdx(null); hoveredIdxRef.current = null; setDragStart(null); }}
         onMouseDown={onDragStart}
         onMouseMove={onDragMove}
         onMouseUp={onDragEnd}
@@ -540,7 +580,9 @@ function SessionsCarousel({ progress, hasEntered }) {
         onTouchMove={onDragMove}
         onTouchEnd={onDragEnd}
       >
-        <div style={{
+        <div
+        ref={trackRef}
+        style={{
           position: "absolute", top: "50%", left: 0,
           display: "flex", gap: `${CARD_GAP}px`,
           transform: `translateX(${-offsetRef.current + slamTX}px) translateY(-50%)`,
@@ -550,22 +592,25 @@ function SessionsCarousel({ progress, hasEntered }) {
             : "none",
           willChange: "transform",
           userSelect: "none",
-        }}>
+        }}
+      >
           {ITEMS.map((session, i) => {
             const cardLeft = i * CARD_STEP - offsetRef.current;
             return (
-              <div
-                key={i}
-                onMouseEnter={() => setActiveIdx(i)}
-                onMouseLeave={() => setActiveIdx(null)}
-                style={{
-                  width: `${CARD_WIDTH}px`, flexShrink: 0,
-                  cursor: "pointer",
-                  ...getCardStyle(cardLeft, i),
-                }}
-              >
-                <SessionCard session={session} isActive={activeIdx === i} />
-              </div>
+            <div
+            key={i}
+            onMouseEnter={() => { setActiveIdx(i); hoveredIdxRef.current = i; }}
+            onMouseLeave={() => { setActiveIdx(null); hoveredIdxRef.current = null; }}
+            style={{
+              width: `${CARD_WIDTH}px`, flexShrink: 0,
+              cursor: "pointer",
+              ...getCardStyle(i * CARD_STEP - offsetRef.current, i),
+              borderRadius: "20px",       // ← lock it here on the wrapper
+              overflow: "hidden",         // ← clip to the radius
+            }}
+          >
+            <SessionCard session={session} isActive={activeIdx === i} />
+          </div>
             );
           })}
         </div>
@@ -1759,6 +1804,537 @@ function GoalSelector({ onBack }) {
   );
 }
 
+function ContactField({ label, type, placeholder, value, onChange, required }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <label style={{
+        fontSize: "10px", fontWeight: 800, letterSpacing: "2px",
+        color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif",
+        textTransform: "uppercase",
+      }}>{label}</label>
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        required={required}
+        style={{
+          background: focused ? "rgba(255,26,26,0.04)" : "rgba(255,255,255,0.03)",
+          border: `1px solid ${focused ? "rgba(255,26,26,0.45)" : "rgba(255,255,255,0.08)"}`,
+          borderRadius: "10px", padding: "13px 16px",
+          color: "#fff", fontSize: "0.9rem",
+          fontFamily: "'DM Sans', sans-serif",
+          outline: "none", width: "100%",
+          transition: "all 0.2s",
+          boxShadow: focused ? "0 0 0 3px rgba(255,26,26,0.08)" : "none",
+        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+      />
+    </div>
+  );
+}
+
+function ContactInfoRow({ item, index }) {
+  const [ref, inView] = useInView(0.1);
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      ref={ref}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "flex", gap: "1.25rem", alignItems: "flex-start",
+        padding: "1.5rem 0",
+        borderBottom: index < 3 ? "1px solid rgba(255,255,255,0.04)" : "none",
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateX(0)" : "translateX(30px)",
+        transition: `opacity 0.6s ease ${index * 0.08}s, transform 0.6s ease ${index * 0.08}s`,
+      }}
+    >
+      <div style={{
+        width: "38px", height: "38px", flexShrink: 0,
+        borderRadius: "10px",
+        background: hovered ? "rgba(255,26,26,0.12)" : "rgba(255,255,255,0.04)",
+        border: `1px solid ${hovered ? "rgba(255,26,26,0.3)" : "rgba(255,255,255,0.07)"}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: hovered ? "#FF1A1A" : "rgba(255,255,255,0.4)",
+        transition: "all 0.25s ease",
+        marginTop: "2px",
+      }}>{item.icon}</div>
+      <div>
+        <p style={{
+          fontSize: "9px", fontWeight: 800, letterSpacing: "3px",
+          color: "#FF1A1A", fontFamily: "'DM Sans', sans-serif",
+          marginBottom: "5px", textTransform: "uppercase",
+        }}>{item.label}</p>
+        <p style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "0.875rem", color: "rgba(255,255,255,0.6)",
+          lineHeight: 1.6, whiteSpace: "pre-line",
+        }}>{item.value}</p>
+      </div>
+    </div>
+  );
+}
+
+function PlanCard({ plan, index, total }) {
+  const [hovered, setHovered] = useState(false);
+  const [ref, inView] = useInView(0.1);
+
+  return (
+    <div
+      ref={ref}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        flex: 1,
+        position: "relative",
+        padding: "2.5rem 1.75rem",
+        background: plan.highlight
+          ? `linear-gradient(180deg, ${plan.color}12 0%, rgba(0,0,0,0.95) 100%)`
+          : hovered
+          ? "rgba(255,255,255,0.03)"
+          : "#000",
+        display: "flex", flexDirection: "column",
+        cursor: "pointer",
+        transition: "background 0.3s ease",
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateY(0)" : "translateY(30px)",
+        transitionProperty: "background, opacity, transform",
+        transitionDuration: "0.3s, 0.6s, 0.6s",
+        transitionDelay: `0s, ${index * 0.07}s, ${index * 0.07}s`,
+      }}
+    >
+      {/* Top accent line */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: "2px",
+        background: plan.highlight
+          ? `linear-gradient(90deg, transparent, ${plan.color}, transparent)`
+          : hovered
+          ? `linear-gradient(90deg, transparent, ${plan.color}88, transparent)`
+          : "transparent",
+        transition: "background 0.3s ease",
+        boxShadow: plan.highlight ? `0 0 20px ${plan.color}60` : "none",
+      }} />
+
+      {/* Most popular badge */}
+      {plan.highlight && (
+        <div style={{
+          position: "absolute", top: "-1px", left: "50%",
+          transform: "translateX(-50%)",
+          padding: "4px 14px",
+          background: plan.color,
+          borderRadius: "0 0 8px 8px",
+          fontSize: "9px", fontWeight: 800,
+          letterSpacing: "2px", color: "#fff",
+          fontFamily: "'DM Sans', sans-serif",
+          boxShadow: `0 4px 16px ${plan.color}50`,
+          whiteSpace: "nowrap",
+        }}>MOST POPULAR</div>
+      )}
+
+      {/* Plan name */}
+      <div style={{ marginBottom: "1.5rem", paddingTop: plan.highlight ? "1rem" : "0" }}>
+        <p style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "9px", fontWeight: 800,
+          letterSpacing: "3px", color: plan.color,
+          marginBottom: "6px", textTransform: "uppercase",
+        }}>{plan.note}</p>
+        <h3 style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "1.6rem", letterSpacing: "2px",
+          color: "#fff", lineHeight: 1,
+        }}>{plan.name}</h3>
+      </div>
+
+      {/* Price */}
+      <div style={{
+        display: "flex", alignItems: "flex-start",
+        gap: "3px", marginBottom: "2rem",
+      }}>
+        <span style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "clamp(2.2rem, 3vw, 3rem)",
+          color: hovered || plan.highlight ? "#fff" : "rgba(255,255,255,0.8)",
+          letterSpacing: "-2px", lineHeight: 1,
+          transition: "color 0.3s",
+        }}>{plan.price}</span>
+        <span style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "11px", color: "rgba(255,255,255,0.3)",
+          marginTop: "6px", lineHeight: 1.3,
+        }}>{plan.period}</span>
+      </div>
+
+      {/* Divider */}
+      <div style={{
+        height: "1px",
+        background: hovered || plan.highlight
+          ? `linear-gradient(90deg, ${plan.color}44, transparent)`
+          : "rgba(255,255,255,0.06)",
+        marginBottom: "1.5rem",
+        transition: "background 0.3s",
+      }} />
+
+      {/* Features */}
+      <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "10px", flex: 1, marginBottom: "2rem" }}>
+        {plan.features.map((f, fi) => (
+          <li key={fi} style={{
+            display: "flex", alignItems: "flex-start", gap: "10px",
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: "0.82rem", color: "rgba(255,255,255,0.55)",
+            lineHeight: 1.4,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: "1px" }}>
+              <path d="M20 6L9 17l-5-5" stroke={plan.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {f}
+          </li>
+        ))}
+      </ul>
+
+      {/* CTA */}
+      <a href="/register" style={{
+        display: "block", width: "100%",
+        padding: "12px",
+        textAlign: "center",
+        textDecoration: "none",
+        fontFamily: "'DM Sans', sans-serif",
+        fontWeight: 800, fontSize: "12px",
+        letterSpacing: "1.5px",
+        borderRadius: "8px",
+        color: plan.highlight ? "#fff" : hovered ? "#fff" : plan.color,
+        background: plan.highlight
+          ? `linear-gradient(135deg, ${plan.color}, ${plan.color}cc)`
+          : hovered
+          ? `${plan.color}18`
+          : "transparent",
+        border: plan.highlight ? "none" : `1px solid ${plan.color}44`,
+        boxShadow: plan.highlight ? `0 6px 24px ${plan.color}40` : "none",
+        transition: "all 0.25s ease",
+      }}>
+        {plan.highlight ? "GET STARTED →" : "CHOOSE PLAN"}
+      </a>
+
+      {/* Right border divider — except last */}
+      {index < total - 1 && (
+        <div style={{
+          position: "absolute", top: "10%", bottom: "10%", right: 0, width: "1px",
+          background: "rgba(255,255,255,0.05)",
+        }} />
+      )}
+    </div>
+  );
+}
+
+function AboutFact({ item, index }) {
+  const [ref, inView] = useInView(0.2);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      ref={ref}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "flex", gap: "1.5rem", alignItems: "flex-start",
+        padding: "1.75rem 0",
+        borderBottom: index < 3 ? "1px solid rgba(255,255,255,0.05)" : "none",
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateX(0)" : "translateX(40px)",
+        transition: `opacity 0.6s ease ${index * 0.1}s, transform 0.6s ease ${index * 0.1}s`,
+        cursor: "default",
+      }}
+    >
+      {/* Number */}
+      <span style={{
+        fontFamily: "'Bebas Neue', sans-serif",
+        fontSize: "3.5rem", lineHeight: 1,
+        color: hovered ? "#FF1A1A" : "rgba(255,26,26,0.15)",
+        letterSpacing: "-2px", flexShrink: 0,
+        transition: "color 0.3s ease",
+        textShadow: hovered ? "0 0 30px rgba(255,26,26,0.4)" : "none",
+      }}>{item.num}</span>
+
+      <div style={{ paddingTop: "6px" }}>
+        <h4 style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "1.1rem", letterSpacing: "3px",
+          color: hovered ? "#fff" : "rgba(255,255,255,0.7)",
+          marginBottom: "6px", lineHeight: 1,
+          transition: "color 0.3s ease",
+        }}>{item.title}</h4>
+        <p style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "0.85rem", lineHeight: 1.7,
+          color: "rgba(255,255,255,0.4)",
+        }}>{item.desc}</p>
+
+        {/* Animated underline */}
+        <div style={{
+          height: "1px", marginTop: "10px",
+          background: "#FF1A1A",
+          width: hovered ? "40px" : "0px",
+          transition: "width 0.35s ease",
+          boxShadow: "0 0 8px rgba(255,26,26,0.6)",
+        }} />
+      </div>
+    </div>
+  );
+}
+
+function TrainerCard({ trainer, index }) {
+  const [hovered, setHovered] = useState(false);
+  const [tilt, setTilt]       = useState({ x: 0, y: 0 });
+  const cardRef               = useRef(null);
+
+  const onMouseMove = (e) => {
+    if (!cardRef.current) return;
+    const r  = cardRef.current.getBoundingClientRect();
+    const dx = (e.clientX - r.left) / r.width  - 0.5;
+    const dy = (e.clientY - r.top)  / r.height - 0.5;
+    setTilt({ x: -dy * 8, y: dx * 8 });
+  };
+
+  return (
+    <ScrollCard direction={index % 2 === 0 ? "left" : "right"} delay={index * 0.08}>
+      <div
+        ref={cardRef}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => { setHovered(false); setTilt({ x: 0, y: 0 }); }}
+        onMouseMove={onMouseMove}
+        style={{
+          position: "relative",
+          borderRadius: "20px",
+          cursor: "pointer",
+          isolation: "isolate",
+          transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(${hovered ? "-6px" : "0px"}) translateZ(0)`,
+          transition: hovered
+            ? "transform 0.15s ease"
+            : "transform 0.5s cubic-bezier(0.4,0,0.2,1)",
+          boxShadow: hovered
+            ? `0 32px 64px rgba(0,0,0,0.7), 0 0 40px ${trainer.color}25`
+            : "0 8px 32px rgba(0,0,0,0.5)",
+          willChange: "transform",
+        }}
+      >
+        {/* ── Image block — top corners only ── */}
+        <div style={{
+          position: "relative",
+          height: "320px",
+          borderRadius: "20px 20px 0 0",
+          overflow: "hidden",
+          transform: "translateZ(0)",
+          backgroundColor: "#111",
+        }}>
+          <img
+            src={trainer.image}
+            alt={trainer.name}
+            style={{
+              width: "100%", height: "100%",
+              objectFit: "cover", objectPosition: "top",
+              transform: hovered ? "scale(1.06)" : "scale(1.0)",
+              transition: "transform 0.6s cubic-bezier(0.4,0,0.2,1)",
+              display: "block",
+            }}
+            onError={e => { e.target.style.display = "none"; }}
+          />
+
+          {/* Dark gradient */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: hovered
+              ? "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.97) 100%)"
+              : "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0.98) 100%)",
+            transition: "background 0.4s ease",
+          }} />
+
+          {/* Color tint */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: `linear-gradient(160deg, ${trainer.color}18 0%, transparent 55%)`,
+            opacity: hovered ? 1 : 0.4,
+            transition: "opacity 0.4s ease",
+          }} />
+
+          {/* Exp badge — top right */}
+          <div style={{
+            position: "absolute", top: 14, right: 14,
+            padding: "5px 12px", borderRadius: "100px",
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(10px)",
+            border: `1px solid ${trainer.color}44`,
+            fontSize: "10px", fontWeight: 800,
+            letterSpacing: "1.5px", color: trainer.color,
+            fontFamily: "'DM Sans', sans-serif",
+            display: "flex", alignItems: "center", gap: "5px",
+          }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            {trainer.exp}
+          </div>
+
+          {/* Name block — bottom of image */}
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, right: 0,
+            padding: "1.25rem 1.4rem 0.85rem",
+          }}>
+            <div style={{
+              width: hovered ? "44px" : "22px",
+              height: "2px",
+              background: trainer.color,
+              borderRadius: "2px",
+              marginBottom: "8px",
+              transition: "width 0.4s ease",
+              boxShadow: `0 0 8px ${trainer.color}80`,
+            }} />
+            <h3 style={{
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: "2rem", letterSpacing: "2px",
+              color: "#fff", lineHeight: 1,
+              textShadow: "0 2px 16px rgba(0,0,0,0.9)",
+              marginBottom: "4px",
+            }}>{trainer.name}</h3>
+            <p style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: "10px", fontWeight: 800,
+              letterSpacing: "2.5px", textTransform: "uppercase",
+              color: trainer.color, lineHeight: 1,
+            }}>{trainer.role}</p>
+          </div>
+        </div>
+
+        {/* ── Info panel — bottom corners only ── */}
+        <div style={{
+          background: "linear-gradient(180deg, #0a0a0a 0%, #040404 100%)",
+          padding: "1.2rem 1.4rem 1.5rem",
+          borderTop: `1px solid ${trainer.color}18`,
+          borderRadius: "0 0 20px 20px",
+          overflow: "hidden",
+          transform: "translateZ(0)",
+        }}>
+
+          {/* Speciality row */}
+          <div style={{
+            display: "flex", alignItems: "flex-start",
+            gap: "10px", marginBottom: "0.85rem",
+          }}>
+            <div style={{
+              width: "30px", height: "30px", flexShrink: 0,
+              borderRadius: "8px",
+              background: `${trainer.color}14`,
+              border: `1px solid ${trainer.color}35`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: trainer.color,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+              </svg>
+            </div>
+            <div style={{ paddingTop: "1px" }}>
+              <p style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "9px", fontWeight: 800,
+                letterSpacing: "2px", color: "rgba(255,255,255,0.22)",
+                marginBottom: "3px", textTransform: "uppercase",
+              }}>Speciality</p>
+              <p style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "0.82rem", fontWeight: 600,
+                color: "rgba(255,255,255,0.78)", lineHeight: 1.4,
+              }}>{trainer.spec}</p>
+            </div>
+          </div>
+
+          {/* Cert row */}
+          <div style={{
+            display: "flex", alignItems: "center",
+            gap: "10px",
+            padding: "0.75rem 0 0",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+          }}>
+            <div style={{
+              width: "30px", height: "30px", flexShrink: 0,
+              borderRadius: "8px",
+              background: `${trainer.color}14`,
+              border: `1px solid ${trainer.color}35`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: trainer.color,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+              </svg>
+            </div>
+            <div style={{ paddingTop: "1px" }}>
+              <p style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "9px", fontWeight: 800,
+                letterSpacing: "2px", color: "rgba(255,255,255,0.22)",
+                marginBottom: "3px", textTransform: "uppercase",
+              }}>Certification</p>
+              <p style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "0.82rem", fontWeight: 600,
+                color: "rgba(255,255,255,0.78)",
+              }}>{trainer.cert}</p>
+            </div>
+          </div>
+
+          {/* CTA — slides in on hover */}
+          <div style={{
+            maxHeight: hovered ? "60px" : "0px",
+            opacity: hovered ? 1 : 0,
+            overflow: "hidden",
+            transition: "max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease",
+            marginTop: hovered ? "1rem" : "0",
+          }}>
+            <button style={{
+              width: "100%", padding: "11px",
+              background: `linear-gradient(135deg, ${trainer.color}, ${trainer.color}bb)`,
+              border: "none", borderRadius: "8px",
+              cursor: "pointer", color: "#fff",
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 800, fontSize: "12px",
+              letterSpacing: "1.5px",
+              boxShadow: `0 4px 20px ${trainer.color}35`,
+              display: "flex", alignItems: "center",
+              justifyContent: "center", gap: "8px",
+            }}>
+              BOOK A SESSION
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 17L17 7"/><path d="M7 7h10v10"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom glow line */}
+        <div style={{
+          position: "absolute", bottom: 0, left: "15%", right: "15%", height: "1px",
+          background: `linear-gradient(90deg, transparent, ${trainer.color}, transparent)`,
+          boxShadow: `0 0 16px 3px ${trainer.color}40`,
+          opacity: hovered ? 1 : 0,
+          transition: "opacity 0.4s ease",
+          pointerEvents: "none",
+        }} />
+
+        {/* Shimmer */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          background: `radial-gradient(circle at ${50 + tilt.y * 6}% ${50 - tilt.x * 6}%, rgba(255,255,255,0.04) 0%, transparent 60%)`,
+          opacity: hovered ? 1 : 0,
+          transition: "opacity 0.2s",
+          borderRadius: "20px",
+        }} />
+      </div>
+    </ScrollCard>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
  function EnergyShakeSection() {
   const [phase, setPhase]       = useState("invite");   // invite | typing | summary | goals
@@ -1926,6 +2502,111 @@ function GoalSelector({ onBack }) {
   );
 }
 
+function CustomCursor() {
+  const dotRef   = useRef(null);
+  const ringRef  = useRef(null);
+  const pos      = useRef({ x: -100, y: -100 });
+  const ringPos  = useRef({ x: -100, y: -100 });
+  const hovering = useRef(false);
+  const rafRef   = useRef(null);
+
+  useEffect(() => {
+    let lastCheck = 0;
+    const onMove = (e) => {
+      pos.current = { x: e.clientX, y: e.clientY };
+      const now = Date.now();
+      if (now - lastCheck > 40) {
+        lastCheck = now;
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        hovering.current = !!el?.closest('a, button, [role="button"], input, textarea, select, label');
+      }
+    };
+
+    const animate = () => {
+      // Dot snaps to cursor
+      if (dotRef.current) {
+        dotRef.current.style.left = `${pos.current.x}px`;
+        dotRef.current.style.top  = `${pos.current.y}px`;
+
+        if (hovering.current) {
+          // Dot expands into big circle
+          dotRef.current.style.width      = "56px";
+          dotRef.current.style.height     = "56px";
+          dotRef.current.style.background = "rgba(255,107,0,0.13)";
+          dotRef.current.style.border     = "1.5px solid #FF6B00";
+          dotRef.current.style.boxShadow  = "0 0 20px rgba(255,107,0,0.25)";
+        } else {
+          // Back to small dot
+          dotRef.current.style.width      = "7px";
+          dotRef.current.style.height     = "7px";
+          dotRef.current.style.background = "#fff";
+          dotRef.current.style.border     = "none";
+          dotRef.current.style.boxShadow  = "none";
+        }
+      }
+
+      // Ring lerps behind
+      ringPos.current.x += (pos.current.x - ringPos.current.x) * 0.28;
+      ringPos.current.y += (pos.current.y - ringPos.current.y) * 0.28;
+
+      if (ringRef.current) {
+        ringRef.current.style.left = `${ringPos.current.x}px`;
+        ringRef.current.style.top  = `${ringPos.current.y}px`;
+
+        if (hovering.current) {
+          // Ring vanishes completely
+          ringRef.current.style.opacity = "0";
+          ringRef.current.style.width   = "8px";
+          ringRef.current.style.height  = "8px";
+        } else {
+          // Ring visible and following
+          ringRef.current.style.opacity = "1";
+          ringRef.current.style.width   = "32px";
+          ringRef.current.style.height  = "32px";
+        }
+      }
+
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  return (
+    <>
+      {/* Dot — expands into big circle on hover */}
+      <div ref={dotRef} style={{
+        position: "fixed", zIndex: 99999,
+        left: "-100px", top: "-100px",
+        width: "7px", height: "7px",
+        borderRadius: "50%",
+        background: "#fff",
+        transform: "translate(-50%, -50%)",
+        pointerEvents: "none",
+        transition: "width 0.3s cubic-bezier(0.34,1.56,0.64,1), height 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.25s ease, border 0.25s ease, box-shadow 0.25s ease",
+      }} />
+
+      {/* Ring — vanishes on hover */}
+      <div ref={ringRef} style={{
+        position: "fixed", zIndex: 99998,
+        left: "-100px", top: "-100px",
+        width: "32px", height: "32px",
+        borderRadius: "50%",
+        border: "1px solid rgba(255,255,255,0.5)",
+        background: "transparent",
+        transform: "translate(-50%, -50%)",
+        pointerEvents: "none",
+        transition: "width 0.25s ease, height 0.25s ease, opacity 0.2s ease",
+      }} />
+    </>
+  );
+}
+
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1998,6 +2679,7 @@ useEffect(() => {
   return (
     <div style={s.root}>
       {/* ── Global styles ── */}
+      <CustomCursor /> 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2049,6 +2731,14 @@ useEffect(() => {
         }
 
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        p, h1, h2, h3, h4, h5, h6, span, a, li, div, section, nav, footer { cursor: default !important; }
+input, textarea { cursor: text !important; }
+
+        @keyframes cursorRing {
+          0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+        }
 
         .hero-phrase {
           animation: phraseIn 0.6s cubic-bezier(0.22,1,0.36,1) forwards;
@@ -2411,9 +3101,18 @@ useEffect(() => {
       {/* ════════════════════════════════════════════
     TRAINERS
 ════════════════════════════════════════════ */}
-<section id="trainers" style={{ ...s.section, background: "#050505" }}>
-  <div style={s.sectionInner}>
-    <div style={s.sectionHeader}>
+<section id="trainers" style={{ padding: "7rem 0", background: "#050505", position: "relative", overflow: "hidden" }}>
+
+  {/* Background grid */}
+  <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
+    backgroundImage: "linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px)",
+    backgroundSize: "48px 48px",
+  }} />
+
+  <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 2rem" }}>
+
+    {/* Header */}
+    <div style={{ textAlign: "center", marginBottom: "5rem" }}>
       <span style={s.sectionTag}>MEET THE TEAM</span>
       <h2 style={s.sectionTitle}>
         COACHED BY THE<br />
@@ -2424,279 +3123,726 @@ useEffect(() => {
       </p>
     </div>
 
-    <div style={s.trainersGrid}>
+    {/* Cards grid */}
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+      gap: "1.5rem",
+    }}>
       {TRAINERS.map((trainer, i) => (
-        <ScrollCard key={i} direction={i % 2 === 0 ? "left" : "right"} delay={i * 0.1}>
-          <div
-            className="trainer-card"
-            style={{
-              ...s.trainerCard,
-              "--trainer-color": trainer.color,
-              transition: "all 0.35s ease",
-            }}
-          >
-            <div style={{ ...s.trainerAccent, background: trainer.color }} />
-
-            {/* Trainer Image */}
-            <div style={s.trainerImgWrap}>
-              <img
-                src={trainer.image}
-                alt={trainer.name}
-                style={s.trainerImg}
-                onError={(e) => { e.target.style.display = "none"; }}
-              />
-            </div>
-
-            <h3 style={s.trainerName}>{trainer.name}</h3>
-            <p style={{ ...s.trainerRole, color: trainer.color }}>{trainer.role}</p>
-
-            <div style={s.trainerMeta}>
-              <span style={s.trainerBadge}>⏱ {trainer.exp}</span>
-              <span style={s.trainerBadge}>🎓 {trainer.cert}</span>
-            </div>
-
-            <p style={s.trainerSpec}>
-              <span style={{ color: trainer.color, fontWeight: 700 }}>Speciality: </span>
-              {trainer.spec}
-            </p>
-          </div>
-        </ScrollCard>
+        <TrainerCard key={i} trainer={trainer} index={i} />
       ))}
     </div>
   </div>
 </section>
 
       {/* ════════════════════════════════════════════
-          PLANS
-      ════════════════════════════════════════════ */}
-      <section id="plans" style={s.section}>
-        <div style={s.sectionInner}>
-          <div style={s.sectionHeader}>
-            <span style={s.sectionTag}>MEMBERSHIP</span>
-            <h2 style={s.sectionTitle}>
-              INVEST IN<br />
-              <span style={s.redText}>YOURSELF.</span>
-            </h2>
-            <p style={s.sectionSub}>
-              No hidden fees. No joining fee this month. Cancel anytime on monthly plan.
-            </p>
+    PLANS
+════════════════════════════════════════════ */}
+<section id="plans" style={{
+  padding: "7rem 0",
+  background: "#000",
+  position: "relative",
+  overflow: "hidden",
+}}>
+
+  {/* Background grid */}
+  <div style={{
+    position: "absolute", inset: 0, pointerEvents: "none",
+    backgroundImage: "linear-gradient(rgba(255,26,26,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,26,26,0.018) 1px,transparent 1px)",
+    backgroundSize: "56px 56px",
+  }} />
+
+  {/* Radial glow center */}
+  <div style={{
+    position: "absolute", inset: 0, pointerEvents: "none",
+    background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,26,26,0.05), transparent)",
+  }} />
+
+  <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 2rem", position: "relative", zIndex: 1 }}>
+
+    {/* Header */}
+    <div style={{ textAlign: "center", marginBottom: "5rem" }}>
+      <ScrollCard direction="left" delay={0}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", marginBottom: "1.5rem" }}>
+          <div style={{ width: "32px", height: "1px", background: "rgba(255,26,26,0.4)" }} />
+          <span style={{
+            fontSize: "10px", fontWeight: 800, letterSpacing: "5px",
+            color: "#FF1A1A", fontFamily: "'DM Sans', sans-serif",
+          }}>MEMBERSHIP</span>
+          <div style={{ width: "32px", height: "1px", background: "rgba(255,26,26,0.4)" }} />
+        </div>
+        <h2 style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "clamp(3rem, 6vw, 5.5rem)",
+          color: "#fff", letterSpacing: "2px", lineHeight: 0.9,
+          marginBottom: "1.25rem",
+        }}>
+          INVEST IN<br />
+          <span style={{
+            background: "linear-gradient(135deg, #FF1A1A, #FF6B00)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}>YOURSELF.</span>
+        </h2>
+        <p style={{
+          color: "rgba(255,255,255,0.35)", fontSize: "0.95rem",
+          maxWidth: "420px", margin: "0 auto", lineHeight: 1.7,
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          No hidden fees. No joining fee this month.<br />Cancel anytime on the monthly plan.
+        </p>
+      </ScrollCard>
+    </div>
+
+    {/* Plans row */}
+    <div style={{
+      display: "flex",
+      gap: "1px",
+      alignItems: "stretch",
+      background: "rgba(255,255,255,0.05)",
+      borderRadius: "20px",
+      overflow: "hidden",
+      boxShadow: "0 0 80px rgba(0,0,0,0.6)",
+    }}>
+      {PLANS.map((plan, i) => (
+        <PlanCard key={i} plan={plan} index={i} total={PLANS.length} />
+      ))}
+    </div>
+
+    {/* Addon note */}
+    <ScrollCard direction="left" delay={0.1}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        gap: "12px", marginTop: "2.5rem",
+      }}>
+        <div style={{ width: "40px", height: "1px", background: "rgba(255,255,255,0.08)" }} />
+        <p style={{
+          textAlign: "center", color: "rgba(255,255,255,0.3)",
+          fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif",
+        }}>
+          Personal Training add-on available at{" "}
+          <span style={{ color: "#FF1A1A", fontWeight: 700 }}>₹4,000/month</span>
+        </p>
+        <div style={{ width: "40px", height: "1px", background: "rgba(255,255,255,0.08)" }} />
+      </div>
+    </ScrollCard>
+  </div>
+</section>
+
+      {/* ════════════════════════════════════════════
+    ABOUT
+════════════════════════════════════════════ */}
+<section id="about" style={{
+  padding: "0",
+  background: "#050505",
+  position: "relative",
+  overflow: "hidden",
+}}>
+
+  {/* ── Diagonal red slash ── */}
+  <div style={{
+    position: "absolute",
+    top: 0, left: "-10%", right: "-10%",
+    height: "6px",
+    background: "linear-gradient(90deg, transparent, #FF1A1A 30%, #FF6B00 70%, transparent)",
+    boxShadow: "0 0 40px rgba(255,26,26,0.6)",
+    zIndex: 2,
+  }} />
+
+  {/* ── Background noise texture ── */}
+  <div style={{
+    position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+    opacity: 0.025,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+  }} />
+
+  {/* ── Large ghost year ── */}
+  <div style={{
+    position: "absolute", right: "-2rem", top: "50%",
+    transform: "translateY(-50%)",
+    fontFamily: "'Bebas Neue', sans-serif",
+    fontSize: "clamp(12rem, 22vw, 22rem)",
+    color: "rgba(255,26,26,0.028)",
+    letterSpacing: "-8px", lineHeight: 1,
+    userSelect: "none", pointerEvents: "none",
+    zIndex: 0,
+  }}>2018</div>
+
+  {/* ══ BLOCK 1 — MANIFESTO (full width, cinematic) ══ */}
+  <div style={{
+    position: "relative", zIndex: 1,
+    padding: "7rem 2rem 5rem",
+    maxWidth: "1400px", margin: "0 auto",
+  }}>
+    <ScrollCard direction="left" delay={0}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "2rem" }}>
+        <div style={{ width: "40px", height: "2px", background: "#FF1A1A", boxShadow: "0 0 8px rgba(255,26,26,0.6)" }} />
+        <span style={{
+          fontSize: "10px", fontWeight: 800, letterSpacing: "5px",
+          color: "#FF1A1A", fontFamily: "'DM Sans', sans-serif",
+        }}>EST. BENGALURU · 2018</span>
+      </div>
+    </ScrollCard>
+
+    <ScrollCard direction="left" delay={0.08}>
+      <h2 style={{
+        fontFamily: "'Bebas Neue', sans-serif",
+        fontSize: "clamp(3.5rem, 8vw, 8rem)",
+        letterSpacing: "-1px", lineHeight: 0.88,
+        color: "#fff", marginBottom: "2.5rem",
+        maxWidth: "900px",
+      }}>
+        NOT JUST A GYM.<br />
+        <span style={{
+          background: "linear-gradient(135deg, #FF1A1A 0%, #FF6B00 100%)",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}>A MOVEMENT.</span>
+      </h2>
+    </ScrollCard>
+
+    <ScrollCard direction="left" delay={0.14}>
+      <p style={{
+        fontFamily: "'DM Sans', sans-serif",
+        fontSize: "clamp(1rem, 1.4vw, 1.2rem)",
+        color: "rgba(255,255,255,0.45)",
+        lineHeight: 1.85, maxWidth: "580px",
+        borderLeft: "2px solid rgba(255,26,26,0.3)",
+        paddingLeft: "1.5rem",
+      }}>
+        FitZone was built on a single belief — that every person in Bengaluru 
+        deserves access to world-class training, regardless of where they're 
+        starting from. We don't sell memberships. We build athletes.
+      </p>
+    </ScrollCard>
+  </div>
+
+  {/* ══ BLOCK 2 — SPLIT LAYOUT ══ */}
+  <div style={{
+    position: "relative", zIndex: 1,
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    minHeight: "520px",
+  }}>
+
+    {/* Left — red-tinted image panel */}
+    <ScrollCard direction="left" delay={0}>
+      <div style={{
+        position: "relative",
+        height: "100%", minHeight: "520px",
+        overflow: "hidden",
+        background: "#0a0a0a",
+      }}>
+        {/* Placeholder for gym image */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(135deg, #1a0000 0%, #0d0000 50%, #050000 100%)",
+        }} />
+
+        {/* Grid lines on image side */}
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: "linear-gradient(rgba(255,26,26,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,26,26,0.06) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }} />
+
+        {/* Big stat overlay */}
+        <div style={{
+          position: "absolute", inset: 0,
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center",
+          gap: "0",
+        }}>
+          <span style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: "clamp(6rem, 12vw, 10rem)",
+            color: "#FF1A1A", lineHeight: 1,
+            letterSpacing: "-4px",
+            textShadow: "0 0 80px rgba(255,26,26,0.4)",
+          }}>2,400+</span>
+          <span style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: "11px", fontWeight: 800,
+            letterSpacing: "6px", color: "rgba(255,255,255,0.4)",
+            textTransform: "uppercase",
+          }}>Members Strong</span>
+
+          {/* Decorative ring */}
+          <div style={{
+            position: "absolute",
+            width: "320px", height: "320px",
+            borderRadius: "50%",
+            border: "1px solid rgba(255,26,26,0.08)",
+            boxShadow: "inset 0 0 80px rgba(255,26,26,0.04)",
+          }} />
+          <div style={{
+            position: "absolute",
+            width: "440px", height: "440px",
+            borderRadius: "50%",
+            border: "1px solid rgba(255,26,26,0.04)",
+          }} />
+        </div>
+
+        {/* Bottom label */}
+        <div style={{
+          position: "absolute", bottom: "2rem", left: "2rem",
+          display: "flex", alignItems: "center", gap: "10px",
+        }}>
+          <div style={{ width: "28px", height: "1px", background: "#FF1A1A" }} />
+          <span style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: "10px", fontWeight: 700,
+            letterSpacing: "3px", color: "rgba(255,255,255,0.25)",
+          }}>WHITEFIELD · BENGALURU</span>
+        </div>
+      </div>
+    </ScrollCard>
+
+    {/* Right — facts panel */}
+    <ScrollCard direction="right" delay={0.08}>
+      <div style={{
+        padding: "4rem 3.5rem",
+        background: "#000",
+        height: "100%",
+        display: "flex", flexDirection: "column", justifyContent: "center",
+        gap: "0",
+        borderLeft: "1px solid rgba(255,26,26,0.1)",
+      }}>
+
+        {/* Numbered facts */}
+        {[
+          {
+            num: "01",
+            title: "CERTIFIED COACHES",
+            desc: "Every trainer holds recognised certifications and brings real competition or clinical experience.",
+          },
+          {
+            num: "02",
+            title: "PREMIUM EQUIPMENT",
+            desc: "Hammer Strength racks, Concept2 rowers, Technogym cardio, and a full functional zone.",
+          },
+          {
+            num: "03",
+            title: "REAL COMMUNITY",
+            desc: "2,400+ members who show up for each other. Beginners and veterans train side by side.",
+          },
+          {
+            num: "04",
+            title: "TRACKED PROGRESS",
+            desc: "Monthly body composition scans, fitness assessments, and trainer check-ins — no guesswork.",
+          },
+        ].map((item, i) => (
+          <AboutFact key={i} item={item} index={i} />
+        ))}
+      </div>
+    </ScrollCard>
+  </div>
+
+  {/* ══ BLOCK 3 — HOURS + LOCATION BAR ══ */}
+  <ScrollCard direction="left" delay={0}>
+    <div style={{
+      position: "relative", zIndex: 1,
+      borderTop: "1px solid rgba(255,255,255,0.05)",
+      borderBottom: "1px solid rgba(255,255,255,0.05)",
+      display: "grid",
+      gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
+    }}>
+
+      {/* Hours weekday */}
+      <div style={{ padding: "2.5rem 3rem", display: "flex", flexDirection: "column", gap: "6px" }}>
+        <span style={{
+          fontSize: "9px", fontWeight: 800, letterSpacing: "3px",
+          color: "#FF1A1A", fontFamily: "'DM Sans', sans-serif",
+          marginBottom: "4px",
+        }}>MON – SAT</span>
+        <span style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "2.2rem", letterSpacing: "1px", color: "#fff", lineHeight: 1,
+        }}>5:00 AM</span>
+        <span style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "12px", color: "rgba(255,255,255,0.3)", letterSpacing: "1px",
+        }}>until 10:30 PM</span>
+      </div>
+
+      <div style={{ background: "rgba(255,255,255,0.05)" }} />
+
+      {/* Hours sunday */}
+      <div style={{ padding: "2.5rem 3rem", display: "flex", flexDirection: "column", gap: "6px" }}>
+        <span style={{
+          fontSize: "9px", fontWeight: 800, letterSpacing: "3px",
+          color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif",
+          marginBottom: "4px",
+        }}>SUNDAY</span>
+        <span style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "2.2rem", letterSpacing: "1px", color: "#fff", lineHeight: 1,
+        }}>6:00 AM</span>
+        <span style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "12px", color: "rgba(255,255,255,0.3)", letterSpacing: "1px",
+        }}>until 1:00 PM</span>
+      </div>
+
+      <div style={{ background: "rgba(255,255,255,0.05)" }} />
+
+      {/* Location */}
+      <div style={{ padding: "2.5rem 3rem", display: "flex", flexDirection: "column", gap: "6px" }}>
+        <span style={{
+          fontSize: "9px", fontWeight: 800, letterSpacing: "3px",
+          color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif",
+          marginBottom: "4px",
+        }}>FIND US</span>
+        <span style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "1.5rem", letterSpacing: "1px", color: "#fff", lineHeight: 1.2,
+        }}>Lakshmi Arcade</span>
+        <span style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "12px", color: "rgba(255,255,255,0.3)", lineHeight: 1.5,
+        }}>Whitefield Main Rd, near<br />Hope Farm Signal · 560066</span>
+      </div>
+    </div>
+  </ScrollCard>
+
+  {/* ══ BLOCK 4 — BOTTOM CTA STRIP ══ */}
+  <ScrollCard direction="left" delay={0}>
+    <div style={{
+      position: "relative", zIndex: 1,
+      padding: "4rem 3rem",
+      display: "flex", alignItems: "center",
+      justifyContent: "space-between",
+      gap: "2rem", flexWrap: "wrap",
+      background: "linear-gradient(90deg, rgba(255,26,26,0.04) 0%, transparent 60%)",
+      borderTop: "1px solid rgba(255,26,26,0.1)",
+      maxWidth: "100%",
+    }}>
+      <div>
+        <p style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "clamp(1.8rem, 4vw, 3rem)",
+          color: "#fff", letterSpacing: "2px", lineHeight: 1,
+          marginBottom: "8px",
+        }}>READY TO JOIN THE MOVEMENT?</p>
+        <p style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "0.9rem", color: "rgba(255,255,255,0.35)",
+        }}>First session free · No joining fee this month</p>
+      </div>
+      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+        <a href="/register" style={{
+          padding: "14px 32px",
+          background: "linear-gradient(135deg, #FF1A1A, #991111)",
+          color: "#fff", textDecoration: "none",
+          fontFamily: "'DM Sans', sans-serif",
+          fontWeight: 800, fontSize: "13px", letterSpacing: "1px",
+          borderRadius: "6px",
+          boxShadow: "0 6px 24px rgba(255,26,26,0.35)",
+        }}>Start Training →</a>
+        <a href="#contact" style={{
+          padding: "14px 28px",
+          background: "transparent",
+          border: "1px solid rgba(255,255,255,0.12)",
+          color: "rgba(255,255,255,0.55)", textDecoration: "none",
+          fontFamily: "'DM Sans', sans-serif",
+          fontWeight: 600, fontSize: "13px",
+          borderRadius: "6px",
+        }}>Get in Touch</a>
+      </div>
+    </div>
+  </ScrollCard>
+
+</section>
+
+     {/* ════════════════════════════════════════════
+    CONTACT
+════════════════════════════════════════════ */}
+<section id="contact" style={{
+  padding: "0",
+  background: "#000",
+  position: "relative",
+  overflow: "hidden",
+}}>
+
+  {/* Top slash */}
+  <div style={{
+    position: "absolute", top: 0, left: 0, right: 0, height: "1px",
+    background: "linear-gradient(90deg, transparent, rgba(255,26,26,0.3), transparent)",
+  }} />
+
+  {/* Full bleed split layout */}
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: "700px" }}>
+
+    {/* ── Left — form side ── */}
+    <ScrollCard direction="left" delay={0}>
+      <div style={{
+        padding: "6rem 4rem",
+        height: "100%",
+        display: "flex", flexDirection: "column", justifyContent: "center",
+        borderRight: "1px solid rgba(255,255,255,0.05)",
+        position: "relative",
+      }}>
+
+        {/* Background glow */}
+        <div style={{
+          position: "absolute", top: "30%", left: "-20%",
+          width: "400px", height: "400px", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(255,26,26,0.04), transparent 70%)",
+          pointerEvents: "none",
+        }} />
+
+        <div style={{ position: "relative", zIndex: 1 }}>
+          {/* Eyebrow */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1.5rem" }}>
+            <div style={{ width: "28px", height: "2px", background: "#FF1A1A", boxShadow: "0 0 8px rgba(255,26,26,0.6)" }} />
+            <span style={{
+              fontSize: "10px", fontWeight: 800, letterSpacing: "4px",
+              color: "#FF1A1A", fontFamily: "'DM Sans', sans-serif",
+            }}>GET IN TOUCH</span>
           </div>
 
-          <div style={s.plansGrid}>
-            {PLANS.map((plan, i) => (
-              <ScrollCard key={i} direction={i % 2 === 0 ? "left" : "right"} delay={i * 0.08}>
-                <div
-                  className="plan-card"
+          <h2 style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: "clamp(2.5rem, 5vw, 4.5rem)",
+            color: "#fff", letterSpacing: "2px", lineHeight: 0.9,
+            marginBottom: "2.5rem",
+          }}>
+            YOUR FIRST STEP<br />
+            <span style={{
+              background: "linear-gradient(135deg, #FF1A1A, #FF6B00)",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}>STARTS HERE.</span>
+          </h2>
+
+          {formSent ? (
+            <div style={{
+              padding: "3rem 2rem",
+              background: "rgba(34,197,94,0.04)",
+              border: "1px solid rgba(34,197,94,0.15)",
+              borderRadius: "16px",
+              textAlign: "center",
+            }}>
+              <div style={{
+                width: "64px", height: "64px", borderRadius: "50%",
+                background: "rgba(34,197,94,0.1)", border: "2px solid #22C55E",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 1.25rem",
+              }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+              </div>
+              <h3 style={{
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: "2rem", color: "#fff", letterSpacing: "2px", marginBottom: "0.5rem",
+              }}>We'll be in touch!</h3>
+              <p style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "0.9rem", color: "rgba(255,255,255,0.45)", lineHeight: 1.6,
+              }}>Our team will contact you within 24 hours to schedule your free session.</p>
+            </div>
+          ) : (
+            <form onSubmit={handleEnquiry} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {/* Name + Phone row */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <ContactField label="Full Name" type="text" placeholder="Rahul Kumar"
+                  value={formData.name} onChange={v => setFormData(p => ({ ...p, name: v }))} required />
+                <ContactField label="Phone" type="tel" placeholder="+91 98765 43210"
+                  value={formData.phone} onChange={v => setFormData(p => ({ ...p, phone: v }))} required />
+              </div>
+
+              {/* Email */}
+              <ContactField label="Email Address" type="email" placeholder="rahul@email.com"
+                value={formData.email} onChange={v => setFormData(p => ({ ...p, email: v }))} required />
+
+              {/* Message */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{
+                  fontSize: "10px", fontWeight: 800, letterSpacing: "2px",
+                  color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif",
+                  textTransform: "uppercase",
+                }}>Message (Optional)</label>
+                <textarea
+                  placeholder="Tell us your fitness goal..."
+                  value={formData.message}
+                  onChange={e => setFormData(p => ({ ...p, message: e.target.value }))}
+                  rows={3}
                   style={{
-                    ...s.planCard,
-                    border: plan.highlight
-                      ? `2px solid #FF1A1A`
-                      : "1px solid rgba(255,255,255,0.07)",
-                    background: plan.highlight
-                      ? "linear-gradient(135deg, rgba(255,26,26,0.08), rgba(0,0,0,0.9))"
-                      : "rgba(255,255,255,0.02)",
-                    animation: plan.highlight ? "borderGlow 3s ease infinite" : "none",
-                    transition: "all 0.35s ease",
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "10px", padding: "14px 16px",
+                    color: "#fff", fontSize: "0.9rem",
+                    fontFamily: "'DM Sans', sans-serif",
+                    resize: "vertical", outline: "none",
+                    transition: "border-color 0.2s",
                   }}
-                >
-                  {plan.highlight && (
-                    <div style={s.planBestBadge}>MOST POPULAR</div>
-                  )}
-                  <div style={{ ...s.planColorBar, background: plan.color }} />
-                  <h3 style={s.planName}>{plan.name}</h3>
-                  <div style={s.planPriceRow}>
-                    <span style={s.planPrice}>{plan.price}</span>
-                    <span style={s.planPeriod}>{plan.period}</span>
-                  </div>
-                  <p style={s.planNote}>{plan.note}</p>
-                  <ul style={s.planFeatures}>
-                    {plan.features.map((f, fi) => (
-                      <li key={fi} style={s.planFeature}>
-                        <span style={{ color: plan.color, marginRight: "8px" }}>✓</span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <a href="/register" className="cta-btn" style={{
-                    ...s.planBtn,
-                    background: plan.highlight ? "#FF1A1A" : "transparent",
-                    border: plan.highlight ? "none" : `1px solid ${plan.color}`,
-                    color: plan.highlight ? "#fff" : plan.color,
-                  }}>
-                    {plan.highlight ? "Get Started →" : "Choose Plan"}
-                  </a>
-                </div>
-              </ScrollCard>
+                  onFocus={e => e.target.style.borderColor = "rgba(255,26,26,0.5)"}
+                  onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+                />
+              </div>
+
+              <button type="submit" style={{
+                width: "100%", padding: "15px",
+                background: "linear-gradient(135deg, #FF1A1A, #991111)",
+                border: "none", borderRadius: "10px",
+                cursor: "pointer", color: "#fff",
+                fontFamily: "'DM Sans', sans-serif",
+                fontWeight: 800, fontSize: "13px",
+                letterSpacing: "1.5px",
+                boxShadow: "0 6px 28px rgba(255,26,26,0.35)",
+                transition: "transform 0.15s, box-shadow 0.15s",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 36px rgba(255,26,26,0.45)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 6px 28px rgba(255,26,26,0.35)"; }}
+              >BOOK FREE SESSION →</button>
+
+              <p style={{
+                textAlign: "center", fontSize: "11px",
+                color: "rgba(255,255,255,0.18)", letterSpacing: "1px",
+                fontFamily: "'DM Sans', sans-serif",
+              }}>First session free · No commitment required</p>
+            </form>
+          )}
+        </div>
+      </div>
+    </ScrollCard>
+
+    {/* ── Right — info side ── */}
+    <ScrollCard direction="right" delay={0.08}>
+      <div style={{
+        padding: "6rem 4rem",
+        height: "100%",
+        display: "flex", flexDirection: "column", justifyContent: "center",
+        background: "rgba(255,255,255,0.01)",
+        gap: "0",
+        position: "relative",
+      }}>
+
+        {/* Ghost text watermark */}
+        <div style={{
+          position: "absolute", bottom: "1rem", right: "-1rem",
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "10rem", color: "rgba(255,255,255,0.015)",
+          letterSpacing: "-4px", lineHeight: 1,
+          userSelect: "none", pointerEvents: "none",
+        }}>FITZONE</div>
+
+        {/* Info items */}
+        {[
+          {
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+            ),
+            label: "ADDRESS",
+            value: "1st Floor, Lakshmi Arcade\nWhitefield Main Rd, near Hope Farm\nBengaluru – 560066",
+          },
+          {
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11.5 19.79 19.79 0 01.1 2.82 2 2 0 012.11 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.09a16 16 0 006 6l.46-.46a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+              </svg>
+            ),
+            label: "PHONE",
+            value: "+91 98765 43210",
+          },
+          {
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+              </svg>
+            ),
+            label: "EMAIL",
+            value: "info@fitzoneGym.in",
+          },
+          {
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            ),
+            label: "HOURS",
+            value: "Mon–Sat  5:00 AM – 10:30 PM\nSunday  6:00 AM – 1:00 PM",
+          },
+        ].map((item, i) => (
+          <ContactInfoRow key={i} item={item} index={i} />
+        ))}
+
+        {/* Social row */}
+        <div style={{
+          marginTop: "2.5rem",
+          paddingTop: "2rem",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
+        }}>
+          <p style={{
+            fontSize: "9px", fontWeight: 800, letterSpacing: "3px",
+            color: "rgba(255,255,255,0.2)", fontFamily: "'DM Sans', sans-serif",
+            marginBottom: "1rem",
+          }}>FOLLOW US</p>
+          <div style={{ display: "flex", gap: "10px" }}>
+            {[
+              {
+                label: "Instagram",
+                href: "https://instagram.com/fitzoneGym",
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                  </svg>
+                ),
+              },
+              {
+                label: "YouTube",
+                href: "https://youtube.com/@fitzoneGym",
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 00-1.95 1.96A29 29 0 001 12a29 29 0 00.46 5.58A2.78 2.78 0 003.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.95A29 29 0 0023 12a29 29 0 00-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/>
+                  </svg>
+                ),
+              },
+              {
+                label: "Facebook",
+                href: "https://facebook.com/fitzoneGym",
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+                  </svg>
+                ),
+              },
+            ].map((s2, i) => (
+              <a key={i} href={s2.href} target="_blank" rel="noreferrer"
+                style={{
+                  width: "42px", height: "42px",
+                  borderRadius: "10px",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "rgba(255,255,255,0.4)",
+                  textDecoration: "none",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = "rgba(255,26,26,0.1)";
+                  e.currentTarget.style.borderColor = "rgba(255,26,26,0.3)";
+                  e.currentTarget.style.color = "#FF1A1A";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+                  e.currentTarget.style.color = "rgba(255,255,255,0.4)";
+                  e.currentTarget.style.transform = "none";
+                }}
+              >{s2.icon}</a>
             ))}
           </div>
-
-          <p style={s.planAddon}>
-            + Personal Training add-on available at <strong style={{ color: "#FF1A1A" }}>₹4,000/month</strong>
-          </p>
         </div>
-      </section>
-
-      {/* ════════════════════════════════════════════
-          ABOUT
-      ════════════════════════════════════════════ */}
-      <section id="about" style={{ ...s.section, background: "#050505" }}>
-        <div style={s.aboutInner}>
-          <ScrollCard direction="left">
-            <div style={s.aboutLeft}>
-              <span style={s.sectionTag}>OUR STORY</span>
-              <h2 style={{ ...s.sectionTitle, textAlign: "left" }}>
-                BUILT ON<br />
-                <span style={s.redText}>REAL IRON.</span>
-              </h2>
-              <p style={s.aboutText}>
-                FitZone Gym was founded in 2018 with one belief —
-                that every person deserves access to world-class training, regardless
-                of where they're starting from.
-              </p>
-              <p style={s.aboutText}>
-                Located in the heart of Whitefield, Bengaluru, we've built a community
-                of over 2,400 members who show up every day to become stronger versions
-                of themselves.
-              </p>
-              <div style={s.aboutHours}>
-                <div style={s.hoursItem}>
-                  <span style={s.hoursDay}>Mon – Sat</span>
-                  <span style={s.hoursTime}>5:00 AM – 10:30 PM</span>
-                </div>
-                <div style={s.hoursItem}>
-                  <span style={s.hoursDay}>Sunday</span>
-                  <span style={s.hoursTime}>6:00 AM – 1:00 PM</span>
-                </div>
-              </div>
-            </div>
-          </ScrollCard>
-
-          <ScrollCard direction="right">
-            <div style={s.aboutRight}>
-              {[
-                { icon: "🏆", title: "Certified Coaches", desc: "Every trainer is certified and experienced in their discipline." },
-                { icon: "🔧", title: "Premium Equipment", desc: "State-of-the-art machines. Free weights. Functional zones." },
-                { icon: "👥", title: "Real Community", desc: "A supportive family that pushes each other to be better." },
-                { icon: "📊", title: "Tracked Progress", desc: "Body composition analysis and monthly fitness assessments." },
-              ].map((item, i) => (
-                <div key={i} style={s.aboutCard}>
-                  <span style={s.aboutCardIcon}>{item.icon}</span>
-                  <div>
-                    <h4 style={s.aboutCardTitle}>{item.title}</h4>
-                    <p style={s.aboutCardDesc}>{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollCard>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════
-          ENQUIRY / CONTACT
-      ════════════════════════════════════════════ */}
-      <section id="contact" style={s.section}>
-        <div style={s.sectionInner}>
-          <div style={s.sectionHeader}>
-            <span style={s.sectionTag}>GET IN TOUCH</span>
-            <h2 style={s.sectionTitle}>
-              YOUR FIRST STEP<br />
-              <span style={s.redText}>STARTS HERE.</span>
-            </h2>
-            <p style={s.sectionSub}>
-              Fill in your details and we'll reach out within 24 hours.
-              First session is on us.
-            </p>
-          </div>
-
-          <div style={s.contactWrap}>
-            {/* Form */}
-            <ScrollCard direction="left">
-              <div style={s.formCard}>
-                {formSent ? (
-                  <div style={s.formSuccess}>
-                    <span style={s.successIcon}>✓</span>
-                    <h3 style={s.successTitle}>We'll be in touch!</h3>
-                    <p style={s.successText}>
-                      Our team will contact you within 24 hours to schedule your free session.
-                    </p>
-                  </div>
-                ) : (
-                  <form onSubmit={handleEnquiry} style={s.form}>
-                    <h3 style={s.formTitle}>Book a Free Session</h3>
-                    {[
-                      { key: "name", label: "Full Name", type: "text", placeholder: "Rahul Kumar" },
-                      { key: "email", label: "Email Address", type: "email", placeholder: "rahul@email.com" },
-                      { key: "phone", label: "Phone Number", type: "tel", placeholder: "+91 98765 43210" },
-                    ].map(({ key, label, type, placeholder }) => (
-                      <div key={key} style={s.formField}>
-                        <label style={s.formLabel}>{label}</label>
-                        <input
-                          type={type}
-                          placeholder={placeholder}
-                          value={formData[key]}
-                          onChange={(e) => setFormData(p => ({ ...p, [key]: e.target.value }))}
-                          style={s.formInput}
-                          required
-                        />
-                      </div>
-                    ))}
-                    <div style={s.formField}>
-                      <label style={s.formLabel}>Message (Optional)</label>
-                      <textarea
-                        placeholder="Tell us your fitness goal..."
-                        value={formData.message}
-                        onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))}
-                        style={{ ...s.formInput, height: "100px", resize: "vertical" }}
-                        rows={4}
-                      />
-                    </div>
-                    <button type="submit" className="cta-btn" style={{ ...s.primaryBtn, width: "100%", justifyContent: "center" }}>
-                      Book Free Session →
-                    </button>
-                  </form>
-                )}
-              </div>
-            </ScrollCard>
-
-            {/* Info */}
-            <ScrollCard direction="right">
-              <div style={s.contactInfo}>
-                {[
-                  { icon: "📍", label: "Address", value: "1st Floor, Lakshmi Arcade, Whitefield Main Road, Near Hope Farm Signal, Bengaluru – 560066" },
-                  { icon: "📞", label: "Phone", value: "+91 98765 43210" },
-                  { icon: "✉️", label: "Email", value: "info@fitzoneGym.in" },
-                  { icon: "🕐", label: "Mon–Sat", value: "5:00 AM – 10:30 PM" },
-                  { icon: "🕐", label: "Sunday", value: "6:00 AM – 1:00 PM" },
-                ].map((item, i) => (
-                  <div key={i} style={s.contactItem}>
-                    <span style={s.contactIcon}>{item.icon}</span>
-                    <div>
-                      <span style={s.contactLabel}>{item.label}</span>
-                      <span style={s.contactValue}>{item.value}</span>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Social */}
-                <div style={s.socials}>
-                  {[
-                    { label: "Instagram", href: "https://instagram.com/fitzoneGym", icon: "📸" },
-                    { label: "Facebook", href: "https://facebook.com/fitzoneGym", icon: "👍" },
-                    { label: "YouTube", href: "https://youtube.com/@fitzoneGym", icon: "▶️" },
-                  ].map((s2, i) => (
-                    <a key={i} href={s2.href} target="_blank" rel="noreferrer"
-                      className="social-link" style={s.socialLink}>
-                      <span>{s2.icon}</span>
-                      <span>{s2.label}</span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </ScrollCard>
-          </div>
-        </div>
-      </section>
+      </div>
+    </ScrollCard>
+  </div>
+</section>
 
       {/* ════════════════════════════════════════════
           FOOTER
