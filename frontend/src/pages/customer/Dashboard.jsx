@@ -3,53 +3,93 @@ import { Link } from "react-router-dom";
 import DashLayout from "../../components/DashLayout";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
+import {
+  Zap, Clock, CheckCircle, Calendar, TrendingUp,
+  CreditCard, ClipboardList, User, Dumbbell,
+  ArrowRight, AlertTriangle, ChevronRight, Activity
+} from "lucide-react";
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// ── Design tokens ──────────────────────────────────────────────
+const T = {
+  red:    "#FF1A1A",
+  redDim: "rgba(255,26,26,0.12)",
+  gold:   "#FFB800",
+  cyan:   "#00C2FF",
+  green:  "#22C55E",
+  purple: "#A855F7",
+  glass:  "rgba(255,255,255,0.03)",
+  border: "rgba(255,255,255,0.07)",
+  muted:  "rgba(255,255,255,0.35)",
+  sub:    "rgba(255,255,255,0.18)",
+};
 
-function KpiCard({ icon, label, value, accent, sub }) {
+const PLAN_COLORS = {
+  student:    T.cyan,
+  monthly:    "#FF6B00",
+  quarterly:  T.red,
+  halfyearly: T.gold,
+  annual:     T.green,
+};
+
+function KpiCard({ icon: Icon, label, value, color, delay = 0 }) {
   return (
-    <div style={{ ...ds.kpiCard, borderTop: `3px solid ${accent}` }}>
-      <div style={ds.kpiTop}>
-        <span style={{ ...ds.kpiIcon, background: accent + "15", color: accent }}>{icon}</span>
+    <div style={{
+      background: T.glass,
+      border: `1px solid ${T.border}`,
+      borderTop: `2px solid ${color}`,
+      borderRadius: "14px",
+      padding: "1.4rem",
+      animation: `fadeUp 0.5s ease ${delay}s both`,
+      transition: "transform 0.2s, box-shadow 0.2s",
+      cursor: "default",
+    }}
+      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = `0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px ${color}20`; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
+    >
+      <div style={{ width: 38, height: 38, borderRadius: 10, background: color + "18", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.9rem" }}>
+        <Icon size={18} color={color} strokeWidth={2} />
       </div>
-      <p style={{ ...ds.kpiValue, color: accent }}>{value ?? "—"}</p>
-      <p style={ds.kpiLabel}>{label}</p>
-      {sub && <p style={ds.kpiSub}>{sub}</p>}
+      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2.2rem", color, letterSpacing: "-0.5px", lineHeight: 1 }}>{value ?? "—"}</div>
+      <div style={{ fontSize: "11px", fontWeight: 600, color: T.muted, marginTop: "6px", letterSpacing: "0.5px" }}>{label}</div>
     </div>
   );
 }
 
-function ActivityRow({ icon, title, desc, time, accent }) {
+function QuickLink({ icon: Icon, label, sub, href, color }) {
   return (
-    <div style={ds.activityRow}>
-      <span style={{ ...ds.activityIcon, background: accent + "15", color: accent }}>{icon}</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={ds.activityTitle}>{title}</p>
-        <p style={ds.activityDesc}>{desc}</p>
+    <Link to={href} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.1rem", background: T.glass, border: `1px solid ${T.border}`, borderRadius: "12px", textDecoration: "none", color: "#fff", transition: "all 0.2s" }}
+      onMouseEnter={e => { e.currentTarget.style.background = color + "0a"; e.currentTarget.style.borderColor = color + "35"; e.currentTarget.style.transform = "translateX(4px)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = T.glass; e.currentTarget.style.borderColor = T.border; e.currentTarget.style.transform = ""; }}
+    >
+      <div style={{ width: 42, height: 42, borderRadius: 10, background: color + "15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Icon size={19} color={color} />
       </div>
-      <span style={ds.activityTime}>{time}</span>
-    </div>
-  );
-}
-
-function QuickLink({ icon, label, sub, href, accent }) {
-  return (
-    <Link to={href} style={ds.quickLink}>
-      <span style={{ ...ds.quickIcon, color: accent, background: accent + "15" }}>{icon}</span>
       <div style={{ flex: 1 }}>
-        <p style={ds.quickLabel}>{label}</p>
-        <p style={ds.quickSub}>{sub}</p>
+        <div style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: 3 }}>{label}</div>
+        <div style={{ fontSize: "11px", color: T.muted }}>{sub}</div>
       </div>
-      <span style={ds.quickArrow}>→</span>
+      <ChevronRight size={16} color={T.sub} />
     </Link>
   );
 }
 
-// ── Main Dashboard ─────────────────────────────────────────────────────────────
+function ActivityRow({ icon: Icon, title, desc, time, color, delay = 0 }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", padding: "0.9rem 1.25rem", borderBottom: `1px solid ${T.border}`, animation: `fadeUp 0.4s ease ${delay}s both` }}>
+      <div style={{ width: 36, height: 36, borderRadius: 9, background: color + "15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Icon size={16} color={color} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: "0.83rem", fontWeight: 700, color: "#fff", marginBottom: 2 }}>{title}</div>
+        <div style={{ fontSize: "11px", color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{desc}</div>
+      </div>
+      <div style={{ fontSize: "11px", color: T.sub, flexShrink: 0, fontWeight: 500 }}>{time}</div>
+    </div>
+  );
+}
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
-
   const [membership, setMembership] = useState(null);
   const [requests,   setRequests]   = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -66,7 +106,6 @@ export default function CustomerDashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
-  // ── Derived values ──────────────────────────────────────────────────────────
   const daysLeft = membership?.end_date
     ? Math.max(0, Math.ceil((new Date(membership.end_date) - new Date()) / 86400000))
     : null;
@@ -81,38 +120,30 @@ export default function CustomerDashboard() {
 
   const pendingRequests  = requests.filter((r) => r.status === "pending").length;
   const approvedRequests = requests.filter((r) => r.status === "approved").length;
-
-  const PLAN_COLORS = {
-    student:    "#00C2FF",
-    monthly:    "#FF6B00",
-    quarterly:  "#FF1A1A",
-    halfyearly: "#FFB800",
-    annual:     "#22C55E",
-  };
-  const planColor = PLAN_COLORS[membership?.plan_type] || "#FF1A1A";
+  const planColor        = PLAN_COLORS[membership?.plan_type] || T.red;
 
   const greetHour = new Date().getHours();
   const greeting  = greetHour < 12 ? "Good Morning" : greetHour < 17 ? "Good Afternoon" : "Good Evening";
   const firstName = user?.full_name?.split(" ")[0] || user?.username || "Member";
 
-  // ── Recent activity (synthesised from requests) ─────────────────────────────
+  const TYPE_MAP = {
+    new_membership:  { icon: Zap,           title: "New Membership",  color: T.green  },
+    renewal:         { icon: TrendingUp,     title: "Renewal",         color: T.cyan   },
+    upgrade:         { icon: Activity,       title: "Plan Upgrade",    color: T.purple },
+    trainer_request: { icon: Dumbbell,       title: "Trainer Request", color: "#FF6B00"},
+    freeze:          { icon: Clock,          title: "Freeze Request",  color: T.cyan   },
+    cancellation:    { icon: AlertTriangle,  title: "Cancellation",    color: T.red    },
+    other:           { icon: ClipboardList,  title: "General Request", color: T.gold   },
+  };
+
   const recentActivity = requests.slice(0, 4).map((r) => {
-    const typeMap = {
-      new_membership: { icon: "🆕", title: "New Membership Request", accent: "#22C55E" },
-      renewal:        { icon: "🔄", title: "Renewal Request",        accent: "#00C2FF" },
-      upgrade:        { icon: "⬆️", title: "Plan Upgrade Request",   accent: "#A855F7" },
-      trainer_request:{ icon: "🏋️", title: "Trainer Request",        accent: "#FF6B00" },
-      freeze:         { icon: "❄️", title: "Freeze Request",         accent: "#00C2FF" },
-      cancellation:   { icon: "✕",  title: "Cancellation Request",   accent: "#FF1A1A" },
-      other:          { icon: "💬", title: "General Request",        accent: "#FFB800" },
-    };
-    const info = typeMap[r.request_type] || { icon: "📋", title: "Request", accent: "#fff" };
+    const info = TYPE_MAP[r.request_type] || { icon: ClipboardList, title: "Request", color: T.muted };
     return {
-      icon:   info.icon,
-      title:  info.title,
-      desc:   r.notes ? `"${r.notes.slice(0, 50)}${r.notes.length > 50 ? "…" : ""}"` : "No notes added",
-      time:   new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
-      accent: info.accent,
+      icon:  info.icon,
+      title: info.title,
+      desc:  r.notes ? `${r.notes.slice(0, 55)}${r.notes.length > 55 ? "…" : ""}` : "No notes added",
+      time:  new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+      color: info.color,
     };
   });
 
@@ -122,564 +153,236 @@ export default function CustomerDashboard() {
       subtitle={`${greeting}, ${firstName} · ${new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}`}
       actions={
         <div style={{ display: "flex", gap: "0.75rem" }}>
-          <Link to="/dashboard/request" style={ds.outlineBtn}>+ New Request</Link>
-          <Link to="/dashboard/membership" style={ds.primaryBtn}>View Plans →</Link>
+          <Link to="/dashboard/request" style={Btn.outline}>+ New Request</Link>
+          <Link to="/dashboard/membership" style={Btn.primary}>View Plans <ArrowRight size={14} style={{ marginLeft: 4, verticalAlign: "middle" }} /></Link>
         </div>
       }
     >
       <style>{`
-        @keyframes spin    { to { transform: rotate(360deg); } }
-        @keyframes fadeUp  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-        @keyframes progressFill { from { width: 0%; } to { width: var(--target-width); } }
-        .kpi-card:hover    { transform: translateY(-3px) !important; box-shadow: 0 8px 30px rgba(0,0,0,0.3) !important; }
-        .quick-link:hover  { background: rgba(255,255,255,0.04) !important; border-color: rgba(255,255,255,0.12) !important; }
-        .quick-link:hover .quick-arrow { color: #FF1A1A !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap');
+        @keyframes fadeUp    { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes spin      { to { transform: rotate(360deg); } }
+        @keyframes shimmer   { 0%,100%{opacity:0.6} 50%{opacity:1} }
+        @keyframes progressIn{ from{width:0} to{width:var(--w)} }
+        @keyframes ringPulse { 0%,100%{box-shadow:0 0 0 0 var(--rc)} 50%{box-shadow:0 0 0 8px transparent} }
 
-        /* ── Mobile responsive overrides ── */
-        @media (max-width: 768px) {
-
-          /* Hero card: stack vertically, hide days ring on very small */
-          .hero-card {
-            flex-direction: column !important;
-            padding: 1.25rem !important;
-          }
-          .hero-left { min-width: unset !important; }
-          .hero-right {
-            align-self: flex-start !important;
-          }
-          .hero-title { font-size: 1.4rem !important; }
-          .hero-btns {
-            flex-direction: column !important;
-          }
-          .hero-btns a {
-            text-align: center;
-            width: 100%;
-          }
-
-          /* KPI: 2 per row on mobile */
-          .kpi-grid {
-            grid-template-columns: 1fr 1fr !important;
-            gap: 0.75rem !important;
-          }
-          .kpi-card { padding: 1rem !important; }
-          .kpi-value { font-size: 1.6rem !important; }
-
-          /* Two col panels: stack */
-          .two-col {
-            grid-template-columns: 1fr !important;
-            gap: 1rem !important;
-          }
-
-          /* Alert bar: smaller text */
-          .alert-bar {
-            padding: 10px 14px !important;
-            font-size: 0.8rem !important;
-            gap: 8px !important;
-          }
-
-          /* Profile snap: wrap on mobile */
-          .profile-snap {
-            padding: 1rem !important;
-            gap: 0.875rem !important;
-          }
-          .snap-edit-btn {
-            width: 100% !important;
-            text-align: center !important;
-          }
-
-          /* CTA banner: stack */
-          .cta-banner {
-            flex-direction: column !important;
-            padding: 1.25rem !important;
-            align-items: flex-start !important;
-          }
-          .cta-banner-btn {
-            width: 100% !important;
-            text-align: center !important;
-          }
-
-          /* Activity row: truncate desc */
-          .activity-desc {
-            display: none !important;
-          }
-          .activity-title { font-size: 0.8rem !important; }
+        @media(max-width:768px){
+          .hero-card  { flex-direction:column!important; padding:1.25rem!important; }
+          .hero-right { align-self:flex-start!important; }
+          .kpi-grid   { grid-template-columns:1fr 1fr!important; }
+          .two-col    { grid-template-columns:1fr!important; }
+          .hero-btns  { flex-direction:column!important; }
+          .hero-btns a{ width:100%!important; text-align:center!important; }
+          .alert-bar  { font-size:0.8rem!important; padding:10px 14px!important; }
+          .profile-snap{ flex-wrap:wrap!important; }
+          .cta-banner { flex-direction:column!important; }
         }
-
-        /* ── Very small phones (≤380px) ── */
-        @media (max-width: 380px) {
-          .kpi-grid {
-            grid-template-columns: 1fr 1fr !important;
-          }
-          .hero-right { display: none !important; }
+        @media(max-width:380px){
+          .hero-right { display:none!important; }
         }
       `}</style>
 
       {loading ? <Loader /> : (
-        <div style={{ animation: "fadeUp 0.4s ease forwards" }}>
-
-          {/* ── Membership Hero Card ── */}
+        <div>
+          {/* ── Hero membership card ── */}
           {membership ? (
-            <div className="hero-card" style={{ ...ds.heroCard, borderColor: planColor + "30" }}>
-              <div style={{ ...ds.heroGlow, background: `radial-gradient(ellipse 80% 60% at 70% 50%, ${planColor}08, transparent)` }} />
+            <div className="hero-card" style={{
+              position: "relative", display: "flex", justifyContent: "space-between",
+              alignItems: "center", background: T.glass,
+              border: `1px solid ${planColor}25`,
+              borderRadius: "18px", padding: "2rem", marginBottom: "1.5rem",
+              overflow: "hidden", gap: "1.5rem", animation: "fadeUp 0.5s ease both",
+            }}>
+              {/* Glow bg */}
+              <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse 70% 60% at 80% 50%, ${planColor}07, transparent)`, pointerEvents: "none" }} />
+              {/* Top accent line */}
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${planColor}, transparent)` }} />
 
-              <div className="hero-left" style={ds.heroLeft}>
-                <span style={{
-                  ...ds.heroBadge,
-                  color: membership.status === "active" ? planColor : "#FF1A1A",
-                  borderColor: (membership.status === "active" ? planColor : "#FF1A1A") + "40",
-                  background: (membership.status === "active" ? planColor : "#FF1A1A") + "12",
-                }}>
-                  {membership.status === "active" ? "● ACTIVE" : "● EXPIRED"}
-                  {" · "}
-                  {membership.plan_type?.toUpperCase().replace("HALFYEARLY", "HALF-YEARLY")} PLAN
-                </span>
+              <div style={{ position: "relative", zIndex: 1, flex: 1, minWidth: 260 }}>
+                {/* Status badge */}
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: "10px", fontWeight: 800, letterSpacing: "2px", border: `1px solid ${planColor}40`, borderRadius: 100, padding: "5px 14px", marginBottom: "1rem", color: planColor, background: planColor + "12" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: planColor, animation: membership.status === "active" ? "shimmer 2s ease infinite" : "none", display: "inline-block" }} />
+                  {membership.status === "active" ? "ACTIVE" : "EXPIRED"} · {membership.plan_type?.toUpperCase().replace("HALFYEARLY","HALF-YEARLY")} PLAN
+                </div>
 
-                <h2 className="hero-title" style={ds.heroTitle}>
+                <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2rem", letterSpacing: "2px", color: "#fff", marginBottom: "1.1rem", lineHeight: 1 }}>
                   {membership.status === "active" ? "MEMBERSHIP ACTIVE" : "MEMBERSHIP EXPIRED"}
                 </h2>
 
-                <div style={ds.heroMeta}>
-                  <div style={ds.heroMetaItem}>
-                    <span style={ds.heroMetaLabel}>START DATE</span>
-                    <span style={ds.heroMetaValue}>
-                      {new Date(membership.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </span>
-                  </div>
-                  <div style={ds.heroMetaDivider} />
-                  <div style={ds.heroMetaItem}>
-                    <span style={ds.heroMetaLabel}>EXPIRES ON</span>
-                    <span style={ds.heroMetaValue}>
-                      {new Date(membership.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </span>
-                  </div>
-                  {membership.trainer_name && (
-                    <>
-                      <div style={ds.heroMetaDivider} />
-                      <div style={ds.heroMetaItem}>
-                        <span style={ds.heroMetaLabel}>TRAINER</span>
-                        <span style={ds.heroMetaValue}>🏋️ {membership.trainer_name}</span>
-                      </div>
-                    </>
-                  )}
+                {/* Meta row */}
+                <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+                  {[
+                    { label: "START DATE", value: new Date(membership.start_date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) },
+                    { label: "EXPIRES ON", value: new Date(membership.end_date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) },
+                    ...(membership.trainer_name ? [{ label: "TRAINER", value: `🏋 ${membership.trainer_name}` }] : []),
+                  ].map((m, i) => (
+                    <div key={i} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "2px", color: T.sub }}>{m.label}</span>
+                      <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#fff" }}>{m.value}</span>
+                    </div>
+                  ))}
                 </div>
 
-                {totalDays && (
-                  <div style={ds.progressWrap}>
-                    <div style={ds.progressLabelRow}>
-                      <span style={ds.progressLabel}>Membership Progress</span>
-                      <span style={{ ...ds.progressLabel, color: planColor }}>{progressPct}%</span>
+                {/* Progress bar */}
+                {totalDays > 0 && (
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
+                      <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "1px", color: T.sub }}>MEMBERSHIP PROGRESS</span>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: planColor }}>{progressPct}%</span>
                     </div>
-                    <div style={ds.progressTrack}>
-                      <div style={{
-                        ...ds.progressFill,
-                        width: `${progressPct}%`,
-                        background: `linear-gradient(90deg, ${planColor}99, ${planColor})`,
-                        boxShadow: `0 0 10px ${planColor}60`,
-                      }} />
+                    <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${progressPct}%`, background: `linear-gradient(90deg, ${planColor}80, ${planColor})`, borderRadius: 3, boxShadow: `0 0 8px ${planColor}60`, transition: "width 1.2s ease" }} />
                     </div>
                   </div>
                 )}
 
-                <div className="hero-btns" style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
-                  <Link to="/dashboard/membership" style={{ ...ds.heroBtn, background: planColor, color: "#fff" }}>
-                    Renew / Upgrade →
+                <div className="hero-btns" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                  <Link to="/dashboard/membership" style={{ ...Btn.primary, background: planColor, boxShadow: `0 4px 20px ${planColor}40` }}>
+                    Renew / Upgrade <ArrowRight size={13} style={{ marginLeft: 4, verticalAlign: "middle" }} />
                   </Link>
-                  <Link to="/dashboard/request" style={ds.heroBtnOutline}>
-                    Raise Request
-                  </Link>
+                  <Link to="/dashboard/request" style={Btn.outline}>Raise Request</Link>
                 </div>
               </div>
 
+              {/* Days ring */}
               {daysLeft !== null && (
-                <div className="hero-right" style={ds.heroRight}>
-                  <div style={{ ...ds.daysRing, borderColor: planColor, boxShadow: `0 0 30px ${planColor}30` }}>
-                    <span style={{ ...ds.daysNum, color: planColor }}>{daysLeft}</span>
-                    <span style={ds.daysLabel}>DAYS<br />LEFT</span>
+                <div className="hero-right" style={{ flexShrink: 0, textAlign: "center", position: "relative", zIndex: 1 }}>
+                  <div style={{
+                    width: 116, height: 116, borderRadius: "50%",
+                    border: `3px solid ${planColor}`,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    boxShadow: `0 0 30px ${planColor}25, inset 0 0 20px ${planColor}08`,
+                    "--rc": planColor + "40",
+                    animation: daysLeft <= 7 ? "ringPulse 2s ease infinite" : "none",
+                  }}>
+                    <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2.4rem", color: planColor, letterSpacing: "-2px", lineHeight: 1 }}>{daysLeft}</span>
+                    <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, lineHeight: 1.4 }}>DAYS<br/>LEFT</span>
                   </div>
-                  {daysLeft <= 7 && daysLeft > 0 && (
-                    <p style={{ ...ds.daysWarning, color: "#FFB800" }}>⚠ Expiring soon!</p>
-                  )}
-                  {daysLeft === 0 && (
-                    <p style={{ ...ds.daysWarning, color: "#FF1A1A" }}>✕ Expired</p>
-                  )}
+                  {daysLeft <= 7 && daysLeft > 0 && <p style={{ fontSize: "11px", fontWeight: 700, color: T.gold, marginTop: 10 }}>⚠ Expiring soon</p>}
+                  {daysLeft === 0 && <p style={{ fontSize: "11px", fontWeight: 700, color: T.red, marginTop: 10 }}>✕ Expired</p>}
                 </div>
               )}
             </div>
           ) : (
-            <div style={ds.noMembership}>
-              <div style={ds.noMemGlow} />
-              <span style={ds.noMemIcon}>🏋️</span>
-              <h3 style={ds.noMemTitle}>No Active Membership</h3>
-              <p style={ds.noMemSub}>Join FitZone and start your transformation today.</p>
-              <Link to="/dashboard/membership" style={{ ...ds.primaryBtn, marginTop: "1.5rem", display: "inline-block" }}>
-                Browse Plans →
-              </Link>
+            <div style={{ textAlign: "center", padding: "3.5rem 2rem", background: T.glass, border: `1px solid ${T.border}`, borderRadius: "18px", marginBottom: "1.5rem", animation: "fadeUp 0.5s ease both" }}>
+              <Dumbbell size={40} color={T.red} style={{ marginBottom: "1rem", opacity: 0.7 }} />
+              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.6rem", color: "#fff", marginBottom: "0.5rem" }}>NO ACTIVE MEMBERSHIP</h3>
+              <p style={{ fontSize: "0.9rem", color: T.muted, marginBottom: "1.5rem" }}>Join FitZone and start your transformation today.</p>
+              <Link to="/dashboard/membership" style={{ ...Btn.primary, display: "inline-block" }}>Browse Plans <ArrowRight size={13} style={{ marginLeft: 4, verticalAlign: "middle" }} /></Link>
             </div>
           )}
 
           {/* ── KPI Grid ── */}
-          <div className="kpi-grid" style={ds.kpiGrid}>
-            <div className="kpi-card" style={{ ...ds.kpiCard, borderTop: "3px solid #22C55E", transition: "all 0.2s" }}>
-              <div style={ds.kpiTop}>
-                <span style={{ ...ds.kpiIcon, background: "#22C55E15", color: "#22C55E" }}>📋</span>
-              </div>
-              <p style={{ ...ds.kpiValue, color: "#22C55E" }}>{requests.length}</p>
-              <p style={ds.kpiLabel}>Total Requests</p>
-            </div>
-            <div className="kpi-card" style={{ ...ds.kpiCard, borderTop: "3px solid #FFB800", transition: "all 0.2s" }}>
-              <div style={ds.kpiTop}>
-                <span style={{ ...ds.kpiIcon, background: "#FFB80015", color: "#FFB800" }}>⏳</span>
-              </div>
-              <p style={{ ...ds.kpiValue, color: "#FFB800" }}>{pendingRequests}</p>
-              <p style={ds.kpiLabel}>Pending Requests</p>
-            </div>
-            <div className="kpi-card" style={{ ...ds.kpiCard, borderTop: "3px solid #00C2FF", transition: "all 0.2s" }}>
-              <div style={ds.kpiTop}>
-                <span style={{ ...ds.kpiIcon, background: "#00C2FF15", color: "#00C2FF" }}>✅</span>
-              </div>
-              <p style={{ ...ds.kpiValue, color: "#00C2FF" }}>{approvedRequests}</p>
-              <p style={ds.kpiLabel}>Approved</p>
-            </div>
-            <div className="kpi-card" style={{ ...ds.kpiCard, borderTop: `3px solid ${planColor}`, transition: "all 0.2s" }}>
-              <div style={ds.kpiTop}>
-                <span style={{ ...ds.kpiIcon, background: planColor + "15", color: planColor }}>🗓️</span>
-              </div>
-              <p style={{ ...ds.kpiValue, color: planColor }}>
-                {daysLeft !== null ? `${daysLeft}d` : "—"}
-              </p>
-              <p style={ds.kpiLabel}>Days Remaining</p>
-            </div>
+          <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px,1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+            <KpiCard icon={ClipboardList} label="Total Requests"  value={requests.length}  color={T.cyan}   delay={0.05} />
+            <KpiCard icon={Clock}         label="Pending"          value={pendingRequests}  color={T.gold}   delay={0.1}  />
+            <KpiCard icon={CheckCircle}   label="Approved"         value={approvedRequests} color={T.green}  delay={0.15} />
+            <KpiCard icon={Calendar}      label="Days Remaining"   value={daysLeft !== null ? `${daysLeft}d` : "—"} color={planColor} delay={0.2} />
           </div>
 
-          {/* ── Expiry alert ── */}
+          {/* ── Alert bar ── */}
           {daysLeft !== null && daysLeft <= 7 && membership?.status === "active" && (
-            <div className="alert-bar" style={ds.alertBar}>
-              <span style={{ fontSize: "1.1rem" }}>⚠️</span>
-              <span style={{ flex: 1, fontSize: "0.9rem", color: "rgba(255,255,255,0.7)" }}>
-                Your <strong>{membership.plan_type}</strong> membership expires in <strong style={{ color: "#FFB800" }}>{daysLeft} day{daysLeft !== 1 ? "s" : ""}</strong>. Renew now to avoid losing access.
+            <div className="alert-bar" style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,184,0,0.07)", border: `1px solid rgba(255,184,0,0.25)`, borderRadius: 12, padding: "13px 20px", marginBottom: "1.5rem", animation: "fadeUp 0.5s ease 0.25s both" }}>
+              <AlertTriangle size={18} color={T.gold} style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: "0.875rem", color: "rgba(255,255,255,0.65)" }}>
+                Your <strong>{membership.plan_type}</strong> membership expires in <strong style={{ color: T.gold }}>{daysLeft} day{daysLeft !== 1 ? "s" : ""}</strong>. Renew to avoid losing access.
               </span>
-              <Link to="/dashboard/membership" style={{ fontSize: "13px", fontWeight: 700, color: "#FFB800", textDecoration: "none" }}>
-                Renew →
-              </Link>
+              <Link to="/dashboard/membership" style={{ fontSize: 13, fontWeight: 700, color: T.gold, textDecoration: "none", flexShrink: 0 }}>Renew →</Link>
             </div>
           )}
 
-          {/* ── Two-col: Activity + Quick Actions ── */}
-          <div className="two-col" style={ds.twoCol}>
+          {/* ── Two col: Activity + Quick Actions ── */}
+          <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem", animation: "fadeUp 0.5s ease 0.3s both" }}>
 
-            <div style={ds.panel}>
-              <div style={ds.panelHeader}>
-                <h3 style={ds.panelTitle}>RECENT ACTIVITY</h3>
-                <Link to="/dashboard/request" style={ds.viewAll}>View all →</Link>
+            <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem 1.25rem", borderBottom: `1px solid ${T.border}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Activity size={15} color={T.muted} />
+                  <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "0.95rem", letterSpacing: "2.5px", color: T.muted }}>RECENT ACTIVITY</span>
+                </div>
+                <Link to="/dashboard/request" style={{ fontSize: "12px", color: T.red, textDecoration: "none", fontWeight: 600 }}>View all →</Link>
               </div>
               {recentActivity.length === 0 ? (
-                <div style={ds.emptyState}>
-                  <span style={ds.emptyIcon}>📭</span>
-                  <p style={ds.emptyText}>No activity yet</p>
-                  <p style={ds.emptySub}>Raise a request to get started.</p>
+                <div style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
+                  <ClipboardList size={32} color={T.sub} style={{ marginBottom: 12 }} />
+                  <p style={{ fontSize: "0.875rem", color: T.muted }}>No activity yet</p>
+                  <p style={{ fontSize: "12px", color: T.sub, marginTop: 4 }}>Raise a request to get started</p>
                 </div>
-              ) : (
-                <div style={ds.activityList}>
-                  {recentActivity.map((a, i) => (
-                    <ActivityRow key={i} {...a} />
-                  ))}
-                </div>
-              )}
+              ) : recentActivity.map((a, i) => <ActivityRow key={i} {...a} delay={0.32 + i * 0.05} />)}
             </div>
 
-            <div style={ds.panel}>
-              <div style={ds.panelHeader}>
-                <h3 style={ds.panelTitle}>QUICK ACTIONS</h3>
+            <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${T.border}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Zap size={15} color={T.muted} />
+                  <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "0.95rem", letterSpacing: "2.5px", color: T.muted }}>QUICK ACTIONS</span>
+                </div>
               </div>
-              <div style={ds.quickList}>
-                <QuickLink icon="💳" label="My Membership" sub="View plan & pay online"      href="/dashboard/membership" accent={planColor} />
-                <QuickLink icon="📋" label="My Requests"   sub="Track all your requests"     href="/dashboard/request"    accent="#FFB800"  />
-                <QuickLink icon="👤" label="My Profile"    sub="Update info & password"       href="/dashboard/profile"    accent="#A855F7"  />
-                <QuickLink
-                  icon="🏋️"
-                  label="Trainer Info"
-                  sub={membership?.trainer_name ? `Assigned: ${membership.trainer_name}` : "No trainer assigned yet"}
-                  href="/dashboard/membership"
-                  accent="#00C2FF"
-                />
+              <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <QuickLink icon={CreditCard}  label="My Membership" sub="View plan & pay online"    href="/dashboard/membership" color={planColor} />
+                <QuickLink icon={ClipboardList} label="My Requests" sub="Track all your requests"   href="/dashboard/request"    color={T.gold}    />
+                <QuickLink icon={User}         label="My Profile"   sub="Update info & password"     href="/dashboard/profile"    color={T.purple}  />
+                <QuickLink icon={Dumbbell}     label="Trainer Info" sub={membership?.trainer_name ? `Assigned: ${membership.trainer_name}` : "No trainer assigned"} href="/dashboard/membership" color={T.cyan} />
               </div>
             </div>
           </div>
 
           {/* ── Profile snapshot ── */}
-          <div className="profile-snap" style={ds.profileSnap}>
-            <div style={ds.snapAvatar}>
+          <div className="profile-snap" style={{ display: "flex", alignItems: "center", gap: "1.25rem", background: T.glass, border: `1px solid ${T.border}`, borderRadius: 14, padding: "1.25rem 1.5rem", marginBottom: "1.5rem", animation: "fadeUp 0.5s ease 0.4s both" }}>
+            <div style={{ width: 54, height: 54, flexShrink: 0, borderRadius: "50%", background: T.redDim, border: `2px solid ${T.red}40`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.5rem", color: T.red }}>
               {user?.full_name?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || "M"}
             </div>
-            <div style={ds.snapInfo}>
-              <h4 style={ds.snapName}>{user?.full_name || user?.username}</h4>
-              <p style={ds.snapEmail}>{user?.email}</p>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "1rem", fontWeight: 700, color: "#fff", marginBottom: 4 }}>{user?.full_name || user?.username}</div>
+              <div style={{ fontSize: "12px", color: T.muted, marginBottom: 8 }}>{user?.email}</div>
               {membership && (
-                <span style={{
-                  ...ds.snapBadge,
-                  color: planColor,
-                  borderColor: planColor + "40",
-                  background: planColor + "10",
-                }}>
-                  {membership.plan_type?.toUpperCase().replace("HALFYEARLY", "HALF-YEARLY")} MEMBER
+                <span style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "1.5px", border: `1px solid ${planColor}40`, borderRadius: 100, padding: "3px 10px", color: planColor, background: planColor + "10" }}>
+                  {membership.plan_type?.toUpperCase().replace("HALFYEARLY","HALF-YEARLY")} MEMBER
                 </span>
               )}
             </div>
-            <Link className="snap-edit-btn" to="/dashboard/profile" style={ds.snapEditBtn}>
+            <Link to="/dashboard/profile" style={{ padding: "9px 18px", background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 8, color: T.muted, textDecoration: "none", fontWeight: 600, fontSize: 13, flexShrink: 0, transition: "all 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; e.currentTarget.style.color="#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color=T.muted; }}
+            >
               Edit Profile →
             </Link>
           </div>
 
           {/* ── CTA Banner ── */}
-          <div className="cta-banner" style={ds.ctaBanner}>
-            <div style={ds.ctaBannerGlow} />
-            <div style={ds.ctaBannerLeft}>
-              <h4 style={ds.ctaBannerTitle}>Need help or a custom plan?</h4>
-              <p style={ds.ctaBannerSub}>Raise a request and our team will contact you within 24 hours.</p>
+          <div className="cta-banner" style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center", background: T.redDim, border: `1px solid rgba(255,26,26,0.18)`, borderRadius: 14, padding: "1.5rem 2rem", gap: "1rem", overflow: "hidden", animation: "fadeUp 0.5s ease 0.45s both" }}>
+            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 40% 80% at 95% 50%, rgba(255,26,26,0.07), transparent)", pointerEvents: "none" }} />
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div style={{ fontSize: "1rem", fontWeight: 700, color: "#fff", marginBottom: 5 }}>Need help or a custom plan?</div>
+              <div style={{ fontSize: "0.875rem", color: T.muted }}>Raise a request and our team will contact you within 24 hours.</div>
             </div>
-            <Link className="cta-banner-btn" to="/dashboard/request" style={ds.ctaBannerBtn}>
-              Raise a Request →
+            <Link to="/dashboard/request" style={{ ...Btn.primary, flexShrink: 0, position: "relative", zIndex: 1 }}>
+              Raise a Request <ArrowRight size={13} style={{ marginLeft: 4, verticalAlign: "middle" }} />
             </Link>
           </div>
-
         </div>
       )}
     </DashLayout>
   );
 }
 
-// ── Loader ─────────────────────────────────────────────────────────────────────
 function Loader() {
   return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
-      <div style={{
-        width: "36px", height: "36px",
-        border: "3px solid rgba(255,26,26,0.2)",
-        borderTop: "3px solid #FF1A1A",
-        borderRadius: "50%",
-        animation: "spin 0.8s linear infinite",
-      }} />
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "5rem", gap: 16 }}>
+      <div style={{ width: 32, height: 32, border: "2.5px solid rgba(255,26,26,0.15)", borderTop: "2.5px solid #FF1A1A", borderRadius: "50%", animation: "spin 0.75s linear infinite" }} />
+      <span style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>Loading your dashboard…</span>
     </div>
   );
 }
 
-// ── Styles (unchanged from original) ──────────────────────────────────────────
-const ds = {
-  primaryBtn: {
-    padding: "10px 20px",
-    background: "linear-gradient(135deg, #FF1A1A, #cc0000)",
-    color: "#fff", textDecoration: "none",
-    fontWeight: 700, fontSize: "13px",
-    borderRadius: "8px",
-    boxShadow: "0 4px 15px rgba(255,26,26,0.3)",
+const Btn = {
+  primary: {
+    padding: "10px 20px", background: "linear-gradient(135deg, #FF1A1A, #cc0000)",
+    color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "13px",
+    borderRadius: 9, boxShadow: "0 4px 16px rgba(255,26,26,0.3)", display: "inline-flex", alignItems: "center",
   },
-  outlineBtn: {
-    padding: "10px 20px",
-    background: "transparent",
-    border: "1px solid rgba(255,255,255,0.12)",
-    color: "rgba(255,255,255,0.7)", textDecoration: "none",
-    fontWeight: 600, fontSize: "13px", borderRadius: "8px",
-  },
-  heroCard: {
-    position: "relative", display: "flex",
-    justifyContent: "space-between", alignItems: "center",
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid",
-    borderRadius: "16px", padding: "2rem",
-    marginBottom: "1.5rem", overflow: "hidden", gap: "1.5rem",
-    flexWrap: "wrap",
-  },
-  heroGlow:  { position: "absolute", inset: 0, pointerEvents: "none" },
-  heroLeft:  { position: "relative", zIndex: 1, flex: 1, minWidth: "260px" },
-  heroBadge: {
-    display: "inline-block", fontSize: "10px", fontWeight: 800,
-    letterSpacing: "2px", border: "1px solid",
-    borderRadius: "100px", padding: "4px 12px", marginBottom: "0.75rem",
-  },
-  heroTitle: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: "1.8rem", letterSpacing: "2px",
-    color: "#fff", marginBottom: "1rem",
-  },
-  heroMeta:       { display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: "1.25rem" },
-  heroMetaItem:   { display: "flex", flexDirection: "column", gap: "3px" },
-  heroMetaDivider:{ width: "1px", background: "rgba(255,255,255,0.08)", alignSelf: "stretch" },
-  heroMetaLabel:  { fontSize: "10px", fontWeight: 700, letterSpacing: "2px", color: "rgba(255,255,255,0.3)" },
-  heroMetaValue:  { fontSize: "0.9rem", fontWeight: 600, color: "#fff" },
-  progressWrap: { marginBottom: "0.25rem" },
-  progressLabelRow: { display: "flex", justifyContent: "space-between", marginBottom: "6px" },
-  progressLabel: { fontSize: "11px", fontWeight: 700, letterSpacing: "1px", color: "rgba(255,255,255,0.35)" },
-  progressTrack: { height: "6px", background: "rgba(255,255,255,0.06)", borderRadius: "3px", overflow: "hidden" },
-  progressFill: { height: "100%", borderRadius: "3px", transition: "width 1s ease" },
-  heroBtn: {
-    padding: "10px 20px", borderRadius: "8px",
-    fontWeight: 700, fontSize: "13px",
-    textDecoration: "none", display: "inline-block", transition: "all 0.2s",
-  },
-  heroBtnOutline: {
-    padding: "10px 20px", borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.12)",
-    color: "rgba(255,255,255,0.6)",
-    fontWeight: 600, fontSize: "13px",
-    textDecoration: "none", display: "inline-block",
-  },
-  heroRight: { flexShrink: 0, position: "relative", zIndex: 1, textAlign: "center" },
-  daysRing: {
-    width: "110px", height: "110px", borderRadius: "50%",
-    border: "3px solid",
-    display: "flex", flexDirection: "column",
-    alignItems: "center", justifyContent: "center",
-  },
-  daysNum: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: "2.2rem", letterSpacing: "-1px", lineHeight: 1,
-  },
-  daysLabel: {
-    fontSize: "9px", fontWeight: 700, letterSpacing: "1px",
-    color: "rgba(255,255,255,0.35)", textAlign: "center", lineHeight: 1.3,
-  },
-  daysWarning: { fontSize: "11px", fontWeight: 700, marginTop: "8px", letterSpacing: "0.5px" },
-  noMembership: {
-    position: "relative", textAlign: "center", padding: "3.5rem 2rem",
-    background: "rgba(255,255,255,0.01)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: "16px", marginBottom: "1.5rem", overflow: "hidden",
-  },
-  noMemGlow: {
-    position: "absolute", inset: 0,
-    background: "radial-gradient(ellipse 60% 50% at 50% 100%, rgba(255,26,26,0.05), transparent)",
-    pointerEvents: "none",
-  },
-  noMemIcon:  { fontSize: "2.5rem", display: "block", marginBottom: "1rem" },
-  noMemTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.5rem", color: "#fff", marginBottom: "0.5rem" },
-  noMemSub:   { fontSize: "0.9rem", color: "rgba(255,255,255,0.35)" },
-  kpiGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-    gap: "1rem", marginBottom: "1.5rem",
-  },
-  kpiCard: {
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: "12px", padding: "1.25rem",
-  },
-  kpiTop:   { marginBottom: "0.75rem" },
-  kpiIcon: {
-    width: "36px", height: "36px", borderRadius: "8px",
-    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem",
-  },
-  kpiValue: { fontFamily: "'Bebas Neue', sans-serif", fontSize: "2rem", marginBottom: "4px", letterSpacing: "-0.5px" },
-  kpiLabel: { fontSize: "12px", color: "rgba(255,255,255,0.35)", fontWeight: 500 },
-  kpiSub:   { fontSize: "11px", color: "rgba(255,255,255,0.2)", marginTop: "2px" },
-  alertBar: {
-    display: "flex", alignItems: "center", gap: "12px",
-    background: "rgba(255,184,0,0.06)",
-    border: "1px solid rgba(255,184,0,0.2)",
-    borderRadius: "10px", padding: "14px 20px", marginBottom: "1.5rem",
-  },
-  twoCol: {
-    display: "grid", gridTemplateColumns: "1fr 1fr",
-    gap: "1.5rem", marginBottom: "1.5rem",
-  },
-  panel: {
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: "12px", overflow: "hidden",
-  },
-  panelHeader: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "1rem 1.25rem",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
-  },
-  panelTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: "1rem", letterSpacing: "2px", color: "rgba(255,255,255,0.5)" },
-  viewAll: { fontSize: "12px", color: "#FF1A1A", textDecoration: "none", fontWeight: 600 },
-  emptyState: { textAlign: "center", padding: "2.5rem 1rem" },
-  emptyIcon: { fontSize: "2rem", display: "block", marginBottom: "0.75rem" },
-  emptyText: { fontSize: "0.9rem", fontWeight: 600, color: "rgba(255,255,255,0.35)", marginBottom: "4px" },
-  emptySub:  { fontSize: "0.8rem", color: "rgba(255,255,255,0.2)" },
-  activityList: { display: "flex", flexDirection: "column" },
-  activityRow: {
-    display: "flex", alignItems: "center", gap: "0.875rem",
-    padding: "1rem 1.25rem",
-    borderBottom: "1px solid rgba(255,255,255,0.04)",
-  },
-  activityIcon: {
-    width: "36px", height: "36px", flexShrink: 0,
-    borderRadius: "8px",
-    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.95rem",
-  },
-  activityTitle: { fontSize: "0.875rem", fontWeight: 600, color: "#fff", marginBottom: "2px" },
-  activityDesc:  { fontSize: "11px", color: "rgba(255,255,255,0.35)", lineHeight: 1.4 },
-  activityTime:  { fontSize: "11px", color: "rgba(255,255,255,0.3)", flexShrink: 0, fontWeight: 500 },
-  quickList: { display: "flex", flexDirection: "column", padding: "0.5rem", gap: "0.25rem" },
-  quickLink: {
-    display: "flex", alignItems: "center", gap: "1rem",
-    padding: "1rem",
-    background: "rgba(255,255,255,0.01)",
-    border: "1px solid rgba(255,255,255,0.05)",
-    borderRadius: "10px",
-    textDecoration: "none", color: "#fff", transition: "all 0.2s", cursor: "pointer",
-  },
-  quickIcon: {
-    width: "40px", height: "40px", flexShrink: 0,
-    borderRadius: "8px",
-    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.15rem",
-  },
-  quickLabel: { fontSize: "0.875rem", fontWeight: 700, marginBottom: "2px" },
-  quickSub:   { fontSize: "11px", color: "rgba(255,255,255,0.35)" },
-  quickArrow: { marginLeft: "auto", color: "rgba(255,255,255,0.2)", fontSize: "14px", transition: "color 0.2s" },
-  profileSnap: {
-    display: "flex", alignItems: "center", gap: "1.25rem",
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: "14px", padding: "1.25rem 1.5rem",
-    marginBottom: "1.5rem", flexWrap: "wrap",
-  },
-  snapAvatar: {
-    width: "52px", height: "52px", flexShrink: 0, borderRadius: "50%",
-    background: "rgba(255,26,26,0.15)", border: "2px solid rgba(255,26,26,0.3)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.5rem", color: "#FF1A1A",
-  },
-  snapInfo: { flex: 1 },
-  snapName: { fontSize: "1rem", fontWeight: 700, color: "#fff", marginBottom: "3px" },
-  snapEmail:{ fontSize: "12px", color: "rgba(255,255,255,0.4)", marginBottom: "6px" },
-  snapBadge:{
-    display: "inline-block", fontSize: "10px", fontWeight: 800,
-    letterSpacing: "1.5px", border: "1px solid",
-    borderRadius: "100px", padding: "3px 10px",
-  },
-  snapEditBtn: {
-    padding: "9px 18px",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "8px", color: "rgba(255,255,255,0.6)",
-    textDecoration: "none", fontWeight: 600, fontSize: "13px", flexShrink: 0,
-  },
-  ctaBanner: {
-    position: "relative", display: "flex",
-    justifyContent: "space-between", alignItems: "center",
-    background: "rgba(255,26,26,0.05)",
-    border: "1px solid rgba(255,26,26,0.15)",
-    borderRadius: "14px", padding: "1.5rem 2rem",
-    gap: "1rem", flexWrap: "wrap", overflow: "hidden",
-  },
-  ctaBannerGlow: {
-    position: "absolute", inset: 0,
-    background: "radial-gradient(ellipse 50% 80% at 100% 50%, rgba(255,26,26,0.06), transparent)",
-    pointerEvents: "none",
-  },
-  ctaBannerLeft: { position: "relative", zIndex: 1 },
-  ctaBannerTitle:{ fontSize: "1rem", fontWeight: 700, color: "#fff", marginBottom: "4px" },
-  ctaBannerSub:  { fontSize: "0.875rem", color: "rgba(255,255,255,0.4)" },
-  ctaBannerBtn: {
-    position: "relative", zIndex: 1,
-    padding: "12px 24px",
-    background: "linear-gradient(135deg, #FF1A1A, #cc0000)",
-    color: "#fff", textDecoration: "none",
-    fontWeight: 700, fontSize: "13px",
-    borderRadius: "8px", flexShrink: 0,
-    boxShadow: "0 4px 15px rgba(255,26,26,0.3)",
+  outline: {
+    padding: "10px 20px", background: "transparent", border: "1px solid rgba(255,255,255,0.12)",
+    color: "rgba(255,255,255,0.6)", textDecoration: "none", fontWeight: 600, fontSize: "13px", borderRadius: 9,
   },
 };

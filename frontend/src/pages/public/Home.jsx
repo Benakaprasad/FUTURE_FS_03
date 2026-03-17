@@ -699,6 +699,52 @@ const StatCard = ({ stat, index, active }) => {
   );
 };
 
+function MemberCountUp({ active }) {
+  const count = useCountUp(2400, 2000, active);
+  return <>{count.toLocaleString()}+</>;
+}
+
+// Add this near StatCard and MemberCountUp
+function AboutMemberStat() {
+  const [ref, inView] = useInView(0.3);
+  const count = useCountUp(2400, 2000, inView);
+  return (
+    <div ref={ref} style={{
+      position: "absolute", inset: 0,
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      gap: "0",
+    }}>
+      <span style={{
+        fontFamily: "'Bebas Neue', sans-serif",
+        fontSize: "clamp(6rem, 12vw, 10rem)",
+        color: "#FF1A1A", lineHeight: 1,
+        letterSpacing: "-4px",
+        textShadow: "0 0 80px rgba(255,26,26,0.4)",
+      }}>{count.toLocaleString()}+</span>
+      <span style={{
+        fontFamily: "'DM Sans', sans-serif",
+        fontSize: "11px", fontWeight: 800,
+        letterSpacing: "6px", color: "rgba(255,255,255,0.4)",
+        textTransform: "uppercase",
+      }}>Members Strong</span>
+      <div style={{
+        position: "absolute",
+        width: "320px", height: "320px",
+        borderRadius: "50%",
+        border: "1px solid rgba(255,26,26,0.08)",
+        boxShadow: "inset 0 0 80px rgba(255,26,26,0.04)",
+      }} />
+      <div style={{
+        position: "absolute",
+        width: "440px", height: "440px",
+        borderRadius: "50%",
+        border: "1px solid rgba(255,26,26,0.04)",
+      }} />
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 
@@ -2502,6 +2548,454 @@ function TrainerCard({ trainer, index }) {
   );
 }
 
+// ─── Marquee Strip ────────────────────────────────────────────────────────────
+function AboutMarquee() {
+  const items = [
+    "WHITEFIELD · BENGALURU",
+    "EST. 2018",
+    "2,400+ MEMBERS",
+    "48 EXPERT TRAINERS",
+    "7 YEARS OF EXCELLENCE",
+    "99% SATISFACTION",
+    "TRAIN HARD",
+    "NO EXCUSES",
+  ];
+  const repeated = [...items, ...items];
+
+  return (
+    <div style={{
+      borderTop: "1px solid rgba(255,26,26,0.15)",
+      borderBottom: "1px solid rgba(255,26,26,0.15)",
+      background: "rgba(255,26,26,0.03)",
+      overflow: "hidden",
+      padding: "14px 0",
+      position: "relative", zIndex: 1,
+    }}>
+      <div style={{
+        display: "flex",
+        width: "max-content",
+        animation: "marquee 18s linear infinite",
+      }}>
+        {repeated.map((item, i) => (
+          <span key={i} style={{
+            display: "inline-flex", alignItems: "center", gap: "16px",
+            paddingRight: "32px",
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: "1rem", letterSpacing: "4px",
+            color: i % 2 === 0 ? "rgba(255,255,255,0.55)" : "rgba(255,26,26,0.7)",
+            whiteSpace: "nowrap",
+          }}>
+            {item}
+            <span style={{
+              width: "5px", height: "5px", borderRadius: "50%",
+              background: "#FF1A1A", opacity: 0.5, flexShrink: 0,
+              boxShadow: "0 0 6px rgba(255,26,26,0.6)",
+            }} />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MasonryPhotoGrid() {
+  const containerRef = useRef(null);
+  const [entered, setEntered] = useState(false);
+  const [hovered, setHovered] = useState(null);
+
+  // Trigger once when the grid enters the viewport
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setEntered(true); },
+      { threshold: 0.15 }
+    );
+    if (containerRef.current) obs.observe(containerRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  const PHOTOS = [
+    { src: "/images/about/strength-zone.png",      label: "Strength Zone",   stat: "5 Power Racks",   color: "#FF1A1A", from: "translateX(-120px) translateY(60px) rotate(-6deg)"  },
+    { src: "/images/about/cardio-deck.png",         label: "Cardio Deck",     stat: "20+ Machines",    color: "#FF6B00", from: "translateX(80px) translateY(-100px) rotate(5deg)"   },
+    { src: "/images/about/functional-training.png", label: "Functional Zone", stat: "Full TRX Setup",  color: "#00C2FF", from: "translateX(-60px) translateY(-100px) rotate(-4deg)" },
+    { src: "/images/about/boxing-ring.png",         label: "Boxing Ring",     stat: "Pro Bag Setup",   color: "#FFB800", from: "translateX(60px) translateY(100px) rotate(4deg)"    },
+    { src: "/images/about/group-classes.png",       label: "Group Classes",   stat: "12 Classes/Week", color: "#A855F7", from: "translateX(120px) translateY(40px) rotate(6deg)"    },
+  ];
+
+  // Stagger delays so cards arrive one by one
+  const DELAYS = [0, 0.08, 0.16, 0.22, 0.30];
+
+  return (
+    <div style={{ padding: "5rem 2rem", background: "#050505" }}>
+
+      {/* Eyebrow */}
+      <div style={{
+        display:      "flex",
+        alignItems:   "center",
+        gap:          "12px",
+        marginBottom: "2.5rem",
+        maxWidth:     "1400px",
+        margin:       "0 auto 2.5rem",
+        opacity:      entered ? 1 : 0,
+        transform:    entered ? "none" : "translateY(20px)",
+        transition:   "opacity 0.6s ease, transform 0.6s ease",
+      }}>
+        <div style={{ width: "40px", height: "2px", background: "#FF1A1A" }} />
+        <span style={{
+          fontSize:      "10px",
+          fontWeight:    800,
+          letterSpacing: "5px",
+          color:         "#FF1A1A",
+          fontFamily:    "'DM Sans', sans-serif",
+        }}>OUR FACILITY</span>
+      </div>
+
+      {/* Grid */}
+      <div
+        ref={containerRef}
+        style={{
+          display:             "grid",
+          gridTemplateColumns: "1.4fr 1fr 1fr",
+          gridTemplateRows:    "260px 260px",
+          gap:                 "10px",
+          maxWidth:            "1400px",
+          margin:              "0 auto",
+        }}
+      >
+        {PHOTOS.map((photo, i) => {
+          const isHovered = hovered === i;
+
+          // Grid placement — matches original masonry layout
+          const gridStyle = i === 0 ? { gridRow: "1 / 3" } : {};
+
+          return (
+            <div
+              key={i}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                position:     "relative",
+                borderRadius: "14px",
+                overflow:     "hidden",
+                cursor:       "pointer",
+                // Slide in from each card's unique direction
+                opacity:      entered ? 1 : 0,
+                transform:    entered ? "none" : photo.from,
+                transition:   `opacity 0.7s ease ${DELAYS[i]}s, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${DELAYS[i]}s`,
+                ...gridStyle,
+              }}
+            >
+              <img
+                src={photo.src}
+                alt={photo.label}
+                style={{
+                  width:          "100%",
+                  height:         "100%",
+                  objectFit:      "cover",
+                  objectPosition: "center",
+                  transform:      isHovered ? "scale(1.06)" : "scale(1)",
+                  transition:     "transform 0.6s cubic-bezier(0.4,0,0.2,1)",
+                  display:        "block",
+                }}
+              />
+
+              {/* Base gradient */}
+              <div style={{
+                position:      "absolute", inset: 0,
+                background:    "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.65) 100%)",
+                pointerEvents: "none",
+              }} />
+
+              {/* Colour tint on hover */}
+              <div style={{
+                position:      "absolute", inset: 0,
+                background:    `linear-gradient(135deg, ${photo.color}33 0%, transparent 60%)`,
+                opacity:       isHovered ? 1 : 0,
+                transition:    "opacity 0.4s ease",
+                pointerEvents: "none",
+              }} />
+
+              {/* Stat pill */}
+              <div style={{
+                position:       "absolute", top: "14px", right: "14px",
+                padding:        "6px 14px",
+                background:     "rgba(0,0,0,0.6)",
+                backdropFilter: "blur(10px)",
+                border:         `1px solid ${photo.color}55`,
+                borderRadius:   "100px",
+                fontSize:       "10px", fontWeight: 800, letterSpacing: "1.5px",
+                color:          photo.color,
+                fontFamily:     "'DM Sans', sans-serif",
+                opacity:        isHovered ? 1 : 0,
+                transform:      isHovered ? "translateY(0)" : "translateY(-8px)",
+                transition:     "opacity 0.3s ease, transform 0.3s ease",
+                pointerEvents:  "none",
+              }}>{photo.stat}</div>
+
+              {/* Bottom label */}
+              <div style={{
+                position:      "absolute", bottom: 0, left: 0, right: 0,
+                padding:       "1.25rem",
+                transform:     isHovered ? "translateY(0)" : "translateY(4px)",
+                transition:    "transform 0.4s ease",
+                pointerEvents: "none",
+              }}>
+                <div style={{
+                  width:        isHovered ? "32px" : "16px",
+                  height:       "2px",
+                  background:   photo.color,
+                  borderRadius: "2px",
+                  marginBottom: "8px",
+                  transition:   "width 0.4s ease",
+                  boxShadow:    `0 0 8px ${photo.color}80`,
+                }} />
+                <span style={{
+                  fontFamily:    "'Bebas Neue', sans-serif",
+                  fontSize:      "1.3rem",
+                  letterSpacing: "2px",
+                  color:         "#fff",
+                  textShadow:    "0 2px 12px rgba(0,0,0,0.8)",
+                }}>{photo.label}</span>
+              </div>
+
+              {/* Bottom glow on hover */}
+              <div style={{
+                position:      "absolute", bottom: 0, left: "10%", right: "10%",
+                height:        "1px",
+                background:    `linear-gradient(90deg, transparent, ${photo.color}, transparent)`,
+                boxShadow:     `0 0 16px 3px ${photo.color}50`,
+                opacity:       isHovered ? 1 : 0,
+                transition:    "opacity 0.4s ease",
+                pointerEvents: "none",
+              }} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const TIMELINE = [
+  { year: "2018", color: "#FF1A1A", title: "Founded",         desc: "Doors opened in Whitefield with 200 founding members and a dream.",            badge: "LAUNCH",    stats:[{v:"200",   l:"Founding Members"},{v:"1",  l:"Location"      },{v:"8",  l:"Trainers"   }] },
+  { year: "2019", color: "#FF6B00", title: "500 Strong",      desc: "Crossed 500 members. Added cardio deck and group class studio.",                badge: "GROWTH",    stats:[{v:"500+",  l:"Members"        },{v:"12", l:"Group Classes/wk"},{v:"2",  l:"New Zones"  }] },
+  { year: "2021", color: "#FFB800", title: "Expansion",       desc: "Doubled the floor space. Brought in Hammer Strength & Technogym rigs.",         badge: "SCALE",     stats:[{v:"2×",    l:"Floor Space"    },{v:"5",  l:"Power Racks"    },{v:"20+",l:"Machines"   }] },
+  { year: "2022", color: "#A855F7", title: "Pro Trainers",    desc: "Recruited ISSA, CrossFit & RYT certified coaches. 12 trainers on staff.",        badge: "TEAM",      stats:[{v:"12",    l:"Trainers"       },{v:"3",  l:"Certifications" },{v:"4",  l:"Specialties"}] },
+  { year: "2023", color: "#00C2FF", title: "2,000 Members",   desc: "Bengaluru's fastest growing gym. Launched personal training programs.",          badge: "MILESTONE", stats:[{v:"2,000", l:"Members"        },{v:"1:1",l:"PT Programs"     },{v:"99%",l:"Satisfaction"}] },
+  { year: "2024", color: "#22C55E", title: "2,400+ & Rising", desc: "Award nominated. 99% satisfaction. Still just getting started.",                 badge: "TODAY",     stats:[{v:"2,400+",l:"Members"        },{v:"48", l:"Trainers"        },{v:"7+", l:"Years"       }] },
+];
+
+function AboutTimeline() {
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const [spineHeight, setSpineHeight] = useState(0);
+  const itemRefs = useRef([]);
+  const bodyRef  = useRef(null);
+
+  useEffect(() => {
+  // Entrance animation — reveal all cards on mount
+  itemRefs.current.forEach((el, i) => {
+    if (el) {
+      setTimeout(() => el.style.opacity = "1", i * 80);
+    }
+  });
+
+  const handleScroll = () => {
+    if (!bodyRef.current) return;
+    const viewportCenter = window.innerHeight * 0.5;
+    let closestIdx = 0;
+    let closestDist = Infinity;
+
+    itemRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const cardCenter = rect.top + rect.height / 2;
+      const dist = Math.abs(cardCenter - viewportCenter);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIdx = i;
+      }
+    });
+
+    setActiveIdx(closestIdx);
+
+    // Grow spine smoothly to the active node
+    const activeEl = itemRefs.current[closestIdx];
+    if (activeEl && bodyRef.current) {
+      const node = activeEl.querySelector("[data-node]");
+      if (node) {
+        const bodyTop = bodyRef.current.getBoundingClientRect().top;
+        const nodeTop = node.getBoundingClientRect().top;
+        setSpineHeight(nodeTop - bodyTop + 7);
+      }
+    }
+  };
+
+  // Run once on mount to set initial state
+  handleScroll();
+
+  window.addEventListener("scroll", handleScroll, { passive: true });
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
+
+  return (
+    <section style={{
+      padding: "6rem 2rem",
+      position: "relative", zIndex: 1,
+      borderTop: "1px solid rgba(255,255,255,0.05)",
+    }}>
+      <style>{`
+        .tl-card-hover:hover { border-color: rgba(255,26,26,0.2) !important; transform: translateX(4px); }
+        .tl-item-enter { animation: tlSlideIn 0.5s ease forwards; }
+        @keyframes tlSlideIn { from { opacity:0; transform:translateX(30px);} to { opacity:1; transform:none;} }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ textAlign: "center", marginBottom: "4rem", maxWidth: "600px", margin: "0 auto 4rem" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"10px", marginBottom:"1rem" }}>
+          <div style={{ width:"32px", height:"1px", background:"rgba(255,26,26,0.4)" }} />
+          <span style={{ fontSize:"10px", fontWeight:800, letterSpacing:"5px", color:"#FF1A1A", fontFamily:"'DM Sans',sans-serif" }}>OUR JOURNEY</span>
+          <div style={{ width:"32px", height:"1px", background:"rgba(255,26,26,0.4)" }} />
+        </div>
+        <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:"clamp(2.5rem,5vw,4rem)", color:"#fff", letterSpacing:"2px", lineHeight:1, marginBottom:".5rem" }}>
+          FROM ZERO TO <span style={{ color:"#FF1A1A" }}>2,400.</span>
+        </h2>
+        <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:".9rem", color:"rgba(255,255,255,0.35)" }}>
+          Six years. One gym. A whole community.
+        </p>
+      </div>
+
+      {/* Timeline body */}
+      <div ref={bodyRef} style={{ maxWidth:"700px", margin:"0 auto", position:"relative", paddingLeft:"52px" }}>
+
+        {/* Spine track */}
+        <div style={{ position:"absolute", left:"16px", top:0, bottom:0, width:"1px", background:"rgba(255,26,26,0.12)" }} />
+        {/* Spine fill — grows as you scroll */}
+        <div style={{ position:"absolute", left:"16px", top:0, width:"1px", height:`${spineHeight}px`, background:"#FF1A1A", boxShadow:"0 0 8px rgba(255,26,26,0.5)", transition: "height 0.15s linear" }} />
+
+        {TIMELINE.map((item, i) => {
+          const isActive = activeIdx === i;
+          return (
+            <div
+              key={i}
+              ref={(el) => (itemRefs.current[i] = el)}
+              data-idx={i}
+              style={{
+                position:"relative", marginBottom:"2.5rem",
+                opacity: 1,
+                transform: "none",
+                transition: "none",
+              }}
+            >
+              {/* Node dot */}
+              <div
+                data-node
+                style={{
+                  position:"absolute", left:"-45px", top:"20px",
+                  width:"14px", height:"14px", borderRadius:"50%",
+                  background: isActive ? item.color : "#0a0a0a",
+                  border: `2px solid ${isActive ? item.color : "rgba(255,26,26,0.25)"}`,
+                  boxShadow: isActive ? `0 0 16px ${item.color}80` : "none",
+                  transform: isActive ? "scale(1.3)" : "scale(1)",
+                  transition:"all 0.3s ease",
+                }}
+              />
+              {/* Connector tick */}
+              <div style={{
+                position:"absolute", left:"-31px", top:"26px",
+                width:"18px", height:"1px",
+                background: isActive ? `${item.color}60` : "rgba(255,255,255,0.08)",
+                transition:"background 0.3s",
+              }} />
+
+              {/* Card */}
+              <div
+                className="tl-card-hover"
+                onClick={() => setActiveIdx(i)}
+                style={{
+                  background: isActive ? `${item.color}08` : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${isActive ? item.color + "33" : "rgba(255,255,255,0.07)"}`,
+                  borderLeft: `3px solid ${isActive ? item.color : "transparent"}`,
+                  borderRadius:"16px",
+                  padding:"1.75rem 2rem",
+                  cursor:"pointer",
+                  transition:"all 0.3s ease",
+                  position:"relative",
+                  overflow:"hidden",
+                }}
+              >
+                {/* Year + badge */}
+                <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:".6rem" }}>
+                  <span style={{
+                    fontFamily:"'Bebas Neue',sans-serif", fontSize:"2rem",
+                    letterSpacing:"2px", lineHeight:1,
+                    color: isActive ? item.color : "rgba(255,255,255,0.25)",
+                    textShadow: isActive ? `0 0 20px ${item.color}50` : "none",
+                    transition: "background 0.2s ease, border-color 0.2s ease, transform 0.2s ease"
+                  }}>{item.year}</span>
+                  <span style={{
+                    fontSize:"9px", fontWeight:800, letterSpacing:"2px",
+                    padding:"3px 10px", borderRadius:"100px",
+                    color: item.color,
+                    background: `${item.color}11`,
+                    border: `1px solid ${item.color}44`,
+                    fontFamily:"'DM Sans',sans-serif",
+                  }}>{item.badge}</span>
+                </div>
+
+                {/* Title */}
+                <h3 style={{
+                  fontFamily:"'Bebas Neue',sans-serif", fontSize:"1.4rem",
+                  letterSpacing:"2px", color:"#fff", marginBottom:".5rem", lineHeight:1,
+                }}>{item.title}</h3>
+
+                {/* Description — expands when active */}
+                <div style={{
+                  overflow:"hidden",
+                  maxHeight: isActive ? "80px" : "0",
+                  opacity: isActive ? 1 : 0,
+                  transition:"max-height 0.4s ease, opacity 0.3s ease",
+                }}>
+                  <p style={{
+                    fontFamily:"'DM Sans',sans-serif", fontSize:".875rem",
+                    color:"rgba(255,255,255,0.5)", lineHeight:1.7,
+                    marginBottom:"1rem",
+                  }}>{item.desc}</p>
+                </div>
+
+                {/* Stats row — expands when active */}
+                <div style={{
+                  overflow:"hidden",
+                  maxHeight: isActive ? "70px" : "0",
+                  opacity: isActive ? 1 : 0,
+                  transition:"max-height 0.4s ease 0.1s, opacity 0.3s ease 0.1s",
+                }}>
+                  <div style={{
+                    display:"flex", gap:"2rem", paddingTop:"1rem",
+                    borderTop:"1px solid rgba(255,255,255,0.05)",
+                  }}>
+                    {item.stats.map((s, si) => (
+                      <div key={si} style={{ display:"flex", flexDirection:"column", gap:"2px" }}>
+                        <span style={{
+                          fontFamily:"'Bebas Neue',sans-serif", fontSize:"1.5rem",
+                          color: item.color, letterSpacing:"1px", lineHeight:1,
+                        }}>{s.v}</span>
+                        <span style={{
+                          fontSize:"9px", fontWeight:800, letterSpacing:"2px",
+                          color:"rgba(255,255,255,0.25)", fontFamily:"'DM Sans',sans-serif",
+                          textTransform:"uppercase",
+                        }}>{s.l}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function CustomCursor() {
   const dotRef   = useRef(null);
   const ringRef  = useRef(null);
@@ -2607,6 +3101,149 @@ function CustomCursor() {
   );
 }
 
+function AboutPhotoCarousel() {
+  const [current, setCurrent] = useState(0);
+  const [prev, setPrev]       = useState(null);
+  const [dir, setDir]         = useState(1);
+  const [animating, setAnimating] = useState(false);
+  const timerRef = useRef(null);
+
+  const goTo = useCallback((next, direction = 1) => {
+    if (animating) return;
+    setDir(direction);
+    setPrev(current);
+    setCurrent(next);
+    setAnimating(true);
+    setTimeout(() => { setPrev(null); setAnimating(false); }, 600);
+  }, [animating, current]);
+
+  const next = useCallback(() => goTo((current + 1) % ABOUT_PHOTOS.length, 1),  [current, goTo]);
+  const back = useCallback(() => goTo((current - 1 + ABOUT_PHOTOS.length) % ABOUT_PHOTOS.length, -1), [current, goTo]);
+
+  useEffect(() => {
+    timerRef.current = setInterval(next, 3800);
+    return () => clearInterval(timerRef.current);
+  }, [next]);
+
+  const pause  = () => clearInterval(timerRef.current);
+  const resume = () => { timerRef.current = setInterval(next, 3800); };
+
+  const photo = ABOUT_PHOTOS[current];
+
+  return (
+    <div onMouseEnter={pause} onMouseLeave={resume}
+      style={{ position: "relative", width: "100%", userSelect: "none" }}>
+      <div style={{ position: "relative", height: "460px", borderRadius: "16px", overflow: "hidden", background: "#111" }}>
+
+        {prev !== null && (
+          <img src={ABOUT_PHOTOS[prev].src} alt="" style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%",
+            objectFit: "cover",
+            transform: `translateX(${dir === 1 ? "-100%" : "100%"})`,
+            transition: "transform 0.6s cubic-bezier(0.77,0,0.175,1)",
+            zIndex: 1,
+          }} />
+        )}
+
+        <img key={current} src={photo.src} alt={photo.label} style={{
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          objectFit: "cover", zIndex: 2,
+          animation: animating ? `slideIn${dir === 1 ? "Right" : "Left"} 0.6s cubic-bezier(0.77,0,0.175,1) forwards` : "none",
+        }} />
+
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 3,
+          background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.75) 100%)",
+        }} />
+
+        <div style={{
+          position: "absolute", bottom: "1.25rem", left: "1.25rem", zIndex: 4,
+          display: "flex", alignItems: "center", gap: "8px",
+        }}>
+          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: photo.color, boxShadow: `0 0 8px ${photo.color}` }} />
+          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "10px", fontWeight: 800, letterSpacing: "3px", color: photo.color }}>{photo.label}</span>
+        </div>
+
+        <div style={{
+          position: "absolute", bottom: "1.25rem", right: "1.25rem", zIndex: 4,
+          fontFamily: "'Bebas Neue', sans-serif", fontSize: "1rem",
+          letterSpacing: "2px", color: "rgba(255,255,255,0.35)",
+        }}>
+          {String(current + 1).padStart(2, "0")} / {String(ABOUT_PHOTOS.length).padStart(2, "0")}
+        </div>
+
+        {[{ fn: back, label: "←", side: "left" }, { fn: next, label: "→", side: "right" }].map(({ fn, label, side }) => (
+          <button key={side} onClick={fn} style={{
+            position: "absolute", top: "50%", [side]: "1rem",
+            transform: "translateY(-50%)", zIndex: 4,
+            width: "36px", height: "36px", borderRadius: "50%",
+            background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.12)",
+            color: "#fff", fontSize: "14px", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "background 0.2s, border-color 0.2s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background = photo.color; e.currentTarget.style.borderColor = photo.color; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0.45)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+          >{label}</button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", gap: "6px", marginTop: "14px" }}>
+        {ABOUT_PHOTOS.map((p, i) => (
+          <button key={i} onClick={() => goTo(i, i > current ? 1 : -1)} style={{
+            width: current === i ? "24px" : "6px", height: "6px",
+            borderRadius: "3px", border: "none", cursor: "pointer", padding: 0,
+            background: current === i ? photo.color : "rgba(255,255,255,0.2)",
+            transition: "all 0.35s ease",
+            boxShadow: current === i ? `0 0 8px ${photo.color}80` : "none",
+          }} />
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes slideInLeft  { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+      `}</style>
+    </div>
+  );
+}
+
+function ParallaxImage({ src }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!ref.current) return;
+      const container = ref.current.parentElement;
+      const rect = container.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      const progress = 1 - (rect.bottom / (viewportH + rect.height));
+      const offset = progress * rect.height * 0.4;
+      ref.current.style.transform = `translateY(${offset}px)`;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        position: "absolute",
+        top: "-30%",
+        left: 0,
+        right: 0,
+        bottom: "-30%",
+        backgroundImage: `url('${src}')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center top",
+        willChange: "transform",
+      }}
+    />
+  );
+}
+
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -2617,7 +3254,7 @@ export default function Home() {
   const [phraseVisible, setPhraseVisible] = useState(true);
   const sessionsSectionRef = useRef(null);
   const [sessionsScrollProgress, setSessionsScrollProgress] = useState(0);
-  const [sessionsEntered, setSessionsEntered] = useState(false);
+  const [sessionsEntered, setSessionsEntered] = useState(true);
   const [isDesktop, setIsDesktop] = useState(false);
 
   const [statsRef, statsInView] = useInView(0.3);
@@ -2738,6 +3375,10 @@ input, textarea { cursor: text !important; }
         @keyframes cursorRing {
           0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
           100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+        }
+          @keyframes marquee {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
         }
 
         .hero-phrase {
@@ -3237,7 +3878,7 @@ input, textarea { cursor: text !important; }
   padding: "0",
   background: "#050505",
   position: "relative",
-  overflow: "hidden",
+  overflow: "visible",
 }}>
 
   {/* ── Diagonal red slash ── */}
@@ -3250,14 +3891,14 @@ input, textarea { cursor: text !important; }
     zIndex: 2,
   }} />
 
-  {/* ── Background noise texture ── */}
+  {/* ── Background noise ── */}
   <div style={{
     position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
     opacity: 0.025,
     backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
   }} />
 
-  {/* ── Large ghost year ── */}
+  {/* ── Ghost year ── */}
   <div style={{
     position: "absolute", right: "-2rem", top: "50%",
     transform: "translateY(-50%)",
@@ -3269,63 +3910,129 @@ input, textarea { cursor: text !important; }
     zIndex: 0,
   }}>2018</div>
 
-  {/* ══ BLOCK 1 — MANIFESTO (full width, cinematic) ══ */}
+  {/* ══ BLOCK 1 — MANIFESTO ══ */}
+<div style={{
+  position: "relative", zIndex: 1,
+  minHeight: "600px",
+}}>
+
+  {/* Deadlift image fills the entire block behind everything */}
   <div style={{
-    position: "relative", zIndex: 1,
-    padding: "7rem 2rem 5rem",
-    maxWidth: "1400px", margin: "0 auto",
+    position: "absolute", inset: 0,
+    overflow: "hidden",
   }}>
-    <ScrollCard direction="left" delay={0}>
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "2rem" }}>
-        <div style={{ width: "40px", height: "2px", background: "#FF1A1A", boxShadow: "0 0 8px rgba(255,26,26,0.6)" }} />
-        <span style={{
-          fontSize: "10px", fontWeight: 800, letterSpacing: "5px",
-          color: "#FF1A1A", fontFamily: "'DM Sans', sans-serif",
-        }}>EST. BENGALURU · 2018</span>
-      </div>
-    </ScrollCard>
-
-    <ScrollCard direction="left" delay={0.08}>
-      <h2 style={{
-        fontFamily: "'Bebas Neue', sans-serif",
-        fontSize: "clamp(3.5rem, 8vw, 8rem)",
-        letterSpacing: "-1px", lineHeight: 0.88,
-        color: "#fff", marginBottom: "2.5rem",
-        maxWidth: "900px",
-      }}>
-        NOT JUST A GYM.<br />
-        <span style={{
-          background: "linear-gradient(135deg, #FF1A1A 0%, #FF6B00 100%)",
-          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-        }}>A MOVEMENT.</span>
-      </h2>
-    </ScrollCard>
-
-    <ScrollCard direction="left" delay={0.14}>
-      <p style={{
-        fontFamily: "'DM Sans', sans-serif",
-        fontSize: "clamp(1rem, 1.4vw, 1.2rem)",
-        color: "rgba(255,255,255,0.45)",
-        lineHeight: 1.85, maxWidth: "580px",
-        borderLeft: "2px solid rgba(255,26,26,0.3)",
-        paddingLeft: "1.5rem",
-      }}>
-        FitZone was built on a single belief — that every person in Bengaluru 
-        deserves access to world-class training, regardless of where they're 
-        starting from. We don't sell memberships. We build athletes.
-      </p>
-    </ScrollCard>
+    <ParallaxImage src="/images/about/deadlift-for-background-1.png" />
+    {/* Dark gradient — heavy on left so text is readable, fades right */}
+    <div style={{
+      position: "absolute", inset: 0,
+      background: "linear-gradient(90deg, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.75) 45%, rgba(0,0,0,0.2) 100%)",
+      zIndex: 1,
+    }} />
   </div>
 
-  {/* ══ BLOCK 2 — SPLIT LAYOUT ══ */}
+  {/* Text content floats on top */}
+  <div style={{
+    position: "relative", zIndex: 2,
+    padding: "7rem 2rem 5rem",
+    maxWidth: "1400px", margin: "0 auto",
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "4rem",
+    alignItems: "center",
+  }}>
+    {/* Left — text (keep all your ScrollCard blocks exactly as they are) */}
+    <div>
+      <ScrollCard direction="left" delay={0}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "2rem" }}>
+          <div style={{ width: "40px", height: "2px", background: "#FF1A1A", boxShadow: "0 0 8px rgba(255,26,26,0.6)" }} />
+          <span style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "5px", color: "#FF1A1A", fontFamily: "'DM Sans', sans-serif" }}>EST. BENGALURU · 2018</span>
+        </div>
+      </ScrollCard>
+
+      <ScrollCard direction="left" delay={0.08}>
+        <h2 style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: "clamp(3.5rem, 6vw, 7rem)",
+          letterSpacing: "-1px", lineHeight: 0.88,
+          color: "#fff", marginBottom: "2.5rem",
+        }}>
+          NOT JUST A GYM.<br />
+          <span style={{
+            background: "linear-gradient(135deg, #FF1A1A 0%, #FF6B00 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}>A MOVEMENT.</span>
+        </h2>
+      </ScrollCard>
+
+      <ScrollCard direction="left" delay={0.14}>
+        <p style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "clamp(1rem, 1.4vw, 1.15rem)",
+          color: "rgba(255,255,255,0.55)",
+          lineHeight: 1.85, maxWidth: "480px",
+          borderLeft: "2px solid rgba(255,26,26,0.4)",
+          paddingLeft: "1.5rem",
+          marginBottom: "2.5rem",
+        }}>
+          FitZone was built on a single belief — that every person in Bengaluru
+          deserves access to world-class training, regardless of where they're
+          starting from. We don't sell memberships. We build athletes.
+        </p>
+      </ScrollCard>
+
+      <ScrollCard direction="left" delay={0.2}>
+        <div style={{ display: "flex", gap: "2rem" }}>
+          {[["7+", "Years"], ["2400+", "Members"], ["48", "Trainers"]].map(([val, label]) => (
+            <div key={label}>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2.2rem", color: "#FF1A1A", letterSpacing: "-1px", lineHeight: 1 }}>{val}</div>
+              <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "2px", color: "rgba(255,255,255,0.4)", fontFamily: "'DM Sans', sans-serif", textTransform: "uppercase", marginTop: "3px" }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </ScrollCard>
+    </div>
+
+    {/* Right — intentionally empty, deadlift image shows through */}
+    <div />
+  </div>
+
+  {/* Bottom label over image */}
+  <div style={{
+    position: "absolute", bottom: "1.5rem", right: "2rem",
+    display: "flex", alignItems: "center", gap: "8px",
+    zIndex: 3,
+  }}>
+    <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#FF1A1A", boxShadow: "0 0 8px rgba(255,26,26,0.8)" }} />
+    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "10px", fontWeight: 800, letterSpacing: "3px", color: "#FF1A1A" }}>STRENGTH ZONE</span>
+  </div>
+</div>
+
+  {/* ══ MARQUEE STRIP ══ */}
+  <AboutMarquee />
+
+  {/* ══ MASONRY PHOTO GRID — needs its own section so sticky works ══ */}
+<section style={{ background: "#050505", position: "relative" }}>
+  <MasonryPhotoGrid />
+</section>
+
+<section id="about-continued" style={{
+  padding: "0",
+  background: "#050505",
+  position: "relative",
+  overflow: "hidden",
+}}>
+
+  {/* ══ TIMELINE ══ */}
+  <AboutTimeline />
+
+  {/* ══ BLOCK 2 — SPLIT (2400+ count + facts) ══ */}
   <div style={{
     position: "relative", zIndex: 1,
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     minHeight: "520px",
   }}>
-
     {/* Left — red-tinted image panel */}
     <ScrollCard direction="left" delay={0}>
       <div style={{
@@ -3334,57 +4041,16 @@ input, textarea { cursor: text !important; }
         overflow: "hidden",
         background: "#0a0a0a",
       }}>
-        {/* Placeholder for gym image */}
         <div style={{
           position: "absolute", inset: 0,
           background: "linear-gradient(135deg, #1a0000 0%, #0d0000 50%, #050000 100%)",
         }} />
-
-        {/* Grid lines on image side */}
         <div style={{
           position: "absolute", inset: 0,
           backgroundImage: "linear-gradient(rgba(255,26,26,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,26,26,0.06) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }} />
-
-        {/* Big stat overlay */}
-        <div style={{
-          position: "absolute", inset: 0,
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          gap: "0",
-        }}>
-          <span style={{
-            fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: "clamp(6rem, 12vw, 10rem)",
-            color: "#FF1A1A", lineHeight: 1,
-            letterSpacing: "-4px",
-            textShadow: "0 0 80px rgba(255,26,26,0.4)",
-          }}>2,400+</span>
-          <span style={{
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: "11px", fontWeight: 800,
-            letterSpacing: "6px", color: "rgba(255,255,255,0.4)",
-            textTransform: "uppercase",
-          }}>Members Strong</span>
-
-          {/* Decorative ring */}
-          <div style={{
-            position: "absolute",
-            width: "320px", height: "320px",
-            borderRadius: "50%",
-            border: "1px solid rgba(255,26,26,0.08)",
-            boxShadow: "inset 0 0 80px rgba(255,26,26,0.04)",
-          }} />
-          <div style={{
-            position: "absolute",
-            width: "440px", height: "440px",
-            borderRadius: "50%",
-            border: "1px solid rgba(255,26,26,0.04)",
-          }} />
-        </div>
-
-        {/* Bottom label */}
+        <AboutMemberStat />
         <div style={{
           position: "absolute", bottom: "2rem", left: "2rem",
           display: "flex", alignItems: "center", gap: "10px",
@@ -3406,32 +4072,13 @@ input, textarea { cursor: text !important; }
         background: "#000",
         height: "100%",
         display: "flex", flexDirection: "column", justifyContent: "center",
-        gap: "0",
         borderLeft: "1px solid rgba(255,26,26,0.1)",
       }}>
-
-        {/* Numbered facts */}
         {[
-          {
-            num: "01",
-            title: "CERTIFIED COACHES",
-            desc: "Every trainer holds recognised certifications and brings real competition or clinical experience.",
-          },
-          {
-            num: "02",
-            title: "PREMIUM EQUIPMENT",
-            desc: "Hammer Strength racks, Concept2 rowers, Technogym cardio, and a full functional zone.",
-          },
-          {
-            num: "03",
-            title: "REAL COMMUNITY",
-            desc: "2,400+ members who show up for each other. Beginners and veterans train side by side.",
-          },
-          {
-            num: "04",
-            title: "TRACKED PROGRESS",
-            desc: "Monthly body composition scans, fitness assessments, and trainer check-ins — no guesswork.",
-          },
+          { num: "01", title: "CERTIFIED COACHES",  desc: "Every trainer holds recognised certifications and brings real competition or clinical experience." },
+          { num: "02", title: "PREMIUM EQUIPMENT",  desc: "Hammer Strength racks, Concept2 rowers, Technogym cardio, and a full functional zone." },
+          { num: "03", title: "REAL COMMUNITY",     desc: "2,400+ members who show up for each other. Beginners and veterans train side by side." },
+          { num: "04", title: "TRACKED PROGRESS",   desc: "Monthly body composition scans, fitness assessments, and trainer check-ins — no guesswork." },
         ].map((item, i) => (
           <AboutFact key={i} item={item} index={i} />
         ))}
@@ -3439,7 +4086,7 @@ input, textarea { cursor: text !important; }
     </ScrollCard>
   </div>
 
-  {/* ══ BLOCK 3 — HOURS + LOCATION BAR ══ */}
+  {/* ══ BLOCK 3 — HOURS + LOCATION ══ */}
   <ScrollCard direction="left" delay={0}>
     <div style={{
       position: "relative", zIndex: 1,
@@ -3448,65 +4095,27 @@ input, textarea { cursor: text !important; }
       display: "grid",
       gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
     }}>
-
-      {/* Hours weekday */}
       <div style={{ padding: "2.5rem 3rem", display: "flex", flexDirection: "column", gap: "6px" }}>
-        <span style={{
-          fontSize: "9px", fontWeight: 800, letterSpacing: "3px",
-          color: "#FF1A1A", fontFamily: "'DM Sans', sans-serif",
-          marginBottom: "4px",
-        }}>MON – SAT</span>
-        <span style={{
-          fontFamily: "'Bebas Neue', sans-serif",
-          fontSize: "2.2rem", letterSpacing: "1px", color: "#fff", lineHeight: 1,
-        }}>5:00 AM</span>
-        <span style={{
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: "12px", color: "rgba(255,255,255,0.3)", letterSpacing: "1px",
-        }}>until 10:30 PM</span>
+        <span style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "3px", color: "#FF1A1A", fontFamily: "'DM Sans', sans-serif", marginBottom: "4px" }}>MON – SAT</span>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2.2rem", letterSpacing: "1px", color: "#fff", lineHeight: 1 }}>5:00 AM</span>
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.3)", letterSpacing: "1px" }}>until 10:30 PM</span>
       </div>
-
       <div style={{ background: "rgba(255,255,255,0.05)" }} />
-
-      {/* Hours sunday */}
       <div style={{ padding: "2.5rem 3rem", display: "flex", flexDirection: "column", gap: "6px" }}>
-        <span style={{
-          fontSize: "9px", fontWeight: 800, letterSpacing: "3px",
-          color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif",
-          marginBottom: "4px",
-        }}>SUNDAY</span>
-        <span style={{
-          fontFamily: "'Bebas Neue', sans-serif",
-          fontSize: "2.2rem", letterSpacing: "1px", color: "#fff", lineHeight: 1,
-        }}>6:00 AM</span>
-        <span style={{
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: "12px", color: "rgba(255,255,255,0.3)", letterSpacing: "1px",
-        }}>until 1:00 PM</span>
+        <span style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "3px", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif", marginBottom: "4px" }}>SUNDAY</span>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2.2rem", letterSpacing: "1px", color: "#fff", lineHeight: 1 }}>6:00 AM</span>
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.3)", letterSpacing: "1px" }}>until 1:00 PM</span>
       </div>
-
       <div style={{ background: "rgba(255,255,255,0.05)" }} />
-
-      {/* Location */}
       <div style={{ padding: "2.5rem 3rem", display: "flex", flexDirection: "column", gap: "6px" }}>
-        <span style={{
-          fontSize: "9px", fontWeight: 800, letterSpacing: "3px",
-          color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif",
-          marginBottom: "4px",
-        }}>FIND US</span>
-        <span style={{
-          fontFamily: "'Bebas Neue', sans-serif",
-          fontSize: "1.5rem", letterSpacing: "1px", color: "#fff", lineHeight: 1.2,
-        }}>Lakshmi Arcade</span>
-        <span style={{
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: "12px", color: "rgba(255,255,255,0.3)", lineHeight: 1.5,
-        }}>Whitefield Main Rd, near<br />Hope Farm Signal · 560066</span>
+        <span style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "3px", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif", marginBottom: "4px" }}>FIND US</span>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.5rem", letterSpacing: "1px", color: "#fff", lineHeight: 1.2 }}>Lakshmi Arcade</span>
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>Whitefield Main Rd, near<br />Hope Farm Signal · 560066</span>
       </div>
     </div>
   </ScrollCard>
 
-  {/* ══ BLOCK 4 — BOTTOM CTA STRIP ══ */}
+  {/* ══ BLOCK 4 — CTA STRIP ══ */}
   <ScrollCard direction="left" delay={0}>
     <div style={{
       position: "relative", zIndex: 1,
@@ -3516,19 +4125,16 @@ input, textarea { cursor: text !important; }
       gap: "2rem", flexWrap: "wrap",
       background: "linear-gradient(90deg, rgba(255,26,26,0.04) 0%, transparent 60%)",
       borderTop: "1px solid rgba(255,26,26,0.1)",
-      maxWidth: "100%",
     }}>
       <div>
         <p style={{
           fontFamily: "'Bebas Neue', sans-serif",
           fontSize: "clamp(1.8rem, 4vw, 3rem)",
-          color: "#fff", letterSpacing: "2px", lineHeight: 1,
-          marginBottom: "8px",
+          color: "#fff", letterSpacing: "2px", lineHeight: 1, marginBottom: "8px",
         }}>READY TO JOIN THE MOVEMENT?</p>
-        <p style={{
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: "0.9rem", color: "rgba(255,255,255,0.35)",
-        }}>First session free · No joining fee this month</p>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem", color: "rgba(255,255,255,0.35)" }}>
+          First session free · No joining fee this month
+        </p>
       </div>
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
         <a href="/register" style={{
@@ -3537,22 +4143,19 @@ input, textarea { cursor: text !important; }
           color: "#fff", textDecoration: "none",
           fontFamily: "'DM Sans', sans-serif",
           fontWeight: 800, fontSize: "13px", letterSpacing: "1px",
-          borderRadius: "6px",
-          boxShadow: "0 6px 24px rgba(255,26,26,0.35)",
+          borderRadius: "6px", boxShadow: "0 6px 24px rgba(255,26,26,0.35)",
         }}>Start Training →</a>
         <a href="#contact" style={{
-          padding: "14px 28px",
-          background: "transparent",
+          padding: "14px 28px", background: "transparent",
           border: "1px solid rgba(255,255,255,0.12)",
           color: "rgba(255,255,255,0.55)", textDecoration: "none",
-          fontFamily: "'DM Sans', sans-serif",
-          fontWeight: 600, fontSize: "13px",
+          fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: "13px",
           borderRadius: "6px",
         }}>Get in Touch</a>
       </div>
     </div>
   </ScrollCard>
-
+</section>
 </section>
 
      {/* ════════════════════════════════════════════

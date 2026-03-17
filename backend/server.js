@@ -52,9 +52,15 @@ app.set('trust proxy', 1);
 // ── Request ID & Response Time ────────────────────────────────
 app.use((req, res, next) => {
   req.id = req.headers['x-request-id'] || uuidv4();
-  res.setHeader('X-Request-ID', req.id);
+  res.setHeader('X-Request-ID', req.id);  // set early — before response sends
   const start = Date.now();
-  res.on('finish', () => res.setHeader('X-Response-Time', `${Date.now() - start}ms`));
+  // Use res.on('close') not 'finish' — and write to local var, not header
+  // (headers are already sent by 'finish' time, setting them throws)
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    // Attach to res for morgan/logging access, don't try to set header
+    res.responseTime = ms;
+  });
   next();
 });
 
