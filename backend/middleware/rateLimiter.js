@@ -4,12 +4,9 @@ const { RedisStore } = require('rate-limit-redis');
 const { ipKeyGenerator } = require('express-rate-limit');
 const Redis = require('ioredis');
 
-// ── IS_PROD must be first — used by Redis connection block ────
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-// ─────────────────────────────────────────────────────────────
-//  Redis Client
-// ─────────────────────────────────────────────────────────────
+// ── Redis Client ──────────────────────────────────────────────
 const redis = new Redis({
   host:                 process.env.REDIS_HOST     || '127.0.0.1',
   port:                 parseInt(process.env.REDIS_PORT) || 6379,
@@ -25,8 +22,6 @@ const redis = new Redis({
   },
 });
 
-let redisReady = false;
-
 if (IS_PROD) {
   redis.connect()
     .then(() => { redisReady = true; console.log('[Redis] Connected ✓'); })
@@ -40,31 +35,25 @@ if (IS_PROD) {
   console.log('[Redis] Skipped in development — memory store active');
 }
 
-// ─────────────────────────────────────────────────────────────
-//  Store Factory
-// ─────────────────────────────────────────────────────────────
+let redisReady = false;
+
+// ── Store Factory ─────────────────────────────────────────────
 const makeStore = (prefix) => {
-  if (!redisReady) return undefined;
+  if (!IS_PROD) return undefined;  // memory store in dev
   return new RedisStore({
     sendCommand: (...args) => redis.call(...args),
     prefix:      `rl:${prefix}:`,
   });
 };
 
-// ─────────────────────────────────────────────────────────────
-//  Key Generator — uses ipKeyGenerator helper for IPv6 safety
-//  express-rate-limit v7+ requires this when using custom keys
-//  based on IP to prevent IPv6 bypass attacks.
-// ─────────────────────────────────────────────────────────────
+// ── Key Generator ─────────────────────────────────────────────
 const keyGenerator = (req) => {
   const forwarded = req.headers['x-forwarded-for']?.split(',')[0].trim();
   if (forwarded) return forwarded;
-  return ipKeyGenerator(req); // handles IPv4 + IPv6 correctly
+  return ipKeyGenerator(req);
 };
 
-// ─────────────────────────────────────────────────────────────
-//  Consistent JSON 429 response
-// ─────────────────────────────────────────────────────────────
+// ── 429 Handler ───────────────────────────────────────────────
 const rateLimitHandler = (_req, res, _next, options) => {
   res.status(429).json({
     error:      'Too many requests. Please slow down.',
@@ -73,11 +62,9 @@ const rateLimitHandler = (_req, res, _next, options) => {
   });
 };
 
-// ─────────────────────────────────────────────────────────────
-//  Helper — no-op in dev, real limiter in prod
-// ─────────────────────────────────────────────────────────────
+// ── Limiter Factory ───────────────────────────────────────────
 const makeLimiter = (options) => {
-  if (!IS_PROD) return (_req, _res, next) => next();
+  if (!IS_PROD) return (_req, _res, next) => next();  // no-op in dev
   return rateLimit({
     standardHeaders: true,
     legacyHeaders:   false,
@@ -87,17 +74,16 @@ const makeLimiter = (options) => {
   });
 };
 
-// ── 1. GLOBAL — 300 req / 5 min ──────────────────────────────
+// ── Limiters ──────────────────────────────────────────────────
 const globalLimiter = makeLimiter({
   windowMs: 5 * 60 * 1000,
   max:      300,
   store:    makeStore('global'),
-  skip:     (req) =>
+  skip: (req) =>
     req.path.startsWith('/api/auth') ||
     req.path.startsWith('/api/notifications/stream'),
 });
 
-// ── 2. AUTH — 10 req / 15 min (failures only) ────────────────
 const authLimiter = makeLimiter({
   windowMs:               15 * 60 * 1000,
   max:                    10,
@@ -105,21 +91,18 @@ const authLimiter = makeLimiter({
   skipSuccessfulRequests: true,
 });
 
-// ── 3. PAYMENTS — 20 req / 1 hour ────────────────────────────
 const paymentLimiter = makeLimiter({
   windowMs: 60 * 60 * 1000,
   max:      20,
   store:    makeStore('payment'),
 });
 
-// ── 4. PUBLIC — 60 req / 10 min ──────────────────────────────
 const publicLimiter = makeLimiter({
   windowMs: 10 * 60 * 1000,
   max:      60,
   store:    makeStore('public'),
 });
 
-// ── 5. WRITES — 30 req / 10 min ──────────────────────────────
 const writeLimiter = makeLimiter({
   windowMs: 10 * 60 * 1000,
   max:      30,

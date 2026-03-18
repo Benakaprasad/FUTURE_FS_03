@@ -9,29 +9,38 @@ const pool = new Pool({
   password: process.env.DB_PASS,
   max:                20,
   idleTimeoutMillis:  30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // ← increase from 2000 to 10000
   ssl: process.env.NODE_ENV === 'production'
     ? { rejectUnauthorized: false }
     : false,
 });
 
 pool.on('connect', () => {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('PostgreSQL connected');
-  }
+  if (process.env.NODE_ENV !== 'production') console.log('PostgreSQL connected');
 });
 
 pool.on('error', (err) => {
   console.error('PostgreSQL pool error:', err.message);
-  process.exit(1);
-});
+});  // ← remove process.exit(1) here — pool errors shouldn't crash the server
 
-// Test connection on startup
-pool.query('SELECT NOW()')
-  .then(() => console.log('Database connection verified'))
-  .catch(err => {
-    console.error('Database connection failed:', err.message);
-    process.exit(1);
-  });
+// Retry on startup
+const connectWithRetry = async (retries = 5, delay = 3000) => {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      await pool.query('SELECT NOW()');
+      console.log('Database connection verified');
+      return;
+    } catch (err) {
+      console.warn(`DB connect attempt ${i}/${retries} failed: ${err.message}`);
+      if (i === retries) {
+        console.error('Could not connect to database. Exiting.');
+        process.exit(1);
+      }
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+};
 
+const dbReady = connectWithRetry();
 module.exports = pool;
+module.exports.dbReady = dbReady;

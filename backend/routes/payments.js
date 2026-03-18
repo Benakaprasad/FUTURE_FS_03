@@ -11,12 +11,10 @@ const { authorize }        = require('../middleware/role');
 const { validate }         = require('../middleware/validate');
 const { ROLE_GROUPS, ROLES } = require('../constants/roles');
 const { MEMBERSHIP_TYPES, PAYMENT_METHODS } = require('../constants/statuses');
-const { paymentLimiter }   = require('../middleware/rateLimiter');
 
 // ── POST /api/payments/create-order (customer) ────────────────
 router.post('/create-order',
   authenticate, authorize(ROLES.CUSTOMER),
-  paymentLimiter,
   [
     body('amount').isFloat({ min: 1 }).withMessage('Valid amount required'),
     body('membership_type').isIn(MEMBERSHIP_TYPES),

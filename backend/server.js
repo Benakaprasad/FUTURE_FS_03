@@ -10,6 +10,7 @@ const hpp          = require('hpp');
 const { v4: uuidv4 } = require('uuid');
 const { sanitize } = require('./middleware/sanitize');
 const path         = require('path');
+const pool = require('./config/database');
 
 const {
   globalLimiter,
@@ -124,8 +125,8 @@ app.use(hpp());
 
 // ── 8. Health / Readiness Checks ─────────────────────────────
 app.get('/health', async (_req, res) => {
-  let redisStatus = IS_PROD ? 'unreachable' : 'skipped';
-  if (IS_PROD) {
+  let redisStatus = IS_PROD ? 'unreachable' : 'skipped';  // ← restore
+  if (IS_PROD) {                                           // ← restore
     try {
       await redis.ping();
       redisStatus = 'connected';
@@ -203,65 +204,69 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 });
 
 // ── 13. Start ─────────────────────────────────────────────────
-const server = app.listen(PORT, () => {
-  console.log('─────────────────────────────────────');
-  console.log('  FitZone Gym CRM');
-  console.log(`  ENV  : ${process.env.NODE_ENV || 'development'}`);
-  console.log(`  PORT : ${PORT}`);
-  console.log(`  API  : http://localhost:${PORT}/api`);
-  console.log('─────────────────────────────────────');
-});
+const SHUTDOWN_TIMEOUT = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '15000', 10);
 
-// ── 14. Graceful Shutdown ─────────────────────────────────────
-const SHUTDOWN_TIMEOUT = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '10000', 10);
-
-async function gracefulShutdown(signal) {
-  if (isShuttingDown) return;
-  isShuttingDown = true;
-
-  console.log(`\n[shutdown] Received ${signal}. Starting graceful shutdown…`);
-
-  server.close(async (err) => {
-    if (err) {
-      console.error('[shutdown] Error closing HTTP server:', err);
-    } else {
-      console.log('[shutdown] HTTP server closed — no new connections.');
-    }
-
-    try {
-      // Uncomment whichever applies to your DB:
-      // await prisma.$disconnect();   // Prisma
-      // await pool.end();             // pg / mysql2
-      // await db.disconnect();        // Mongoose
-      if (IS_PROD) await redis.quit();
-      console.log('[shutdown] Connections closed.');
-    } catch (closeErr) {
-      console.error('[shutdown] Error closing connections:', closeErr);
-    }
-
-    console.log('[shutdown] Clean exit. Goodbye 👋');
-    process.exit(err ? 1 : 0);
+pool.dbReady.then(() => {
+  const server = app.listen(PORT, () => {
+    console.log('─────────────────────────────────────');
+    console.log('  FitZone Gym CRM');
+    console.log(`  ENV  : ${process.env.NODE_ENV || 'development'}`);
+    console.log(`  PORT : ${PORT}`);
+    console.log(`  API  : http://localhost:${PORT}/api`);
+    console.log('─────────────────────────────────────');
   });
 
-  setTimeout(() => {
-    console.error(`[shutdown] Timeout (${SHUTDOWN_TIMEOUT}ms) exceeded — forcing exit.`);
-    process.exit(1);
-  }, SHUTDOWN_TIMEOUT).unref();
-}
+  // ── Graceful Shutdown ───────────────────────────────────────
+  async function gracefulShutdown(signal) {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
 
-server.on('request', (req, res) => {
-  if (isShuttingDown) res.setHeader('Connection', 'close');
-});
+    console.log(`\n[shutdown] Received ${signal}. Starting graceful shutdown…`);
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+    server.close(async (err) => {
+      if (err) {
+        console.error('[shutdown] Error closing HTTP server:', err);
+      } else {
+        console.log('[shutdown] HTTP server closed — no new connections.');
+      }
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[unhandledRejection]', { reason, promise });
-  gracefulShutdown('unhandledRejection');
-});
+      try {
+        await pool.end();
+        console.log('[shutdown] DB pool closed.');
+        if (IS_PROD) await redis.quit();  
+        console.log('[shutdown] Connections closed.');
+      } catch (closeErr) {
+        console.error('[shutdown] Error closing connections:', closeErr);
+      }
 
-process.on('uncaughtException', (err) => {
-  console.error('[uncaughtException]', err);
-  gracefulShutdown('uncaughtException');
+      console.log('[shutdown] Clean exit. Goodbye 👋');
+      process.exit(err ? 1 : 0);
+    });
+
+    setTimeout(() => {
+      console.error(`[shutdown] Timeout (${SHUTDOWN_TIMEOUT}ms) exceeded — forcing exit.`);
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT).unref();
+  }
+
+  server.on('request', (req, res) => {
+    if (isShuttingDown) res.setHeader('Connection', 'close');
+  });
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[unhandledRejection]', { reason, promise });
+    gracefulShutdown('unhandledRejection');
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('[uncaughtException]', err);
+    gracefulShutdown('uncaughtException');
+  });
+
+}).catch(err => {
+  console.error('Failed to connect to database on startup:', err.message);
+  process.exit(1);
 });
