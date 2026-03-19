@@ -40,7 +40,7 @@ CREATE TABLE users (
     full_name   VARCHAR(100),
     phone       VARCHAR(15),
     is_active   BOOLEAN      DEFAULT true,
-    is_email_verified BOOLEAN DEFAULT false,
+    is_email_verified BOOLEAN DEFAULT true,
     created_by  INTEGER,     -- FK added after table exists (self-ref)
     created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
@@ -235,6 +235,7 @@ CREATE TABLE requests (
     reviewed_at          TIMESTAMP,
     created_at           TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
     updated_at           TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    request_type    VARCHAR(50),
 
     CONSTRAINT check_request_status CHECK (
         status IN ('pending','reviewed','approved','rejected')
@@ -440,6 +441,9 @@ CREATE TABLE payments (
     recorded_by          INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    original_amount      DECIMAL(10,2),
+    discount_applied     DECIMAL(10,2) DEFAULT 0.00,
+    customer_reward_id   INTEGER,   -- FK added after customer_rewards exists
 
     CONSTRAINT check_payment_status CHECK (
         status IN ('pending','created','captured','failed','refunded')
@@ -557,29 +561,32 @@ CREATE TRIGGER trg_schedules_updated_at
 -- ============================================================
 CREATE TABLE notifications (
     id          SERIAL PRIMARY KEY,
-    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
     type        VARCHAR(50)  NOT NULL,
     title       VARCHAR(200) NOT NULL,
     message     TEXT,
     is_read     BOOLEAN   DEFAULT false,
     sent_at     TIMESTAMP,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    target_role VARCHAR(50) DEFAULT 'admin',
 
     CONSTRAINT check_notif_type CHECK (
         type IN (
             'membership_approved','membership_rejected','membership_expiring',
             'payment_success','payment_failed','trainer_assigned',
             'application_approved','application_rejected','password_reset',
-            'account_created','account_deactivated','general'
+            'account_created','account_deactivated','general',
+            'trainer_registration','customer_registration',
+            'membership_request','payment','expiry','system'
         )
     )
 );
 
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX idx_notifications_is_read ON notifications(is_read);
-CREATE INDEX idx_notifications_type    ON notifications(type);
-CREATE INDEX idx_notifications_created ON notifications(created_at DESC);
-
+CREATE INDEX idx_notifications_user_id     ON notifications(user_id);
+CREATE INDEX idx_notifications_is_read     ON notifications(is_read);
+CREATE INDEX idx_notifications_type        ON notifications(type);
+CREATE INDEX idx_notifications_created     ON notifications(created_at DESC);
+CREATE INDEX idx_notifications_target_role ON notifications(target_role);
 
 -- ============================================================
 -- TABLE 18: audit_log
@@ -772,12 +779,6 @@ WHERE routine_schema = 'public'
 -- Functions: 5
 
 -- ============================================================
--- FITZONE GYM — REWARD SYSTEM MIGRATION
--- Version: 1.0
--- Run AFTER the main migration.sql
--- ============================================================
-
--- ============================================================
 -- TABLE 19: reward_tiers
 -- Static config — defines each tier's perks and discount
 -- Seeded once, never changes at runtime
@@ -863,6 +864,13 @@ CREATE TRIGGER trg_customer_rewards_updated_at
     BEFORE UPDATE ON customer_rewards
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+ALTER TABLE payments
+    ADD CONSTRAINT payments_customer_reward_id_fkey
+    FOREIGN KEY (customer_reward_id)
+    REFERENCES customer_rewards(id) ON DELETE SET NULL;
+
+CREATE INDEX idx_payments_customer_reward_id ON payments(customer_reward_id);
+
 
 -- ============================================================
 -- TABLE 21: reward_redemptions
@@ -894,30 +902,6 @@ CREATE INDEX idx_redemptions_customer_id        ON reward_redemptions(customer_i
 CREATE INDEX idx_redemptions_type               ON reward_redemptions(redemption_type);
 CREATE INDEX idx_redemptions_payment_id         ON reward_redemptions(payment_id);
 
-
--- ============================================================
--- Add reward columns to payments table
--- Links a payment to the reward that discounted it
--- ============================================================
-ALTER TABLE payments
-    ADD COLUMN IF NOT EXISTS original_amount    DECIMAL(10,2),
-    ADD COLUMN IF NOT EXISTS discount_applied   DECIMAL(10,2) DEFAULT 0.00,
-    ADD COLUMN IF NOT EXISTS customer_reward_id INTEGER
-        REFERENCES customer_rewards(id) ON DELETE SET NULL;
-
-CREATE INDEX IF NOT EXISTS idx_payments_customer_reward_id
-    ON payments(customer_reward_id);
-
-
--- ============================================================
--- Add reward columns to members table
--- Tracks which non-monetary perks are active on the membership
--- ============================================================
-ALTER TABLE members
-    ADD COLUMN IF NOT EXISTS locker_free_until  DATE,
-    ADD COLUMN IF NOT EXISTS pt_sessions_credit INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS reward_tier        VARCHAR(20)
-        REFERENCES reward_tiers(tier_key) ON DELETE SET NULL;
 
 
 -- ============================================================
