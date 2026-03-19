@@ -1,19 +1,27 @@
 require('../env');
 const { Pool } = require('pg');
 
-const pool = new Pool({
-  host:     process.env.DB_HOST,
-  port:     parseInt(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASS,
-  max:                20,
-  idleTimeoutMillis:  30000,
-  connectionTimeoutMillis: 10000, // ← increase from 2000 to 10000
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: false }
-    : false,
-});
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        max:                    20,
+        idleTimeoutMillis:      30000,
+        connectionTimeoutMillis: 10000,
+      }
+    : {
+        host:     process.env.DB_HOST,
+        port:     parseInt(process.env.DB_PORT) || 5432,
+        database: process.env.DB_NAME,
+        user:     process.env.DB_USER,
+        password: process.env.DB_PASS,
+        max:                    20,
+        idleTimeoutMillis:      30000,
+        connectionTimeoutMillis: 10000,
+        ssl: false,
+      }
+);
 
 pool.on('connect', () => {
   if (process.env.NODE_ENV !== 'production') console.log('PostgreSQL connected');
@@ -21,7 +29,7 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('PostgreSQL pool error:', err.message);
-});  // ← remove process.exit(1) here — pool errors shouldn't crash the server
+});
 
 // Retry on startup
 const connectWithRetry = async (retries = 5, delay = 3000) => {
