@@ -47,84 +47,90 @@ const rateLimitHandler = (_req, res, _next, options) => {
 };
 
 // ── Store Factory ─────────────────────────────────────────────
-// Called lazily inside each limiter so the Redis client is already connected.
 const makeStore = (prefix) => {
-  if (!IS_PROD || !redisReady) return undefined;  // fall back to memory store
+  if (!IS_PROD || !redisReady) return undefined;
   return new RedisStore({
     sendCommand: (...args) => redis.call(...args),
     prefix:      `rl:${prefix}:`,
   });
 };
 
-// ── Limiter Factory ───────────────────────────────────────────
-const makeLimiter = (getOptions) => {
-  if (!IS_PROD) return (_req, _res, next) => next();  // no-op in dev
+// ── No-op middleware for dev ──────────────────────────────────
+const noop = (_req, _res, next) => next();
 
-  // Limiter is created on first request, not at module load time.
-  let limiter = null;
-  return (req, res, next) => {
-    if (!limiter) {
-      limiter = rateLimit({
-        standardHeaders: true,
-        legacyHeaders:   false,
-        keyGenerator,
-        handler:         rateLimitHandler,
-        ...getOptions(),   // store is resolved here, after Redis has connected
-      });
+// ── Limiter placeholders (populated by init()) ────────────────
+let globalLimiter  = noop;
+let authLimiter    = noop;
+let paymentLimiter = noop;
+let publicLimiter  = noop;
+let writeLimiter   = noop;
+
+// ── init() — call this in server.js BEFORE registering routes ─
+const init = async () => {
+  if (IS_PROD) {
+    try {
+      await redis.connect();
+      redisReady = true;
+      console.log('[Redis] Connected ✓');
+    } catch (err) {
+      console.error('[Redis] Failed to connect — using memory store fallback:', err.message);
     }
-    limiter(req, res, next);
-  };
+  }
+
+  if (!IS_PROD) return; // leave all limiters as noop in dev
+
+  const makeLimiter = (options) =>
+    rateLimit({
+      standardHeaders: true,
+      legacyHeaders:   false,
+      keyGenerator,
+      handler:         rateLimitHandler,
+      ...options,
+    });
+
+  globalLimiter = makeLimiter({
+    windowMs: 5 * 60 * 1000,
+    max:      300,
+    store:    makeStore('global'),
+    skip: (req) =>
+      req.path.startsWith('/api/auth') ||
+      req.path.startsWith('/api/notifications/stream'),
+  });
+
+  authLimiter = makeLimiter({
+    windowMs:               15 * 60 * 1000,
+    max:                    10,
+    store:                  makeStore('auth'),
+    skipSuccessfulRequests: true,
+  });
+
+  paymentLimiter = makeLimiter({
+    windowMs: 60 * 60 * 1000,
+    max:      20,
+    store:    makeStore('payment'),
+  });
+
+  publicLimiter = makeLimiter({
+    windowMs: 10 * 60 * 1000,
+    max:      60,
+    store:    makeStore('public'),
+  });
+
+  writeLimiter = makeLimiter({
+    windowMs: 10 * 60 * 1000,
+    max:      30,
+    store:    makeStore('write'),
+  });
+
+  console.log(`[RateLimit] Limiters ready (store: ${redisReady ? 'Redis' : 'memory'})`);
 };
 
-// ── Limiters ──────────────────────────────────────────────────
-const globalLimiter = makeLimiter(() => ({
-  windowMs: 5 * 60 * 1000,
-  max:      300,
-  store:    makeStore('global'),
-  skip: (req) =>
-    req.path.startsWith('/api/auth') ||
-    req.path.startsWith('/api/notifications/stream'),
-}));
-
-const authLimiter = makeLimiter(() => ({
-  windowMs:               15 * 60 * 1000,
-  max:                    10,
-  store:                  makeStore('auth'),
-  skipSuccessfulRequests: true,
-}));
-
-const paymentLimiter = makeLimiter(() => ({
-  windowMs: 60 * 60 * 1000,
-  max:      20,
-  store:    makeStore('payment'),
-}));
-
-const publicLimiter = makeLimiter(() => ({
-  windowMs: 10 * 60 * 1000,
-  max:      60,
-  store:    makeStore('public'),
-}));
-
-const writeLimiter = makeLimiter(() => ({
-  windowMs: 10 * 60 * 1000,
-  max:      30,
-  store:    makeStore('write'),
-}));
-
-// ── Redis Connect (non-blocking) ──────────────────────────────
-// Runs after all limiters are defined so no constructor fires during connect.
-if (IS_PROD) {
-  redis.connect()
-    .then(() => { redisReady = true; console.log('[Redis] Connected ✓'); })
-    .catch(err => console.error('[Redis] Failed to connect:', err.message));
-  // App continues and serves traffic even if Redis is down (memory store fallback).
-}
-
 module.exports = {
-  globalLimiter,
-  authLimiter,
-  paymentLimiter,
-  publicLimiter,
-  writeLimiter,
+  init,
+  get globalLimiter()  { return globalLimiter;  },
+  get authLimiter()    { return authLimiter;     },
+  get paymentLimiter() { return paymentLimiter;  },
+  get publicLimiter()  { return publicLimiter;   },
+  get writeLimiter()   { return writeLimiter;    },
   redis,
 };

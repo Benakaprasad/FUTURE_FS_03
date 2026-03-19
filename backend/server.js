@@ -13,6 +13,7 @@ const path         = require('path');
 const pool = require('./config/database');
 
 const {
+  init: initRateLimiter,
   globalLimiter,
   authLimiter,
   writeLimiter,
@@ -53,14 +54,10 @@ app.set('trust proxy', 1);
 // ── Request ID & Response Time ────────────────────────────────
 app.use((req, res, next) => {
   req.id = req.headers['x-request-id'] || uuidv4();
-  res.setHeader('X-Request-ID', req.id);  // set early — before response sends
+  res.setHeader('X-Request-ID', req.id);
   const start = Date.now();
-  // Use res.on('close') not 'finish' — and write to local var, not header
-  // (headers are already sent by 'finish' time, setting them throws)
   res.on('finish', () => {
-    const ms = Date.now() - start;
-    // Attach to res for morgan/logging access, don't try to set header
-    res.responseTime = ms;
+    res.responseTime = Date.now() - start;
   });
   next();
 });
@@ -125,8 +122,8 @@ app.use(hpp());
 
 // ── 8. Health / Readiness Checks ─────────────────────────────
 app.get('/health', async (_req, res) => {
-  let redisStatus = IS_PROD ? 'unreachable' : 'skipped';  // ← restore
-  if (IS_PROD) {                                           // ← restore
+  let redisStatus = IS_PROD ? 'unreachable' : 'skipped';
+  if (IS_PROD) {
     try {
       await redis.ping();
       redisStatus = 'connected';
@@ -206,7 +203,9 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 // ── 13. Start ─────────────────────────────────────────────────
 const SHUTDOWN_TIMEOUT = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '15000', 10);
 
-pool.dbReady.then(() => {
+pool.dbReady.then(async () => {                 // ← async added
+  await initRateLimiter();                      // ← connects Redis + builds limiters
+
   const server = app.listen(PORT, () => {
     console.log('─────────────────────────────────────');
     console.log('  FitZone Gym CRM');
@@ -233,7 +232,7 @@ pool.dbReady.then(() => {
       try {
         await pool.end();
         console.log('[shutdown] DB pool closed.');
-        if (IS_PROD) await redis.quit();  
+        if (IS_PROD) await redis.quit();
         console.log('[shutdown] Connections closed.');
       } catch (closeErr) {
         console.error('[shutdown] Error closing connections:', closeErr);
