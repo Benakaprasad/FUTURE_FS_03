@@ -13,9 +13,10 @@ const redis = new Redis({
   password:             process.env.REDIS_PASSWORD || undefined,
   tls:                  process.env.REDIS_TLS === 'true' ? {} : undefined,
   lazyConnect:          true,
-  enableOfflineQueue:   true,
-  maxRetriesPerRequest: 3,
+  enableOfflineQueue:   false,   // ← change to false
+  maxRetriesPerRequest: null,    // ← add this
   retryStrategy: (times) => {
+    if (times > 5) return null;  // ← stop retrying after 5 attempts
     const delay = Math.min(100 * Math.pow(2, times), 10000);
     console.warn(`[Redis] Reconnecting in ${delay}ms (attempt ${times})`);
     return delay;
@@ -25,14 +26,15 @@ const redis = new Redis({
 if (IS_PROD) {
   redis.connect()
     .then(() => { redisReady = true; console.log('[Redis] Connected ✓'); })
-    .catch(err => console.error('[Redis] Failed to connect:', err.message));
+    .catch(err => {
+      console.error('[Redis] Failed to connect:', err.message);
+      // Don't crash — app works without Redis, just uses memory store
+    });
 
   redis.on('ready',        ()    => { redisReady = true;  console.log('[Redis] Ready'); });
   redis.on('close',        ()    => { redisReady = false; console.warn('[Redis] Connection closed'); });
   redis.on('reconnecting', ()    => { redisReady = false; });
   redis.on('error',        (err) => console.error('[Redis] Error:', err.message));
-} else {
-  console.log('[Redis] Skipped in development — memory store active');
 }
 
 let redisReady = false;
