@@ -1007,13 +1007,29 @@ const BONUS_PHRASES = [
 ];
 const MAX_WPM = 100;
 const FAST_WPM = 80;          // threshold for streak + fast-typer experience
-const BONUS_WPM_GATE = 60;    // minimum WPM to unlock bonus phrases
+const BONUS_WPM_GATE = 50;    // minimum WPM to unlock bonus phrases
 
 const RANKS = [
-  { label: "ELITE",      min: 100, color: "#FF1A1A", icon: "🔴", msg: "You type like you train. Absolutely relentless." },
-  { label: "PRO",        min: 80,  color: "#FF6B00", icon: "🟠", msg: "Fast hands. That's real FitZone energy." },
-  { label: "SOLID",      min: 60,  color: "#FFB800", icon: "🟡", msg: "Good pace. Keep showing up like this." },
-  { label: "WARMING UP", min: 0,   color: "rgba(255,255,255,0.4)", icon: "⚪", msg: "Every rep counts — including the slow ones." },
+  {
+    label: "ELITE", min: 100, color: "#FF1A1A",
+    icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="#FF1A1A"><path d="M12 1L8 9 2 6l3 13h14l3-13-6 3-4-8z"/><rect x="5" y="20" width="14" height="2" rx="1"/></svg>,
+    msg: "You type like you train. Absolutely relentless.",
+  },
+  {
+    label: "PRO", min: 80, color: "#FF6B00",
+    icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="#FF6B00"><path d="M5 3H3a2 2 0 00-2 2v2a4 4 0 003.86 4A6 6 0 009 14.9V17H7v2h10v-2h-2v-2.1A6 6 0 0019.14 11 4 4 0 0023 7V5a2 2 0 00-2-2h-2V1H5v2z"/></svg>,
+    msg: "Fast hands. That's real FitZone energy.",
+  },
+  {
+    label: "SOLID", min: 50, color: "#FFB800",
+    icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="#FFB800"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
+    msg: "Good pace. Keep showing up like this.",
+  },
+  {
+    label: "WARMING UP", min: 0, color: "rgba(255,255,255,0.45)",
+    icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.4)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>,
+    msg: "Every rep counts — including the slow ones.",
+  },
 ];
 const getRank = (wpm) => RANKS.find(r => wpm >= r.min) ?? RANKS[RANKS.length - 1];
 
@@ -1088,177 +1104,244 @@ function ParticleBurst({ trigger, color = "#FFB800", count = 12 }) {
 function Summary({ stats, onContinue }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setTimeout(() => setMounted(true), 60); }, []);
-
-  const rank       = getRank(stats.peakWpm);
-  const isFast     = stats.peakWpm >= FAST_WPM;
-  const accGrade   = stats.accuracy >= 98 ? "S" : stats.accuracy >= 92 ? "A" : stats.accuracy >= 82 ? "B" : stats.accuracy >= 70 ? "C" : "D";
+ 
+  const rank     = getRank(stats.peakWpm);
+  const isFast   = stats.peakWpm >= FAST_WPM;
+  const accGrade = stats.accuracy >= 98 ? "S" : stats.accuracy >= 92 ? "A" : stats.accuracy >= 82 ? "B" : stats.accuracy >= 70 ? "C" : "D";
   const gradeColor = accGrade === "S" ? "#FFD700" : accGrade === "A" ? "#22C55E" : accGrade === "B" ? "#FFB800" : accGrade === "C" ? "#FF6B00" : "#FF1A1A";
-
+ 
   return (
     <div style={{
-      maxWidth: 520, width: "100%", margin: "0 auto",
+      maxWidth: 520, width: "100%", margin: "0 auto", padding: "0 1rem",
       opacity: mounted ? 1 : 0, transform: mounted ? "none" : "translateY(28px)",
       transition: "opacity 0.5s ease, transform 0.5s ease",
     }}>
-      {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "1rem" }}>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: rank.color, display: "inline-block", animation: "pulse 2s infinite" }} />
+ 
+      {/* ── Rank block ── */}
+      <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
+        {/* Session complete eyebrow */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: "1.25rem" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill={rank.color}>
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+          </svg>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "4px", color: rank.color, fontFamily: "'DM Sans',sans-serif" }}>SESSION COMPLETE</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill={rank.color}>
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+          </svg>
         </div>
-
-        {/* Rank badge — big and proud for fast typers */}
+ 
+        {/* Rank card */}
         <div style={{
-          display: "inline-flex", flexDirection: "column", alignItems: "center",
-          gap: 4, marginBottom: "1rem",
-          padding: isFast ? "1.25rem 2.5rem" : "0.75rem 2rem",
-          background: isFast ? `${rank.color}12` : "rgba(255,255,255,0.03)",
-          border: `${isFast ? 2 : 1}px solid ${isFast ? rank.color + "40" : "rgba(255,255,255,0.08)"}`,
-          borderRadius: 14,
-          boxShadow: isFast ? `0 0 40px ${rank.color}20` : "none",
-          transition: "all 0.4s",
+          display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 10,
+          padding: isFast ? "1.5rem 2.5rem" : "1rem 2rem",
+          background: isFast
+            ? `linear-gradient(135deg, ${rank.color}18, ${rank.color}06)`
+            : "rgba(255,255,255,0.03)",
+          border: `${isFast ? 2 : 1}px solid ${isFast ? rank.color + "45" : "rgba(255,255,255,0.08)"}`,
+          borderRadius: 18,
+          boxShadow: isFast ? `0 0 60px ${rank.color}18, inset 0 1px 0 ${rank.color}20` : "none",
+          marginBottom: "0.875rem",
         }}>
-          {isFast && <span style={{ fontSize: "2rem", marginBottom: 4 }}>{rank.icon}</span>}
+          {/* Icon */}
+          <div style={{
+            width: isFast ? 52 : 40, height: isFast ? 52 : 40,
+            borderRadius: 14,
+            background: `${rank.color}18`,
+            border: `1.5px solid ${rank.color}35`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: `0 0 20px ${rank.color}25`,
+          }}>
+            {rank.icon}
+          </div>
           <span style={{
             fontFamily: "'Bebas Neue',sans-serif",
-            fontSize: isFast ? "3.5rem" : "2.2rem",
-            letterSpacing: "4px", color: rank.color, lineHeight: 1,
+            fontSize: isFast ? "clamp(2.5rem,7vw,3.5rem)" : "clamp(1.8rem,5vw,2.5rem)",
+            letterSpacing: "5px", color: rank.color, lineHeight: 1,
           }}>{rank.label}</span>
           {isFast && (
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: "'DM Sans',sans-serif", letterSpacing: "1px", marginTop: 4 }}>
-              {rank.msg}
-            </span>
+            <span style={{
+              fontSize: 11, color: "rgba(255,255,255,0.4)",
+              fontFamily: "'DM Sans',sans-serif", letterSpacing: "0.5px",
+            }}>{rank.msg}</span>
           )}
         </div>
-
+ 
         {!isFast && (
           <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans',sans-serif" }}>
             {rank.msg}
           </p>
         )}
       </div>
-
-      {/* Stats grid */}
+ 
+      {/* ── Stats grid ── */}
       <div style={{
         display: "grid",
         gridTemplateColumns: isFast ? "1fr 1px 1fr 1px 1fr 1px 1fr" : "1fr 1px 1fr 1px 1fr",
         background: "rgba(255,255,255,0.02)",
         border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden",
-        marginBottom: "1.25rem",
+        marginBottom: "1rem",
       }}>
         {[
-          { v: stats.peakWpm,       l: "PEAK WPM",  col: getRank(stats.peakWpm).color },
-          { v: `${stats.accuracy}%`, l: "ACCURACY",  col: stats.accuracy >= 90 ? "#22C55E" : stats.accuracy >= 75 ? "#FFB800" : "#FF1A1A" },
-          { v: stats.phrasesTyped,  l: "PHRASES",   col: "#fff" },
-          ...(isFast ? [{ v: stats.bestStreak, l: "BEST STREAK", col: stats.bestStreak >= 5 ? "#FFD700" : "#FFB800" }] : []),
-        ].map(({ v, l, col }, i, arr) => (
+          {
+            v: stats.peakWpm, l: "PEAK WPM", col: getRank(stats.peakWpm).color,
+            icon: <svg width="13" height="13" viewBox="0 0 24 24" fill={getRank(stats.peakWpm).color}><path d="M12 2C6.48 2 2 6.48 2 12c0 3.1 1.41 5.88 3.63 7.75L7.06 18.3A7.96 7.96 0 014 12a8 8 0 018-8 8 8 0 018 8 7.96 7.96 0 01-3.06 6.3l1.43 1.45A9.97 9.97 0 0022 12c0-5.52-4.48-10-10-10z"/><path d="M12 6a1 1 0 011 1v4.59l3.2 3.2-1.41 1.42L11 12.41V7a1 1 0 011-1z"/></svg>,
+          },
+          {
+            v: `${stats.accuracy}%`, l: "ACCURACY", col: stats.accuracy >= 90 ? "#22C55E" : stats.accuracy >= 75 ? "#FFB800" : "#FF1A1A",
+            icon: <svg width="13" height="13" viewBox="0 0 24 24" fill={stats.accuracy >= 90 ? "#22C55E" : stats.accuracy >= 75 ? "#FFB800" : "#FF1A1A"}><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/></svg>,
+          },
+          {
+            v: stats.phrasesTyped, l: "PHRASES", col: "#fff",
+            icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2z"/></svg>,
+          },
+          ...(isFast ? [{
+            v: stats.bestStreak, l: "STREAK", col: stats.bestStreak >= 5 ? "#FFD700" : "#FFB800",
+            icon: <svg width="13" height="13" viewBox="0 0 24 24" fill={stats.bestStreak >= 5 ? "#FFD700" : "#FFB800"}><path d="M12 1.5C12 1.5 7 6.5 7 11a5 5 0 0010 0c0-3.5-2.5-6-2.5-6S14 7 13 8.5C12 6.5 12 1.5 12 1.5z"/><circle cx="12" cy="14" r="1.5"/></svg>,
+          }] : []),
+        ].map(({ v, l, col, icon }, i, arr) => (
           <React.Fragment key={l}>
-            <div style={{ padding: "1rem 0", textAlign: "center" }}>
-              <div style={{
-                fontFamily: "'Bebas Neue',sans-serif", fontSize: "2rem",
-                color: col, lineHeight: 1,
-                animation: "fadeUp 0.4s ease forwards",
-              }}>{v}</div>
-              <div style={{ fontSize: 8, letterSpacing: "2px", color: "rgba(255,255,255,0.18)", fontWeight: 700, fontFamily: "'DM Sans',sans-serif", marginTop: 3 }}>{l}</div>
+            <div style={{ padding: "1rem 0.5rem", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{ opacity: 0.7 }}>{icon}</div>
+              <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.5rem,5vw,2rem)", color: col, lineHeight: 1 }}>{v}</div>
+              <div style={{ fontSize: 7, letterSpacing: "2px", color: "rgba(255,255,255,0.18)", fontWeight: 700, fontFamily: "'DM Sans',sans-serif" }}>{l}</div>
             </div>
             {i < arr.length - 1 && <div style={{ background: "rgba(255,255,255,0.05)", width: 1 }} />}
           </React.Fragment>
         ))}
       </div>
-
-      {/* Accuracy grade — letter grade for fast typers, just bar for slow */}
+ 
+      {/* ── Accuracy grade (fast typers) ── */}
       {isFast ? (
         <div style={{
-          display: "flex", alignItems: "center", gap: 16,
-          padding: "0.85rem 1.25rem",
-          background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: 10, marginBottom: "1.25rem",
+          display: "flex", alignItems: "center", gap: 14,
+          padding: "0.875rem 1.25rem",
+          background: `${gradeColor}08`,
+          border: `1px solid ${gradeColor}22`,
+          borderRadius: 12, marginBottom: "1rem",
         }}>
           <div style={{
-            width: 44, height: 44, borderRadius: 8,
-            background: `${gradeColor}18`, border: `2px solid ${gradeColor}55`,
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            width: 46, height: 46, borderRadius: 12, flexShrink: 0,
+            background: `${gradeColor}15`,
+            border: `2px solid ${gradeColor}45`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: `0 0 20px ${gradeColor}20`,
           }}>
-            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.8rem", color: gradeColor }}>{accGrade}</span>
+            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.9rem", color: gradeColor, lineHeight: 1 }}>{accGrade}</span>
           </div>
           <div>
-            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "2px", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans',sans-serif", marginBottom: 3 }}>ACCURACY GRADE</p>
-            <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.55)", fontFamily: "'DM Sans',sans-serif" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill={gradeColor}>
+                <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/>
+              </svg>
+              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "2px", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans',sans-serif" }}>ACCURACY GRADE</p>
+            </div>
+            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.5)", fontFamily: "'DM Sans',sans-serif" }}>
               {accGrade === "S" ? "Flawless. Every key, every time." :
                accGrade === "A" ? "Sharp. Almost no wasted keystrokes." :
                accGrade === "B" ? "Solid. A few slips but mostly clean." :
-               accGrade === "C" ? "Accuracy needs work — slow down to speed up." :
+               accGrade === "C" ? "Slow down to speed up — accuracy first." :
                "Focus on accuracy first, speed will follow."}
             </p>
           </div>
         </div>
       ) : (
-        <div style={{ marginBottom: "1.25rem" }}>
+        <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-            <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,.13)", fontFamily: "'DM Sans',sans-serif" }}>ACCURACY</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="rgba(255,255,255,0.15)">
+                <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/>
+              </svg>
+              <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,.13)", fontFamily: "'DM Sans',sans-serif" }}>ACCURACY</span>
+            </div>
             <span style={{ fontSize: 9, color: stats.accuracy >= 90 ? "#22C55E" : "#FFB800", fontFamily: "'DM Sans',sans-serif", fontWeight: 700 }}>{stats.accuracy}%</span>
           </div>
-          <div style={{ height: 2, background: "rgba(255,255,255,.05)", borderRadius: 2 }}>
+          <div style={{ height: 3, background: "rgba(255,255,255,.05)", borderRadius: 2 }}>
             <div style={{ height: "100%", borderRadius: 2, width: `${stats.accuracy}%`, background: stats.accuracy >= 90 ? "#22C55E" : "#FFB800" }} />
           </div>
         </div>
       )}
-
-      {/* Streak highlight for fast typers */}
+ 
+      {/* ── Streak highlight ── */}
       {isFast && stats.bestStreak >= 3 && (
         <div style={{
           display: "flex", alignItems: "center", gap: 10,
           padding: "0.75rem 1.25rem",
           background: "rgba(255,184,0,0.06)", border: "1px solid rgba(255,184,0,0.2)",
-          borderRadius: 10, marginBottom: "1.25rem",
-          animation: "fadeUp 0.4s ease 0.2s both",
+          borderRadius: 10, marginBottom: "1rem",
         }}>
-          <span style={{ fontSize: "1.1rem" }}>⚡</span>
-          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 700, color: "#FFB800", letterSpacing: "1px" }}>
-            {stats.bestStreak} WORD STREAK AT 80+ WPM
-            {stats.bestStreak >= 8 ? " — UNSTOPPABLE" : stats.bestStreak >= 5 ? " — ON FIRE" : " — KEEP IT UP"}
+          <div style={{
+            width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+            background: "rgba(255,184,0,0.12)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#FFB800">
+              <path d="M12 1.5C12 1.5 7 6.5 7 11a5 5 0 0010 0c0-3.5-2.5-6-2.5-6S14 7 13 8.5C12 6.5 12 1.5 12 1.5z"/>
+              <circle cx="12" cy="14" r="1.5"/>
+            </svg>
+          </div>
+          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 700, color: "#FFB800", letterSpacing: "0.5px" }}>
+            {stats.bestStreak} word streak at 80+ WPM
+            {stats.bestStreak >= 8 ? " — UNSTOPPABLE" : stats.bestStreak >= 5 ? " — ON FIRE" : ""}
           </span>
         </div>
       )}
-
-      {/* Taunt for fast typers who could do better */}
+ 
+      {/* ── Taunt ── */}
       {isFast && stats.accuracy < 90 && (
         <div style={{
+          display: "flex", alignItems: "center", gap: 10,
           padding: "0.75rem 1.25rem",
-          background: "rgba(255,26,26,0.04)", border: "1px solid rgba(255,26,26,0.15)",
-          borderRadius: 10, marginBottom: "1.25rem",
-          animation: "fadeUp 0.4s ease 0.3s both",
+          background: "rgba(255,26,26,0.04)", border: "1px solid rgba(255,26,26,0.14)",
+          borderRadius: 10, marginBottom: "1rem",
         }}>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "'DM Sans',sans-serif", lineHeight: 1.5 }}>
-            Fast but sloppy. Your accuracy held your score back — {stats.accuracy}% cost you {Math.round((100 - stats.accuracy) / 5)} energy points.
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,26,26,0.5)" style={{ flexShrink: 0 }}>
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontFamily: "'DM Sans',sans-serif", lineHeight: 1.5 }}>
+            Fast but sloppy — {stats.accuracy}% accuracy cost you {Math.round((100 - stats.accuracy) / 5)} energy points.
           </p>
         </div>
       )}
-
-      {/* CTA */}
+ 
+      {/* ── CTA ── */}
       <button onClick={onContinue} style={{
-        width: "100%", padding: "16px",
-        background: isFast ? `linear-gradient(135deg, ${rank.color}, ${rank.color}bb)` : "linear-gradient(135deg,#FF1A1A,#991111)",
-        boxShadow: isFast ? `0 6px 28px ${rank.color}40` : "0 6px 28px rgba(255,26,26,0.35)",
-        border: "none", borderRadius: 8, cursor: "pointer",
-        color: "#fff", fontWeight: 800, fontSize: "1rem", letterSpacing: "0.5px",
+        width: "100%", padding: "15px",
+        background: isFast
+          ? `linear-gradient(135deg, ${rank.color}, ${rank.color}cc)`
+          : "linear-gradient(135deg,#FF1A1A,#991111)",
+        boxShadow: `0 6px 28px ${isFast ? rank.color : "#FF1A1A"}35`,
+        border: "none", borderRadius: 10, cursor: "pointer",
+        color: "#fff", fontWeight: 800,
+        fontSize: "clamp(0.85rem,3.5vw,1rem)",
         fontFamily: "'DM Sans',sans-serif",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
         transition: "transform 0.15s, box-shadow 0.15s",
       }}
         onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
         onMouseLeave={e => { e.currentTarget.style.transform = "none"; }}
       >
-        {isFast ? "Pick Your Goal →" : "Build My Program →"}
+        {isFast ? "See Your Rewards" : "Build My Program"}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff">
+          <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/>
+        </svg>
       </button>
-
-      <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: "0.75rem", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif" }}>
-        Energy score: {stats.finalScore}% · {stats.phrasesTyped} phrase{stats.phrasesTyped !== 1 ? "s" : ""} completed
+ 
+      <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.15)", marginTop: "0.65rem", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif" }}>
+        Energy: {stats.finalScore}% · {stats.phrasesTyped} phrase{stats.phrasesTyped !== 1 ? "s" : ""} typed
       </p>
     </div>
   );
 }
 
-// ─── Typing Mechanic ──────────────────────────────────────────────────────────
+// ─── Typing Mechanic — Fixed ──────────────────────────────────────────────────
+// Changes:
+//   1. WPM stability — only show WPM when ≥3 keystrokes in window
+//   2. "SO CLOSE — PUSH!" nudge at 50-59 WPM on phrase 5
+//   3. Animated pulse on bonus gate bar when close
+//   4. Slow typer encouragement — phrase completion celebration
+//   5. Medium typer — "ALMOST THERE" banner at phrase 4
+//   6. Fast typer streak flash is more visible
+
 function TypingMechanic({ setEnergy, onFinish, audioRef }) {
   const [phraseIdx, setPhraseIdx]     = useState(0);
   const [typed, setTyped]             = useState("");
@@ -1271,31 +1354,43 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
   const [acc, setAcc]                 = useState(100);
   const [score, setScore]             = useState(0);
 
-  // Phrase transition: "idle" | "out" | "flash" | "in"
+  // Phrase transition
   const [txState, setTxState]             = useState("idle");
   const [nextPhraseIdx, setNextPhraseIdx] = useState(null);
   const [displayIdx, setDisplayIdx]       = useState(0);
   const isTransitioning                   = txState !== "idle";
 
-  // Bonus lock state
-  const [bonusLocked, setBonusLocked]     = useState(false); // shown after phrase 5 if WPM too low
-  const [lockedWpm, setLockedWpm]         = useState(0);     // WPM they hit on the last phrase
+  // Bonus lock
+  const [bonusLocked, setBonusLocked] = useState(false);
+  const [lockedWpm, setLockedWpm]     = useState(0);
 
-  // Streak tracking
+  // Streak
   const [streak, setStreak]           = useState(0);
   const [bestStreak, setBestStreak]   = useState(0);
   const [streakFlash, setStreakFlash] = useState(false);
-  const peakWpmRef    = useRef(0);
-  const stampRef      = useRef([]);
-  const wordStampsRef = useRef([]);
-  const phraseStartRef = useRef(Date.now()); // when current phrase typing began
-  const phraseWpmRef   = useRef(0);          // clean WPM for phrase 5 gate check
 
-  const allPhrases     = [...STANDARD_PHRASES, ...BONUS_PHRASES];
-  const currentPhrase  = allPhrases[Math.min(displayIdx, allPhrases.length - 1)];
-  const isBonus        = displayIdx >= STANDARD_PHRASES.length;
+  // FIX 1: Stable WPM — only meaningful once ≥3 stamps
+  const [stableWpm, setStableWpm] = useState(0);
+
+  // FIX 3: Phrase completion cheer for slow typers
+  const [showCheer, setShowCheer] = useState(0);
+
+  const peakWpmRef     = useRef(0);
+  const stampRef       = useRef([]);
+  const wordStampsRef  = useRef([]);
+  const phraseStartRef = useRef(Date.now());
+  const phraseWpmRef   = useRef(0);
+
+  const allPhrases    = [...STANDARD_PHRASES, ...BONUS_PHRASES];
+  const currentPhrase = allPhrases[Math.min(displayIdx, allPhrases.length - 1)];
+  const isBonus       = displayIdx >= STANDARD_PHRASES.length;
   const bonusCompleted = phraseDone.filter(i => i >= STANDARD_PHRASES.length).length;
-  const nextIsBonus    = nextPhraseIdx != null && nextPhraseIdx >= STANDARD_PHRASES.length;
+  const nextIsBonus   = nextPhraseIdx != null && nextPhraseIdx >= STANDARD_PHRASES.length;
+
+  // Closeness to bonus gate
+  const onLastPhrase  = phraseIdx === STANDARD_PHRASES.length - 1;
+  const isClose       = onLastPhrase && stableWpm >= 50 && stableWpm < 60;
+  const almostThere   = phraseIdx === STANDARD_PHRASES.length - 2 && stableWpm >= 55;
 
   const computeScore = useCallback((cWpm, cAcc, done) => {
     const std   = done.filter(i => i < STANDARD_PHRASES.length).length;
@@ -1305,18 +1400,17 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
     return Math.min(100, Math.floor(base + live));
   }, [isBonus]);
 
-  // Per-word WPM — measures speed of each individual word typed
   const getWordWpm = useCallback(() => {
-    const now = Date.now();
+    const now    = Date.now();
     const recent = wordStampsRef.current.filter(t => now - t < 4000);
-    if (recent.length < 2) return wpm;
-    const elapsed = (now - recent[0]) / 1000 / 60; // minutes
+    if (recent.length < 2) return stableWpm;
+    const elapsed = (now - recent[0]) / 1000 / 60;
     return Math.round(recent.length / elapsed);
-  }, [wpm]);
+  }, [stableWpm]);
 
   const handleKey = useCallback((e) => {
     if (e.key === " ") e.preventDefault();
-    if (isTransitioning) return; // block all input during phrase transition
+    if (isTransitioning) return;
     if (e.key === "Backspace") { setTyped(p => p.slice(0, -1)); return; }
     if (e.key.length !== 1) return;
 
@@ -1326,7 +1420,6 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
 
     setTotalTyped(t => t + 1);
     const now = Date.now();
-    // Start phrase timer on first character
     if (typed.length === 0) phraseStartRef.current = now;
     stampRef.current = [...stampRef.current.filter(t => now - t < 3000), now];
 
@@ -1336,7 +1429,6 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
       setTimeout(() => setWrongFlash(false), 140);
       audioRef.current?.wrong();
       if (navigator.vibrate) navigator.vibrate(20);
-      // Wrong key breaks streak
       setStreak(0);
       return;
     }
@@ -1345,19 +1437,14 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
     if (navigator.vibrate) navigator.vibrate(6);
 
     setTyped(prev => {
-      const next = prev + ch;
-
-      // Word boundary — space or end of phrase
-      const nextChar = currentPhrase[next.length];
+      const next    = prev + ch;
+      const nextChar     = currentPhrase[next.length];
       const wordComplete = nextChar === " " || next.length === currentPhrase.length;
 
       if (wordComplete || next.length === currentPhrase.length) {
-        // Record word completion timestamp
         const wordNow = Date.now();
         wordStampsRef.current = [...wordStampsRef.current.filter(t => wordNow - t < 6000), wordNow];
-
-        // Compute word-level WPM
-        const wordWpm = getWordWpm();
+        const wordWpm    = getWordWpm();
         const isFastWord = wordWpm >= FAST_WPM;
 
         if (isFastWord) {
@@ -1378,9 +1465,8 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
       }
 
       if (next.length === currentPhrase.length) {
-        // Compute clean WPM for this phrase: words / minutes elapsed
-        const phraseElapsed = (Date.now() - phraseStartRef.current) / 60000;
-        const phraseWords   = currentPhrase.trim().split(" ").length;
+        const phraseElapsed  = (Date.now() - phraseStartRef.current) / 60000;
+        const phraseWords    = currentPhrase.trim().split(" ").length;
         const cleanPhraseWpm = phraseElapsed > 0 ? Math.round(phraseWords / phraseElapsed) : 0;
         phraseWpmRef.current = cleanPhraseWpm;
         if (cleanPhraseWpm > peakWpmRef.current) peakWpmRef.current = cleanPhraseWpm;
@@ -1391,8 +1477,8 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
         const bon        = newDone.filter(i => i >= STANDARD_PHRASES.length).length;
         const newScore   = Math.min(100, std * 20 + bon * 10);
         const allStdDone = nextIdx >= STANDARD_PHRASES.length && !isBonus;
-        const meetsGate  = cleanPhraseWpm >= BONUS_WPM_GATE; // gate uses THIS phrase's clean WPM
-        const isDone     = newScore >= 100 || (nextIdx >= allPhrases.length);
+        const meetsGate  = cleanPhraseWpm >= BONUS_WPM_GATE;
+        const isDone     = nextIdx >= allPhrases.length;
 
         setPhraseDone(newDone);
         setPhraseBurst(b => b + 1);
@@ -1401,12 +1487,17 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
         setPhraseIdx(nextIdx);
         if (navigator.vibrate) navigator.vibrate([20,10,20,10,20]);
 
-        // After phrase 5 — check bonus gate
+        // FIX 3: Slow typer cheer on each phrase completion
+        if (cleanPhraseWpm < FAST_WPM && !isDone && !allStdDone) {
+          setShowCheer(std);
+          setTimeout(() => setShowCheer(0), 1200);
+        }
+
         if (allStdDone && !meetsGate) {
           audioRef.current?.phrase();
           setTxState("out");
           setTimeout(() => {
-            setLockedWpm(cleanPhraseWpm); // show THIS phrase's actual WPM
+            setLockedWpm(cleanPhraseWpm);
             setBonusLocked(true);
             setTxState("idle");
             setTyped("");
@@ -1414,7 +1505,6 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
           return next;
         }
 
-        // Normal transition: out → flash → in
         setTxState("out");
         setNextPhraseIdx(nextIdx);
 
@@ -1437,28 +1527,32 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
         }, 500);
 
         setTimeout(() => {
-          if (!isDone) { setTxState("idle"); setTyped(""); }
+          if (!isDone) { setTxState("idle"); setTyped(""); phraseStartRef.current = Date.now(); }
         }, 750);
 
         return next;
       }
       return next;
     });
-  }, [typed, currentPhrase, phraseIdx, phraseDone, allPhrases.length, errors, totalTyped, bestStreak, getWordWpm, setEnergy, onFinish]);
+  }, [typed, currentPhrase, phraseIdx, phraseDone, allPhrases.length, errors, totalTyped, bestStreak, getWordWpm, setEnergy, onFinish, isBonus]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [handleKey]);
 
-  // Live WPM + score tick
+  // Live WPM tick — FIX 1: only show when ≥3 stamps
   useEffect(() => {
     const iv = setInterval(() => {
       const now    = Date.now();
-      const recent = stampRef.current.filter(t => now - t < 5000).length;
-      const cWpm   = Math.round((recent / 5) * 12);
-      const cAcc   = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
+      const recent = stampRef.current.filter(t => now - t < 5000);
+      // FIX 1: need at least 3 keystrokes to show meaningful WPM
+      const cWpm = recent.length >= 3
+        ? Math.round((recent.length / 5) * 12)
+        : 0;
+      const cAcc = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
       setWpm(cWpm);
+      setStableWpm(cWpm); // stable version used for gate checks
       setAcc(cAcc);
       if (cWpm > peakWpmRef.current) peakWpmRef.current = cWpm;
       const liveScore = computeScore(cWpm, cAcc, phraseDone);
@@ -1474,320 +1568,563 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
   const streakColor = streak >= 5 ? "#FFD700" : streak >= 3 ? "#FFB800" : "#FF6B00";
   const stdDone     = phraseDone.filter(i => i < STANDARD_PHRASES.length).length;
 
-  return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 18 }}>
+  // Gate bar color — pulses orange when close
+  const gateBarColor = stableWpm >= BONUS_WPM_GATE ? "#22C55E"
+    : isClose ? "#FF6B00"
+    : "#FFB800";
 
-      {/* Phrase progress track */}
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+  return (
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 14 }}>
+ 
+      {/* ── Progress track ── */}
+      <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
         {STANDARD_PHRASES.map((_, i) => (
           <div key={i} style={{
-            flex: 1, height: 4, borderRadius: 2,
+            flex: 1, height: 6, borderRadius: 3, position: "relative", overflow: "hidden",
             background: phraseDone.includes(i) ? "#FF1A1A"
-              : phraseIdx === i ? "rgba(255,26,26,0.3)"
-              : "rgba(255,255,255,0.06)",
+              : phraseIdx === i ? "rgba(255,26,26,0.2)"
+              : "rgba(255,255,255,0.05)",
             transition: "background 0.3s",
-            boxShadow: phraseDone.includes(i) ? "0 0 8px rgba(255,26,26,0.35)" : "none",
-          }} />
+            boxShadow: phraseDone.includes(i) ? "0 0 12px rgba(255,26,26,0.6)" : "none",
+          }}>
+            {/* Animated shimmer on active phrase */}
+            {phraseIdx === i && !phraseDone.includes(i) && (
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "linear-gradient(90deg, transparent, rgba(255,26,26,0.4), transparent)",
+                animation: "shimmerBar 1.5s ease-in-out infinite",
+              }} />
+            )}
+          </div>
         ))}
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.18)", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif", whiteSpace: "nowrap" }}>
-          {stdDone}/5
-        </span>
+        {/* Keyboard icon + count */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, paddingLeft: 6, flexShrink: 0 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="rgba(255,255,255,0.18)">
+            <path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm9 0H8v-2h8v2zm1-5h-2v-2h2v2zm0-3h-2V8h2v2zm3 8h-2v-2h2v2zm0-5h-2v-2h2v2zm0-3h-2V8h2v2z"/>
+          </svg>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.18)", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif", whiteSpace: "nowrap" }}>
+            {stdDone}/5
+          </span>
+        </div>
       </div>
-
-      {/* Bonus unlock banner */}
-      {isBonus && !bonusLocked && (
+ 
+      {/* ── ALMOST THERE banner ── */}
+      {almostThere && !isBonus && (
         <div style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderRadius: 8,
-          background: "rgba(255,184,0,0.07)", border: "1px solid rgba(255,184,0,0.22)",
+          display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10,
+          background: "linear-gradient(135deg, rgba(255,107,0,0.1), rgba(255,107,0,0.04))",
+          border: "1px solid rgba(255,107,0,0.28)",
           animation: "fadeUp 0.3s ease forwards",
         }}>
-          <span style={{ fontSize: "1rem" }}>🔓</span>
-          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 800, letterSpacing: "2px", color: "#FFB800" }}>
-            BONUS PHRASE {bonusCompleted + 1} — +10 ENERGY
+          <div style={{
+            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+            background: "rgba(255,107,0,0.15)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF6B00">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+          </div>
+          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 800, letterSpacing: "1.5px", color: "#FF6B00" }}>
+            ONE MORE PHRASE — BONUS UNLOCKS AT {BONUS_WPM_GATE} WPM
           </span>
         </div>
       )}
-
-      {/* ── BONUS GATE CARD ── */}
+ 
+      {/* ── Bonus unlock banner ── */}
+      {isBonus && !bonusLocked && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10,
+          background: "linear-gradient(135deg, rgba(255,184,0,0.1), rgba(255,184,0,0.03))",
+          border: "1px solid rgba(255,184,0,0.3)",
+          animation: "fadeUp 0.3s ease forwards",
+        }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+            background: "rgba(255,184,0,0.15)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB800">
+              <path d="M12 1C9.24 1 7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2H9V6c0-1.66 1.34-3 3-3s3 1.34 3 3v1h2V6c0-2.76-2.24-5-5-5zm0 11c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>
+            </svg>
+          </div>
+          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 800, letterSpacing: "1.5px", color: "#FFB800" }}>
+            BONUS PHRASE {bonusCompleted + 1} — +10 ENERGY
+          </span>
+          <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,184,0,0.4)">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+          </div>
+        </div>
+      )}
+ 
+      {/* ── Cheer overlay ── */}
+      {showCheer > 0 && (
+        <div style={{
+          position: "fixed", top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 999, pointerEvents: "none",
+          animation: "cheerPop 1.2s ease forwards",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 20,
+            background: "rgba(34,197,94,0.15)",
+            border: "2px solid rgba(34,197,94,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 0 60px rgba(34,197,94,0.3)",
+          }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="#22C55E">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+          </div>
+          <span style={{
+            fontFamily: "'Bebas Neue',sans-serif",
+            fontSize: "clamp(2rem,6vw,3.5rem)",
+            letterSpacing: "5px", color: "#22C55E",
+            textShadow: "0 0 40px rgba(34,197,94,0.7)",
+          }}>
+            {showCheer === 1 ? "KEEP GOING!" : showCheer === 2 ? "SOLID!" : showCheer === 3 ? "HALFWAY!" : "ALMOST DONE!"}
+          </span>
+        </div>
+      )}
+ 
+      {/* ── Bonus gate card (locked) ── */}
       {bonusLocked ? (
         <div style={{
-          padding: "1.5rem", borderRadius: 16,
+          padding: "1.25rem", borderRadius: 16,
           background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.07)",
           animation: "fadeUp 0.35s ease forwards",
-          display: "flex", flexDirection: "column", gap: 12,
+          display: "flex", flexDirection: "column", gap: 14,
         }}>
-          {/* Label + WPM hint */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 800, letterSpacing: "3px", color: "rgba(255,255,255,0.3)" }}>
-              BONUS PHRASES
-            </span>
-            <span style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: "1px",
-              color: "#FFB800", fontFamily: "'DM Sans',sans-serif",
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: "rgba(255,184,0,0.08)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.3)">
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                </svg>
+              </div>
+              <div>
+                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 800, letterSpacing: "2px", color: "rgba(255,255,255,0.3)", marginBottom: 1 }}>BONUS PHRASES</p>
+                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "rgba(255,255,255,0.15)" }}>Speed gate not reached</p>
+              </div>
+            </div>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 5,
               background: "rgba(255,184,0,0.08)", border: "1px solid rgba(255,184,0,0.2)",
-              padding: "3px 10px", borderRadius: 100,
+              padding: "4px 10px", borderRadius: 100,
             }}>
-              🔒 {lockedWpm} / 60 WPM
-            </span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="#FFB800">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#FFB800", fontFamily: "'DM Sans',sans-serif" }}>
+                {lockedWpm} / {BONUS_WPM_GATE} WPM
+              </span>
+            </div>
           </div>
-
-          {/* Thin WPM progress bar */}
-          <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, position: "relative" }}>
+ 
+          {/* Gate progress */}
+          <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 2, position: "relative" }}>
             <div style={{
               height: "100%", borderRadius: 2,
-              width: `${Math.min(100, (lockedWpm / 60) * 100)}%`,
-              background: lockedWpm >= 50 ? "#FF6B00" : "#FF4400",
+              width: `${Math.min(100, (lockedWpm / BONUS_WPM_GATE) * 100)}%`,
+              background: lockedWpm >= 40 ? "linear-gradient(90deg,#FF4400,#FF6B00)" : "#FF4400",
               transition: "width 0.5s ease",
+              boxShadow: "0 0 8px rgba(255,107,0,0.5)",
             }} />
-            <div style={{ position: "absolute", top: -2, right: 0, width: 2, height: 7, background: "#FFB800", borderRadius: 1 }} />
+            <div style={{ position: "absolute", top: -3, right: 0, width: 2, height: 10, background: "#FFB800", borderRadius: 1 }} />
           </div>
-
-          {/* Two equal CTAs */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
-            <button
-              onClick={() => {
-                setBonusLocked(false);
-                setPhraseIdx(STANDARD_PHRASES.length - 1);
-                setDisplayIdx(STANDARD_PHRASES.length - 1);
-                setTyped("");
-                setTxState("idle");
-                phraseStartRef.current = Date.now(); // fresh timer — judge this attempt only
-              }}
-              style={{
-                padding: "12px 0", border: "1.5px solid rgba(255,26,26,0.4)",
-                borderRadius: 8, cursor: "pointer", background: "rgba(255,26,26,0.08)",
-                color: "#fff", fontWeight: 800, fontSize: "0.85rem", letterSpacing: "0.5px",
-                fontFamily: "'DM Sans',sans-serif", transition: "all 0.15s",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,26,26,0.15)"; e.currentTarget.style.borderColor = "rgba(255,26,26,0.7)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,26,26,0.08)"; e.currentTarget.style.borderColor = "rgba(255,26,26,0.4)"; }}
-            >⚡ Try for 60 WPM</button>
-
-            <button
-              onClick={() => {
-                const finalAcc = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
-                onFinish({ peakWpm: peakWpmRef.current, accuracy: finalAcc, phrasesTyped: phraseDone.length, bestStreak, finalScore: score });
-              }}
-              style={{
-                padding: "12px 0", border: "1.5px solid rgba(255,255,255,0.1)",
-                borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,0.04)",
-                color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.5px",
-                fontFamily: "'DM Sans',sans-serif", transition: "all 0.15s",
-              }}
+ 
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <button onClick={() => {
+              setBonusLocked(false);
+              setPhraseIdx(STANDARD_PHRASES.length - 1);
+              setDisplayIdx(STANDARD_PHRASES.length - 1);
+              setTyped(""); setTxState("idle");
+              phraseStartRef.current = Date.now();
+            }} style={{
+              padding: "12px 0",
+              border: "1.5px solid rgba(255,26,26,0.35)",
+              borderRadius: 10, cursor: "pointer",
+              background: "rgba(255,26,26,0.08)",
+              color: "#fff", fontWeight: 800, fontSize: "0.82rem",
+              fontFamily: "'DM Sans',sans-serif",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+              transition: "all 0.15s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,26,26,0.16)"; e.currentTarget.style.borderColor = "rgba(255,26,26,0.6)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,26,26,0.08)"; e.currentTarget.style.borderColor = "rgba(255,26,26,0.35)"; }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#FF6B00">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              Try for {BONUS_WPM_GATE} WPM
+            </button>
+            <button onClick={() => {
+              const finalAcc = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
+              onFinish({ peakWpm: peakWpmRef.current, accuracy: finalAcc, phrasesTyped: phraseDone.length, bestStreak, finalScore: score });
+            }} style={{
+              padding: "12px 0",
+              border: "1.5px solid rgba(255,255,255,0.09)",
+              borderRadius: 10, cursor: "pointer",
+              background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.55)", fontWeight: 700, fontSize: "0.82rem",
+              fontFamily: "'DM Sans',sans-serif",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+              transition: "all 0.15s",
+            }}
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "#fff"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = "rgba(255,255,255,0.6)"; }}
-            >Pick My Goal →</button>
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = "rgba(255,255,255,0.55)"; }}
+            >
+              Pick My Goal
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
+                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/>
+              </svg>
+            </button>
           </div>
         </div>
       ) : (
-      <div style={{
-        padding: "1.5rem",
-        background: txState === "flash"
-          ? (nextIsBonus ? "rgba(255,184,0,0.08)" : "rgba(34,197,94,0.06)")
-          : wrongFlash ? "rgba(255,26,26,0.05)" : "rgba(255,255,255,0.02)",
-        border: `1px solid ${
-          txState === "flash" ? (nextIsBonus ? "rgba(255,184,0,0.5)" : "rgba(34,197,94,0.4)")
-          : wrongFlash ? "rgba(255,26,26,0.4)"
-          : isBonus ? "rgba(255,184,0,0.14)" : "rgba(255,255,255,0.06)"}`,
-        borderRadius: 16, position: "relative", overflow: "hidden",
-        transition: "border-color 0.15s, background 0.15s",
-      }}>
-        <ParticleBurst trigger={phraseBurst} color={isBonus ? "#FFB800" : "#FF1A1A"} count={14} />
-
-        {/* Completion flash overlay */}
-        {txState === "flash" && (
-          <div style={{
-            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-            flexDirection: "column", gap: 8, zIndex: 2,
-            background: nextIsBonus ? "rgba(255,184,0,0.06)" : "rgba(34,197,94,0.05)",
-            animation: "fadeUp 0.2s ease forwards",
-          }}>
-            <span style={{ fontSize: "2rem", animation: "bounceIn 0.25s ease forwards" }}>
-              {nextIsBonus ? "🔓" : "✓"}
-            </span>
-            <span style={{
-              fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.2rem", letterSpacing: "4px",
-              color: nextIsBonus ? "#FFB800" : "#22C55E",
-            }}>
-              {nextIsBonus ? "BONUS UNLOCKED" : "PHRASE COMPLETE"}
-            </span>
-          </div>
-        )}
-
-        <div style={{ marginBottom: "0.75rem" }}>
-          <span style={{
-            fontSize: 9, fontWeight: 800, letterSpacing: "3px",
-            color: isBonus ? "#FFB800" : "rgba(255,255,255,0.18)",
-            fontFamily: "'DM Sans',sans-serif",
-          }}>
-            {isBonus ? `BONUS ${bonusCompleted + 1}` : `PHRASE ${displayIdx + 1} OF ${STANDARD_PHRASES.length}`}
-          </span>
-        </div>
-
-        {/* Characters — with fly-out / fly-in transform */}
+ 
+        /* ── Phrase typing box ── */
         <div style={{
-          display: "flex", flexWrap: "wrap", gap: "1px 0", lineHeight: 1,
-          transform: txState === "out" ? "translateX(-60px)" : txState === "in" ? "translateX(0)" : "none",
-          opacity: txState === "out" ? 0 : txState === "flash" ? 0 : 1,
-          transition: txState === "out" ? "transform 0.22s ease-in, opacity 0.22s ease-in"
-                    : txState === "in"  ? "transform 0.25s ease-out, opacity 0.25s ease-out"
-                    : "none",
-          // "in" starts off-right
-          ...(txState === "in" ? { transform: "translateX(0)", animation: "slideInRight 0.25s ease-out forwards" } : {}),
+          padding: "1.25rem 1.4rem",
+          background: txState === "flash"
+            ? (nextIsBonus ? "rgba(255,184,0,0.07)" : "rgba(34,197,94,0.05)")
+            : wrongFlash ? "rgba(255,26,26,0.06)" : "rgba(255,255,255,0.025)",
+          border: `1.5px solid ${
+            txState === "flash" ? (nextIsBonus ? "rgba(255,184,0,0.45)" : "rgba(34,197,94,0.4)")
+            : wrongFlash ? "rgba(255,26,26,0.45)"
+            : isBonus ? "rgba(255,184,0,0.18)" : "rgba(255,255,255,0.07)"}`,
+          borderRadius: 16, position: "relative", overflow: "hidden",
+          transition: "border-color 0.12s, background 0.12s",
+          boxShadow: wrongFlash ? "inset 0 0 20px rgba(255,26,26,0.05)" : "none",
         }}>
-          {currentPhrase.split("").map((ch, i) => {
-            const isTyped   = i < typed.length;
-            const isCurrent = i === typed.length && txState === "idle";
-            const isSpace   = ch === " ";
-            return (
-              <span key={i} style={{
-                fontFamily: "'Bebas Neue',sans-serif",
-                fontSize: isCurrent ? "2.3rem" : "1.75rem",
-                letterSpacing: "3px",
-                color: isTyped ? "#22C55E" : isCurrent ? "#FFB800" : "rgba(255,255,255,0.22)",
-                textShadow: isTyped ? "0 0 8px rgba(34,197,94,0.3)" : isCurrent ? "0 0 16px rgba(255,184,0,0.55)" : "none",
-                transition: "font-size 0.1s, color 0.07s",
-                animation: isCurrent ? "pulseAmber 0.85s ease-in-out infinite" : "none",
-                display: "inline-block", width: isSpace ? "0.55rem" : "auto",
-              }}>{isSpace ? "\u00A0" : ch}</span>
-            );
-          })}
-        </div>
-
-        {/* Next key */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: "1rem" }}>
-          <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,0.13)", fontFamily: "'DM Sans',sans-serif" }}>NEXT</span>
-          <div style={{
-            width: 36, height: 36, background: "rgba(255,184,0,0.07)",
-            border: "1.5px solid rgba(255,184,0,0.3)", borderRadius: 7,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 0 10px rgba(255,184,0,0.18)",
-          }}>
-            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.35rem", color: "#FFB800", animation: "pulseAmber 0.85s ease-in-out infinite" }}>
-              {currentPhrase[typed.length] === " " ? "⎵" : (currentPhrase[typed.length] ?? "✓")}
-            </span>
-          </div>
-          {wrongFlash && (
-            <span style={{ fontSize: 11, color: "#FF1A1A", fontWeight: 800, fontFamily: "'DM Sans',sans-serif", letterSpacing: "1px" }}>✗ WRONG KEY</span>
-          )}
-        </div>
-      </div>
-      )} {/* end bonusLocked ? ... : ( ... ) */}
-
-      {/* Live stats grid — streak column only shows if active */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: streak > 0 ? "1fr 1px 1fr 1px 1fr 1px 1fr 1px 1fr" : "1fr 1px 1fr 1px 1fr 1px 1fr",
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, overflow: "hidden",
-      }}>
-        {[
-          { v: wpm,        l: "WPM",      col: wpmColor },
-          { v: `${acc}%`,  l: "ACCURACY", col: accColor },
-          { v: errors,     l: "ERRORS",   col: errors > 0 ? "#FF1A1A" : "rgba(255,255,255,.18)" },
-          { v: `${score}`, l: "ENERGY",   col: scoreColor },
-          ...(streak > 0 ? [{ v: `${streak}🔥`, l: "STREAK", col: streakColor }] : []),
-        ].map(({ v, l, col }, i, arr) => (
-          <React.Fragment key={l}>
+          <ParticleBurst trigger={phraseBurst} color={isBonus ? "#FFB800" : "#FF1A1A"} count={14} />
+ 
+          {/* Flash overlay */}
+          {txState === "flash" && (
             <div style={{
-              padding: "0.85rem 0", textAlign: "center",
-              background: l === "STREAK" && streakFlash ? `${streakColor}12` : "transparent",
-              transition: "background 0.2s",
+              position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+              flexDirection: "column", gap: 10, zIndex: 2,
+              background: nextIsBonus ? "rgba(255,184,0,0.05)" : "rgba(34,197,94,0.04)",
+              animation: "fadeUp 0.2s ease forwards",
             }}>
               <div style={{
-                fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.75rem",
-                color: col, transition: "color .25s", lineHeight: 1,
-                transform: l === "STREAK" && streakFlash ? "scale(1.15)" : "scale(1)",
-                transition: "transform 0.15s, color 0.25s",
+                width: 52, height: 52, borderRadius: 14,
+                background: nextIsBonus ? "rgba(255,184,0,0.15)" : "rgba(34,197,94,0.15)",
+                border: `2px solid ${nextIsBonus ? "rgba(255,184,0,0.4)" : "rgba(34,197,94,0.4)"}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                animation: "bounceIn 0.25s ease forwards",
+              }}>
+                {nextIsBonus
+                  ? <svg width="26" height="26" viewBox="0 0 24 24" fill="#FFB800"><path d="M12 1C9.24 1 7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2H9V6c0-1.66 1.34-3 3-3s3 1.34 3 3v1h2V6c0-2.76-2.24-5-5-5zm0 11c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/></svg>
+                  : <svg width="26" height="26" viewBox="0 0 24 24" fill="#22C55E"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                }
+              </div>
+              <span style={{
+                fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.1rem", letterSpacing: "4px",
+                color: nextIsBonus ? "#FFB800" : "#22C55E",
+              }}>
+                {nextIsBonus ? "BONUS UNLOCKED" : "PHRASE COMPLETE"}
+              </span>
+            </div>
+          )}
+ 
+          {/* Phrase label row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.65rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {isBonus
+                ? <svg width="11" height="11" viewBox="0 0 24 24" fill="#FFB800"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                : <svg width="11" height="11" viewBox="0 0 24 24" fill="rgba(255,255,255,0.18)"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm9 0H8v-2h8v2zm1-5h-2v-2h2v2zm0-3h-2V8h2v2zm3 8h-2v-2h2v2zm0-5h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+              }
+              <span style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: "3px",
+                color: isBonus ? "#FFB800" : "rgba(255,255,255,0.18)",
+                fontFamily: "'DM Sans',sans-serif",
+              }}>
+                {isBonus ? `BONUS ${bonusCompleted + 1}` : `PHRASE ${displayIdx + 1} / ${STANDARD_PHRASES.length}`}
+              </span>
+            </div>
+            {wrongFlash && (
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#FF1A1A">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                </svg>
+                <span style={{ fontSize: 10, color: "#FF1A1A", fontWeight: 800, fontFamily: "'DM Sans',sans-serif", letterSpacing: "1px" }}>WRONG</span>
+              </div>
+            )}
+          </div>
+ 
+          {/* Phrase characters */}
+          <div style={{
+            display: "flex", flexWrap: "wrap", gap: "0", lineHeight: 1,
+            transform: txState === "out" ? "translateX(-50px)" : "none",
+            opacity: txState === "out" ? 0 : txState === "flash" ? 0 : 1,
+            transition: txState === "out" ? "transform 0.2s ease-in, opacity 0.2s"
+                      : txState === "in"  ? "transform 0.22s ease-out, opacity 0.22s"
+                      : "none",
+            ...(txState === "in" ? { animation: "slideInRight 0.25s ease-out forwards" } : {}),
+          }}>
+            {currentPhrase.split("").map((ch, i) => {
+              const isTyped   = i < typed.length;
+              const isCurrent = i === typed.length && txState === "idle";
+              const isSpace   = ch === " ";
+              return (
+                <span key={i} style={{
+                  fontFamily: "'Bebas Neue',sans-serif",
+                  fontSize: isCurrent ? "clamp(1.9rem,5.5vw,2.4rem)" : "clamp(1.5rem,4.5vw,1.85rem)",
+                  letterSpacing: "3px",
+                  color: isTyped ? "#22C55E" : isCurrent ? "#FFB800" : "rgba(255,255,255,0.18)",
+                  textShadow: isTyped
+                    ? "0 0 12px rgba(34,197,94,0.4)"
+                    : isCurrent ? "0 0 20px rgba(255,184,0,0.7)" : "none",
+                  transition: "font-size 0.08s, color 0.06s",
+                  animation: isCurrent ? "pulseAmber 0.85s ease-in-out infinite" : "none",
+                  display: "inline-block",
+                  width: isSpace ? "0.5rem" : "auto",
+                }}>{isSpace ? "\u00A0" : ch}</span>
+              );
+            })}
+          </div>
+ 
+          {/* Next key indicator */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: "0.875rem" }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,255,255,0.1)">
+              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/>
+            </svg>
+            <div style={{
+              width: 34, height: 34,
+              background: "rgba(255,184,0,0.07)",
+              border: "1.5px solid rgba(255,184,0,0.25)",
+              borderRadius: 8,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 0 12px rgba(255,184,0,0.12)",
+            }}>
+              <span style={{
+                fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.3rem",
+                color: "#FFB800", animation: "pulseAmber 0.85s ease-in-out infinite",
+              }}>
+                {currentPhrase[typed.length] === " " ? "⎵" : (currentPhrase[typed.length] ?? "✓")}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+ 
+      {/* ── Live stats ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: streak > 0
+          ? "1fr 1px 1fr 1px 1fr 1px 1fr 1px 1fr"
+          : "1fr 1px 1fr 1px 1fr 1px 1fr",
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        borderRadius: 14, overflow: "hidden",
+      }}>
+        {[
+          {
+            v: wpm || "—", l: "WPM", col: wpm > 0 ? wpmColor : "rgba(255,255,255,.15)",
+            icon: <svg width="14" height="14" viewBox="0 0 24 24" fill={wpm > 0 ? wpmColor : "rgba(255,255,255,0.15)"}><path d="M12 2C6.48 2 2 6.48 2 12c0 3.1 1.41 5.88 3.63 7.75L7.06 18.3A7.96 7.96 0 014 12a8 8 0 018-8 8 8 0 018 8 7.96 7.96 0 01-3.06 6.3l1.43 1.45A9.97 9.97 0 0022 12c0-5.52-4.48-10-10-10z"/><path d="M12 6a1 1 0 011 1v4.59l3.2 3.2-1.41 1.42L11 12.41V7a1 1 0 011-1z"/></svg>,
+          },
+          {
+            v: `${acc}%`, l: "ACC", col: accColor,
+            icon: <svg width="14" height="14" viewBox="0 0 24 24" fill={accColor}><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/></svg>,
+          },
+          {
+            v: errors, l: "ERR", col: errors > 0 ? "#FF1A1A" : "rgba(255,255,255,.18)",
+            icon: <svg width="14" height="14" viewBox="0 0 24 24" fill={errors > 0 ? "#FF1A1A" : "rgba(255,255,255,0.18)"}><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>,
+          },
+          {
+            v: `${score}%`, l: "PWR", col: scoreColor,
+            icon: <svg width="14" height="14" viewBox="0 0 24 24" fill={scoreColor}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
+          },
+          ...(streak > 0 ? [{
+            v: streak, l: "FIRE", col: streakColor,
+            icon: <svg width="14" height="14" viewBox="0 0 24 24" fill={streakColor}><path d="M12 1.5C12 1.5 7 6.5 7 11a5 5 0 0010 0c0-3.5-2.5-6-2.5-6S14 7 13 8.5C12 6.5 12 1.5 12 1.5z"/><circle cx="12" cy="14" r="1.5"/></svg>,
+          }] : []),
+        ].map(({ v, l, col, icon }, i, arr) => (
+          <React.Fragment key={l}>
+            <div style={{
+              padding: "0.7rem 0.25rem", textAlign: "center",
+              background: l === "FIRE" && streakFlash ? `${streakColor}15` : "transparent",
+              transition: "background 0.2s",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+            }}>
+              <div style={{ opacity: 0.75 }}>{icon}</div>
+              <div style={{
+                fontFamily: "'Bebas Neue',sans-serif",
+                fontSize: "clamp(1.15rem,3.5vw,1.55rem)",
+                color: col, lineHeight: 1,
+                transform: l === "FIRE" && streakFlash ? "scale(1.25)" : "scale(1)",
+                transition: "transform 0.12s, color 0.25s",
               }}>{v}</div>
-              <div style={{ fontSize: 8, letterSpacing: "2px", color: "rgba(255,255,255,.15)", fontWeight: 700, fontFamily: "'DM Sans',sans-serif", marginTop: 3 }}>{l}</div>
+              <div style={{ fontSize: 7, letterSpacing: "1.5px", color: "rgba(255,255,255,.12)", fontWeight: 800, fontFamily: "'DM Sans',sans-serif" }}>{l}</div>
             </div>
             {i < arr.length - 1 && <div style={{ background: "rgba(255,255,255,0.05)", width: 1 }} />}
           </React.Fragment>
         ))}
       </div>
-
-      {/* Accuracy bar */}
+ 
+      {/* ── Accuracy bar ── */}
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-          <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,.13)", fontFamily: "'DM Sans',sans-serif" }}>ACCURACY</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,255,255,0.15)">
+              <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/>
+            </svg>
+            <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,.13)", fontFamily: "'DM Sans',sans-serif" }}>ACCURACY</span>
+          </div>
           <span style={{ fontSize: 9, letterSpacing: "1px", color: accColor, fontFamily: "'DM Sans',sans-serif", fontWeight: 700, transition: "color .3s" }}>{acc}%</span>
         </div>
-        <div style={{ height: 2, background: "rgba(255,255,255,.04)", borderRadius: 2 }}>
-          <div style={{ height: "100%", borderRadius: 2, width: `${acc}%`, background: accColor, transition: "width .2s, background .3s" }} />
+        <div style={{ height: 3, background: "rgba(255,255,255,.04)", borderRadius: 2 }}>
+          <div style={{ height: "100%", borderRadius: 2, width: `${acc}%`, background: `linear-gradient(90deg,${accColor}99,${accColor})`, transition: "width .2s, background .3s", boxShadow: `0 0 6px ${accColor}60` }} />
         </div>
       </div>
-
-      {/* Bonus gate progress — only visible on phrase 5 */}
-      {phraseIdx === STANDARD_PHRASES.length - 1 && !bonusLocked && (
+ 
+      {/* ── Bonus gate bar ── */}
+      {onLastPhrase && !bonusLocked && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-            <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,.13)", fontFamily: "'DM Sans',sans-serif" }}>
-              BONUS UNLOCK SPEED
-            </span>
-            <span style={{
-              fontSize: 9, letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif", fontWeight: 700,
-              color: wpm >= BONUS_WPM_GATE ? "#22C55E" : "rgba(255,184,0,0.6)",
-              transition: "color .3s",
-            }}>
-              {wpm >= BONUS_WPM_GATE ? "✓ UNLOCKED" : `${wpm} / ${BONUS_WPM_GATE} WPM`}
-            </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,255,255,0.15)">
+                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+              </svg>
+              <span style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(255,255,255,.13)", fontFamily: "'DM Sans',sans-serif" }}>BONUS GATE</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              {stableWpm >= BONUS_WPM_GATE && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#22C55E">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                </svg>
+              )}
+              {isClose && stableWpm < BONUS_WPM_GATE && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#FF6B00">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+              )}
+              <span style={{
+                fontSize: 9, letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif", fontWeight: 700,
+                color: stableWpm >= BONUS_WPM_GATE ? "#22C55E" : isClose ? "#FF6B00" : "rgba(255,184,0,0.55)",
+                transition: "color .3s",
+                animation: isClose ? "pulse 0.8s ease-in-out infinite" : "none",
+              }}>
+                {stableWpm >= BONUS_WPM_GATE ? "UNLOCKED" : isClose ? "SO CLOSE — PUSH!" : `${stableWpm || "—"} / ${BONUS_WPM_GATE} WPM`}
+              </span>
+            </div>
           </div>
-          <div style={{ height: 2, background: "rgba(255,255,255,.04)", borderRadius: 2, position: "relative" }}>
+          <div style={{ height: 3, background: "rgba(255,255,255,.04)", borderRadius: 2, position: "relative" }}>
             <div style={{
               height: "100%", borderRadius: 2,
-              width: `${Math.min(100, (wpm / BONUS_WPM_GATE) * 100)}%`,
-              background: wpm >= BONUS_WPM_GATE ? "#22C55E" : "#FFB800",
+              width: `${Math.min(100, ((stableWpm || 0) / BONUS_WPM_GATE) * 100)}%`,
+              background: `linear-gradient(90deg,${gateBarColor}88,${gateBarColor})`,
               transition: "width .2s, background .3s",
+              boxShadow: isClose ? `0 0 10px ${gateBarColor}90` : "none",
             }} />
+            <div style={{ position: "absolute", top: -3, right: 0, width: 2, height: 9, background: "#FFB800", borderRadius: 1 }} />
           </div>
         </div>
       )}
-
-      <p style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,.1)", letterSpacing: "1.5px", fontFamily: "'DM Sans',sans-serif" }}>
-        COMPLETE 5 PHRASES · BONUS PHRASES UNLOCK AFTER · ACCURACY COUNTS
-      </p>
+ 
+      {/* ── Footer ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="rgba(255,255,255,0.07)">
+          <path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2z"/>
+        </svg>
+        <p style={{ fontSize: 9, color: "rgba(255,255,255,.07)", letterSpacing: "1.5px", fontFamily: "'DM Sans',sans-serif" }}>
+          5 PHRASES · BONUS AFTER · ACCURACY COUNTS
+        </p>
+      </div>
+ 
+      <style>{`
+        @keyframes shimmerBar {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+        @keyframes cheerPop {
+          0%   { opacity:0; transform:translate(-50%,-50%) scale(0.5); }
+          20%  { opacity:1; transform:translate(-50%,-50%) scale(1.08); }
+          80%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+          100% { opacity:0; transform:translate(-50%,-50%) scale(0.9); }
+        }
+      `}</style>
     </div>
   );
 }
 
 // ─── Goal Selector ────────────────────────────────────────────────────────────
-function GoalSelector({ onBack }) {
+function GoalSelector({ earnedTier, earnedRewards, onBack }) {
   const [selectedGoal, setSelectedGoal] = useState(null);
-  const [mounted, setMounted] = useState(false);
-  const activeGoal = GOALS.find(g => g.id === selectedGoal);
+  const [mounted,      setMounted]      = useState(false);
+  const activeGoal  = GOALS.find(g => g.id === selectedGoal);
+  const hasReward   = earnedTier && earnedRewards?.length > 0;
+  const rewardCount = earnedRewards?.length || 0;
   useEffect(() => { setTimeout(() => setMounted(true), 50); }, []);
-
+ 
+  const buildRegisterUrl = (goalId) => {
+    if (!hasReward) return `/register?goal=${goalId}`;
+    return `/register?goal=${goalId}&tier=${earnedTier.registerTag}&rewards=${rewardCount}`;
+  };
+ 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", width: "100%", padding: "0 1rem" }}>
       <div style={{
-        textAlign: "center", marginBottom: "2rem",
+        textAlign: "center", marginBottom: "1.75rem",
         opacity: mounted ? 1 : 0, transform: mounted ? "none" : "translateY(20px)",
         transition: "opacity 0.5s ease, transform 0.5s ease",
       }}>
-        <span style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          background: "rgba(255,26,26,0.07)", border: "1px solid rgba(255,26,26,0.18)",
-          padding: "5px 16px", borderRadius: 100, marginBottom: "1rem",
-        }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF1A1A", display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "4px", color: "#FF1A1A", fontFamily: "'DM Sans',sans-serif" }}>WHAT'S YOUR GOAL?</span>
-        </span>
-        <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(2rem,5vw,3.5rem)", letterSpacing: "2px", color: "#fff", lineHeight: 1.05, marginBottom: "0.5rem" }}>
+        {/* Reward reminder banner */}
+        {hasReward && (
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            background: `${earnedTier.color}10`,
+            border: `1px solid ${earnedTier.color}30`,
+            padding: "7px 16px", borderRadius: 100,
+            marginBottom: "1rem",
+            animation: "fadeUp 0.4s ease forwards",
+          }}>
+            <span style={{ fontSize: 12 }}>🎁</span>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "2px", color: earnedTier.color, fontFamily: "'DM Sans',sans-serif" }}>
+              {rewardCount} REWARD{rewardCount !== 1 ? "S" : ""} LOCKED IN — PICK YOUR GOAL
+            </span>
+          </div>
+        )}
+ 
+        {!hasReward && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            background: "rgba(255,26,26,0.07)", border: "1px solid rgba(255,26,26,0.18)",
+            padding: "5px 16px", borderRadius: 100, marginBottom: "1rem",
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF1A1A", display: "inline-block", animation: "pulse 2s infinite" }} />
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "4px", color: "#FF1A1A", fontFamily: "'DM Sans',sans-serif" }}>WHAT'S YOUR GOAL?</span>
+          </span>
+        )}
+ 
+        <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.8rem,6vw,3.5rem)", letterSpacing: "2px", color: "#fff", lineHeight: 1.05, marginBottom: "0.5rem" }}>
           {selectedGoal ? activeGoal.headline.toUpperCase() : "PICK YOUR PROGRAM."}
         </h2>
-        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.9rem", fontFamily: "'DM Sans',sans-serif" }}>
+        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.8rem,3vw,0.9rem)", fontFamily: "'DM Sans',sans-serif" }}>
           {selectedGoal ? `Suggested: ${activeGoal.plan}` : "We'll build your perfect program around it."}
         </p>
       </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
+ 
+      {/* Goal grid — 2 cols on mobile, 3 on desktop */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+        gap: "0.65rem", marginBottom: "1.5rem",
+      }}>
         {GOALS.map((goal, i) => (
           <button key={goal.id}
             onClick={() => setSelectedGoal(goal.id === selectedGoal ? null : goal.id)}
             style={{
-              position: "relative", padding: "1rem 0.75rem", borderRadius: 12, cursor: "pointer",
+              position: "relative", padding: "0.875rem 0.65rem", borderRadius: 12, cursor: "pointer",
               display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
               border: selectedGoal === goal.id ? `2px solid ${goal.color}` : "2px solid rgba(255,255,255,0.07)",
               background: selectedGoal === goal.id ? goal.color + "15" : "rgba(255,255,255,0.025)",
@@ -1798,53 +2135,71 @@ function GoalSelector({ onBack }) {
               transition: `all 0.25s ease, opacity 0.4s ease ${i * 0.06}s, transform 0.4s ease ${i * 0.06}s`,
               fontFamily: "'DM Sans',sans-serif",
             }}
-            onMouseEnter={e => { if (selectedGoal !== goal.id) { e.currentTarget.style.borderColor = `${goal.color}44`; e.currentTarget.style.transform = "translateY(-2px)"; }}}
-            onMouseLeave={e => { if (selectedGoal !== goal.id) { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.transform = "translateY(0)"; }}}
           >
-            <span style={{ fontSize: "1.6rem" }}>{goal.icon}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.2 }}>{goal.label}</span>
+            <span style={{ fontSize: "1.4rem" }}>{goal.icon}</span>
+            <span style={{ fontSize: "clamp(10px,2.5vw,12px)", fontWeight: 700, letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.2 }}>{goal.label}</span>
             {selectedGoal === goal.id && (
-              <span style={{ position: "absolute", top: 8, right: 8, width: 18, height: 18, borderRadius: "50%", background: goal.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 800, animation: "fadeCheckIn 0.2s ease forwards" }}>✓</span>
+              <span style={{ position: "absolute", top: 6, right: 6, width: 16, height: 16, borderRadius: "50%", background: goal.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#fff", fontWeight: 800 }}>✓</span>
             )}
           </button>
         ))}
       </div>
-
+ 
       {selectedGoal && (
         <div style={{ animation: "fadeUp 0.35s ease forwards" }}>
           <div style={{
-            display: "flex", alignItems: "center", gap: "1rem",
+            display: "flex", alignItems: "center", gap: "0.875rem",
             background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-            borderLeft: `3px solid ${activeGoal.color}`, borderRadius: 12, padding: "1rem 1.5rem", marginBottom: "1.25rem",
+            borderLeft: `3px solid ${activeGoal.color}`, borderRadius: 12,
+            padding: "0.875rem 1.25rem", marginBottom: "0.875rem",
           }}>
-            <span style={{ fontSize: "1.5rem" }}>{activeGoal.icon}</span>
+            <span style={{ fontSize: "1.4rem" }}>{activeGoal.icon}</span>
             <div>
-              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "3px", color: "rgba(255,255,255,0.3)", marginBottom: 4, fontFamily: "'DM Sans',sans-serif" }}>YOUR PROGRAM</p>
-              <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "#fff", fontFamily: "'DM Sans',sans-serif" }}>{activeGoal.plan}</p>
+              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "3px", color: "rgba(255,255,255,0.3)", marginBottom: 3, fontFamily: "'DM Sans',sans-serif" }}>YOUR PROGRAM</p>
+              <p style={{ fontSize: "clamp(0.8rem,3vw,0.95rem)", fontWeight: 600, color: "#fff", fontFamily: "'DM Sans',sans-serif" }}>{activeGoal.plan}</p>
             </div>
           </div>
-          <a href={`/register?goal=${selectedGoal}`} style={{
-            display: "block", width: "100%", padding: "16px", textAlign: "center",
-            background: `linear-gradient(135deg,${activeGoal.color},${activeGoal.color}cc)`,
-            boxShadow: `0 6px 28px ${activeGoal.color}40`,
-            color: "#fff", textDecoration: "none", fontWeight: 800, fontSize: "1rem",
+ 
+          {hasReward && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "9px 12px", borderRadius: 8, marginBottom: "0.875rem",
+              background: `${earnedTier.color}08`, border: `1px solid ${earnedTier.color}25`,
+            }}>
+              <span style={{ fontSize: "0.85rem" }}>🎁</span>
+              <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "clamp(10px,2.5vw,11px)", color: "rgba(255,255,255,0.5)" }}>
+                Your <strong style={{ color: earnedTier.color }}>{rewardCount} rewards</strong> will be applied at registration
+              </span>
+            </div>
+          )}
+ 
+          <a href={buildRegisterUrl(selectedGoal)} style={{
+            display: "block", width: "100%", padding: "15px", textAlign: "center",
+            background: hasReward
+              ? `linear-gradient(135deg, ${earnedTier.color}, ${earnedTier.color}cc)`
+              : `linear-gradient(135deg, ${activeGoal.color}, ${activeGoal.color}cc)`,
+            boxShadow: hasReward
+              ? `0 6px 28px ${earnedTier.color}40`
+              : `0 6px 28px ${activeGoal.color}40`,
+            color: "#fff", textDecoration: "none", fontWeight: 800,
+            fontSize: "clamp(0.85rem,3.5vw,1rem)",
             letterSpacing: "0.5px", borderRadius: 8, fontFamily: "'DM Sans',sans-serif",
-            transition: "transform 0.15s, box-shadow 0.15s",
-          }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 10px 36px ${activeGoal.color}55`; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `0 6px 28px ${activeGoal.color}40`; }}
-          >Start My {activeGoal.label} Journey →</a>
-          <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: "0.75rem", fontFamily: "'DM Sans',sans-serif" }}>
-            First session free · No joining fee this month
+          }}>
+            {hasReward
+              ? `Register & Claim ${rewardCount} Rewards →`
+              : `Start My ${activeGoal.label} Journey →`}
+          </a>
+ 
+          <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: "0.65rem", fontFamily: "'DM Sans',sans-serif" }}>
+            {hasReward ? "Rewards valid today only · No credit card required" : "First session free · No joining fee this month"}
           </p>
         </div>
       )}
-
-      <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.2)", fontSize: 13, cursor: "pointer", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif", transition: "color 0.2s" }}
-          onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.5)"}
-          onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
-        >← Back</button>
+ 
+      <div style={{ textAlign: "center", marginTop: "1.25rem" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.2)", fontSize: 13, cursor: "pointer", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif" }}>
+          ← Back
+        </button>
       </div>
     </div>
   );
@@ -2381,26 +2736,497 @@ function TrainerCard({ trainer, index }) {
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
- function EnergyShakeSection() {
-  const [phase, setPhase]       = useState("invite");   // invite | typing | summary | goals
-  const [energy, setEnergy]     = useState(0);
-  const [summaryStats, setSummaryStats] = useState(null);
+const REWARD_TIERS = {
+  WARMING_UP: {
+    rank:        "WARMING UP",
+    wpmRange:    "0–49 WPM",
+    color:       "rgba(255,255,255,0.5)",
+    headline:    "You showed up. That's everything.",
+    subline:     "Here's what you've unlocked just for completing the challenge.",
+    rewards: [
+      { icon: "🎯", title: "Free Fitness Assessment", value: "₹500 value",      desc: "Full body composition scan on your first visit" },
+      { icon: "🚫", title: "No Joining Fee",          value: "Waived",           desc: "Join today with zero setup cost"               },
+    ],
+    ctaLabel:    "Claim Your Rewards →",
+    registerTag: "warming_up",
+  },
+  SOLID: {
+    rank:        "SOLID",
+    wpmRange:    "50–79 WPM",
+    color:       "#FFB800",
+    headline:    "Good pace. Real FitZone energy.",
+    subline:     "Your speed earned you an extra perk on top.",
+    rewards: [
+      { icon: "🎯", title: "Free Fitness Assessment", value: "₹500 value",      desc: "Full body composition scan on your first visit" },
+      { icon: "🚫", title: "No Joining Fee",          value: "Waived",           desc: "Join today with zero setup cost"               },
+      { icon: "🔒", title: "Bonus Locker Access",     value: "First month free", desc: "Dedicated locker for your first 30 days"       },
+    ],
+    ctaLabel:    "Claim Your Rewards →",
+    registerTag: "solid",
+  },
+  PRO: {
+    rank:        "PRO",
+    wpmRange:    "80–99 WPM",
+    color:       "#FF6B00",
+    headline:    "Fast hands. That's real FitZone energy.",
+    subline:     "You typed like you train — here's what that earns you.",
+    rewards: [
+      { icon: "🎯", title: "Free Fitness Assessment", value: "₹500 value",      desc: "Full body composition scan on your first visit" },
+      { icon: "🚫", title: "No Joining Fee",          value: "Waived",           desc: "Join today with zero setup cost"               },
+      { icon: "🔒", title: "Bonus Locker Access",     value: "First month free", desc: "Dedicated locker for your first 30 days"       },
+      { icon: "💰", title: "₹300 Off First Month",   value: "₹300 discount",    desc: "Applied automatically at checkout"             },
+    ],
+    ctaLabel:    "Claim Your Rewards →",
+    registerTag: "pro",
+  },
+  ELITE: {
+    rank:        "ELITE",
+    wpmRange:    "100+ WPM",
+    color:       "#FF1A1A",
+    headline:    "You type like you train. Absolutely relentless.",
+    subline:     "ELITE tier unlocks everything. This is the full package.",
+    rewards: [
+      { icon: "🎯", title: "Free Fitness Assessment", value: "₹500 value",      desc: "Full body composition scan on your first visit" },
+      { icon: "🚫", title: "No Joining Fee",          value: "Waived",           desc: "Join today with zero setup cost"               },
+      { icon: "🔒", title: "Bonus Locker Access",     value: "First month free", desc: "Dedicated locker for your first 30 days"       },
+      { icon: "💰", title: "₹500 Off First Month",   value: "₹500 discount",    desc: "Applied automatically at checkout"             },
+      { icon: "🏋️", title: "First PT Session Free", value: "₹500 value",       desc: "1-on-1 session with any certified trainer"     },
+    ],
+    ctaLabel:    "Claim Your Full Reward →",
+    registerTag: "elite",
+  },
+};
+ 
+const BONUS_STACK_REWARD = {
+  icon:  "⚡",
+  title: "Bonus Phrase Reward",
+  value: "+₹200 extra off",
+  desc:  "You went beyond — extra discount stacked on your tier reward",
+};
+ 
+const getTier = (peakWpm) => {
+  if (peakWpm >= 100) return REWARD_TIERS.ELITE;
+  if (peakWpm >= 80)  return REWARD_TIERS.PRO;
+  if (peakWpm >= 50)  return REWARD_TIERS.SOLID;
+  return REWARD_TIERS.WARMING_UP;
+};
+ 
+function RewardScreen({ stats, onContinue }) {
+  const [mounted,     setMounted]     = useState(false);
+  const [revealed,    setRevealed]    = useState([]);
+  const [allRevealed, setAllRevealed] = useState(false);
+  const [countDown,   setCountDown]   = useState(null);
+ 
+  const tier         = getTier(stats.peakWpm);
+  const bonusDone    = stats.phrasesTyped > 5;
+  const showBonusRow = bonusDone && stats.peakWpm >= 80;
+  const allRewards   = [...tier.rewards, ...(showBonusRow ? [BONUS_STACK_REWARD] : [])];
+  const registerUrl  = `/register?tier=${tier.registerTag}&peakWpm=${stats.peakWpm}&bonus=${bonusDone ? 1 : 0}`;
+ 
+  useEffect(() => {
+    setTimeout(() => setMounted(true), 60);
+    allRewards.forEach((_, i) => {
+      setTimeout(() => {
+        setRevealed(prev => [...prev, i]);
+        if (i === allRewards.length - 1) setTimeout(() => setAllRevealed(true), 400);
+      }, 500 + i * 320);
+    });
+  }, []);
+ 
+  useEffect(() => {
+    if (!allRevealed) return;
+    setCountDown(8);
+    const iv = setInterval(() => {
+      setCountDown(prev => {
+        if (prev <= 1) { clearInterval(iv); onContinue(tier, allRewards); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [allRevealed]);
+ 
+  // reward icon map — SVG filled
+  const rewardIcons = {
+    "🎯": <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/></svg>,
+    "🚫": <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>,
+    "🔒": <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>,
+    "💰": <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>,
+    "🏋️": <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29l-1.43-1.43z"/></svg>,
+    "⚡": <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
+  };
+ 
+  return (
+    <div style={{
+      maxWidth: 540, width: "100%", margin: "0 auto", padding: "0 1rem",
+      opacity: mounted ? 1 : 0,
+      transform: mounted ? "none" : "translateY(32px)",
+      transition: "opacity 0.5s ease, transform 0.5s ease",
+    }}>
+      <style>{`
+        @keyframes rewardPop {
+          0%   { opacity:0; transform:translateY(14px) scale(0.97); }
+          60%  { transform:translateY(-2px) scale(1.01); }
+          100% { opacity:1; transform:none; }
+        }
+        @keyframes rankPulse {
+          0%,100% { box-shadow: 0 0 24px var(--rc,rgba(255,26,26,0.25)); }
+          50%      { box-shadow: 0 0 48px var(--rc,rgba(255,26,26,0.45)), 0 0 80px var(--rc,rgba(255,26,26,0.15)); }
+        }
+        @keyframes shimmerFlow {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+      `}</style>
+ 
+      {/* ── Rank header ── */}
+      <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+        <div style={{
+          display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 10,
+          padding: "1.25rem clamp(1.5rem,5vw,2.75rem)",
+          background: `linear-gradient(135deg, ${tier.color}14, ${tier.color}06)`,
+          border: `2px solid ${tier.color}40`,
+          borderRadius: 18,
+          animation: "rankPulse 2.5s ease-in-out infinite",
+          "--rc": `${tier.color}30`,
+          marginBottom: "1rem",
+        }}>
+          {/* Rank icon */}
+          <div style={{
+            width: 48, height: 48, borderRadius: 14,
+            background: `${tier.color}20`,
+            border: `2px solid ${tier.color}40`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: `0 0 24px ${tier.color}30`,
+          }}>
+            {tier.rank === "ELITE"      && <svg width="24" height="24" viewBox="0 0 24 24" fill={tier.color}><path d="M12 1L8 9 2 6l3 13h14l3-13-6 3-4-8z"/><rect x="5" y="20" width="14" height="2" rx="1"/></svg>}
+            {tier.rank === "PRO"        && <svg width="24" height="24" viewBox="0 0 24 24" fill={tier.color}><path d="M5 3H3a2 2 0 00-2 2v2a4 4 0 003.86 4A6 6 0 009 14.9V17H7v2h10v-2h-2v-2.1A6 6 0 0019.14 11 4 4 0 0023 7V5a2 2 0 00-2-2h-2V1H5v2z"/></svg>}
+            {tier.rank === "SOLID"      && <svg width="24" height="24" viewBox="0 0 24 24" fill={tier.color}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>}
+            {tier.rank === "WARMING UP" && <svg width="24" height="24" viewBox="0 0 24 24" fill={tier.color}><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>}
+          </div>
+ 
+          <div>
+            <span style={{
+              fontFamily: "'Bebas Neue',sans-serif",
+              fontSize: "clamp(2rem,8vw,3rem)", letterSpacing: "5px",
+              color: tier.color, lineHeight: 1, display: "block",
+            }}>{tier.rank}</span>
+            <span style={{
+              fontSize: 10, fontWeight: 800, letterSpacing: "3px",
+              color: "rgba(255,255,255,0.25)", fontFamily: "'DM Sans',sans-serif",
+              display: "block", marginTop: 2,
+            }}>{tier.wpmRange}</span>
+          </div>
+        </div>
+ 
+        <p style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.1rem,3.5vw,1.6rem)", color: "#fff", letterSpacing: "2px", lineHeight: 1.1, marginBottom: "0.35rem" }}>
+          {tier.headline.toUpperCase()}
+        </p>
+        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "clamp(0.78rem,2.5vw,0.88rem)", color: "rgba(255,255,255,0.38)" }}>
+          {tier.subline}
+        </p>
+ 
+        {/* Shimmer divider */}
+        <div style={{
+          height: 1, margin: "1rem auto 0",
+          background: `linear-gradient(90deg, transparent, ${tier.color}, transparent)`,
+          backgroundSize: "200% auto",
+          animation: "shimmerFlow 2s linear infinite",
+          opacity: 0.45,
+        }} />
+      </div>
+ 
+      {/* ── Reward cards ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "1.25rem" }}>
+        {allRewards.map((reward, i) => {
+          const isVisible = revealed.includes(i);
+          const isBonus   = reward === BONUS_STACK_REWARD;
+          const cardColor = isBonus ? "#FFB800" : tier.color;
+          return (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: "0.875rem",
+              padding: "0.875rem 1rem",
+              background: `linear-gradient(135deg, ${cardColor}0a, ${cardColor}04)`,
+              border: `1px solid ${cardColor}25`,
+              borderRadius: 12,
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? "none" : "translateX(-12px)",
+              transition: "opacity 0.35s ease, transform 0.35s ease",
+              animation: isVisible ? "rewardPop 0.4s ease forwards" : "none",
+            }}>
+              {/* Icon box */}
+              <div style={{
+                width: 42, height: 42, flexShrink: 0, borderRadius: 11,
+                background: `${cardColor}18`,
+                border: `1.5px solid ${cardColor}35`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: cardColor,
+                boxShadow: isVisible ? `0 0 16px ${cardColor}20` : "none",
+              }}>
+                {rewardIcons[reward.icon] || <span style={{ fontSize: "1.1rem" }}>{reward.icon}</span>}
+              </div>
+ 
+              {/* Text */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 2, flexWrap: "wrap" }}>
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "clamp(0.78rem,3vw,0.88rem)", fontWeight: 700, color: "#fff" }}>
+                    {reward.title}
+                  </span>
+                  <span style={{
+                    fontSize: 9, fontWeight: 800, letterSpacing: "1px",
+                    padding: "2px 8px", borderRadius: 100,
+                    color: cardColor,
+                    background: `${cardColor}15`,
+                    border: `1px solid ${cardColor}30`,
+                    fontFamily: "'DM Sans',sans-serif", whiteSpace: "nowrap",
+                  }}>{reward.value}</span>
+                </div>
+                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "clamp(0.68rem,2.5vw,0.75rem)", color: "rgba(255,255,255,0.35)", lineHeight: 1.4 }}>
+                  {reward.desc}
+                </p>
+              </div>
+ 
+              {/* Check */}
+              {isVisible && (
+                <div style={{
+                  width: 24, height: 24, flexShrink: 0, borderRadius: "50%",
+                  background: `${cardColor}18`,
+                  border: `2px solid ${cardColor}55`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  animation: "rewardPop 0.3s ease forwards",
+                }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill={cardColor}>
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+ 
+      {/* ── Stats strip ── */}
+      {allRevealed && (
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: 12, overflow: "hidden", marginBottom: "1rem",
+          animation: "rewardPop 0.4s ease forwards",
+        }}>
+          {[
+            { v: stats.peakWpm, l: "PEAK WPM", col: tier.color, icon: <svg width="12" height="12" viewBox="0 0 24 24" fill={tier.color}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
+            { v: `${stats.accuracy}%`, l: "ACCURACY", col: stats.accuracy >= 90 ? "#22C55E" : "#FFB800", icon: <svg width="12" height="12" viewBox="0 0 24 24" fill={stats.accuracy >= 90 ? "#22C55E" : "#FFB800"}><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/></svg> },
+            { v: stats.phrasesTyped, l: "PHRASES", col: "#fff", icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.4)"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2z"/></svg> },
+          ].map(({ v, l, col, icon }, i, arr) => (
+            <React.Fragment key={l}>
+              <div style={{ padding: "0.65rem 0", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                <div style={{ opacity: 0.7 }}>{icon}</div>
+                <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.2rem,4vw,1.55rem)", color: col, lineHeight: 1 }}>{v}</div>
+                <div style={{ fontSize: 7, letterSpacing: "2px", color: "rgba(255,255,255,0.18)", fontWeight: 700, fontFamily: "'DM Sans',sans-serif" }}>{l}</div>
+              </div>
+              {i < arr.length - 1 && <div style={{ background: "rgba(255,255,255,0.05)" }} />}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+ 
+      {/* ── CTA ── */}
+      {allRevealed && (
+        <div style={{ animation: "rewardPop 0.5s ease 0.1s both" }}>
+          {/* Expiry row */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "9px 12px", borderRadius: 9, marginBottom: "0.875rem",
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(255,184,0,0.6)">
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>
+            </svg>
+            <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "clamp(9px,2.5vw,11px)", color: "rgba(255,255,255,0.35)" }}>
+              Valid <strong style={{ color: "#FFB800" }}>today only</strong> — tied to this session
+            </span>
+            {countDown !== null && countDown > 0 && (
+              <span style={{
+                marginLeft: "auto", flexShrink: 0,
+                fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.05rem",
+                color: countDown <= 3 ? "#FF1A1A" : "#FFB800",
+              }}>{countDown}s</span>
+            )}
+          </div>
+ 
+          <a href={registerUrl} style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            width: "100%", padding: "15px",
+            background: `linear-gradient(135deg, ${tier.color}, ${tier.color}cc)`,
+            boxShadow: `0 6px 28px ${tier.color}40`,
+            border: "none", borderRadius: 10, cursor: "pointer",
+            color: "#fff", fontWeight: 800,
+            fontSize: "clamp(0.85rem,3.5vw,1rem)",
+            textDecoration: "none", fontFamily: "'DM Sans',sans-serif",
+            transition: "transform 0.15s, box-shadow 0.15s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 10px 36px ${tier.color}55`; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `0 6px 28px ${tier.color}40`; }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff">
+              <path d="M20 12v10H4V12H2v-2h20v2h-2zM6 12v8h12v-8H6zM12 4.5A2.5 2.5 0 009.5 7H11V6a1 1 0 012 0v1h1.5A2.5 2.5 0 0012 4.5zm0-2a4.5 4.5 0 014.45 3.83A4 4 0 0120 10H4a4 4 0 013.55-3.67A4.5 4.5 0 0112 2.5z"/>
+            </svg>
+            {tier.ctaLabel}
+          </a>
+ 
+          <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: "0.65rem", letterSpacing: "1px", fontFamily: "'DM Sans',sans-serif" }}>
+            {allRewards.length} reward{allRewards.length !== 1 ? "s" : ""} unlocked · No credit card needed
+          </p>
+ 
+          <div style={{ textAlign: "center", marginTop: "0.875rem" }}>
+            <button onClick={() => onContinue(tier, allRewards)} style={{
+              background: "none", border: "none",
+              color: "rgba(255,255,255,0.2)", fontSize: 12,
+              cursor: "pointer", letterSpacing: "1px",
+              fontFamily: "'DM Sans',sans-serif",
+              display: "inline-flex", alignItems: "center", gap: 5,
+              transition: "color 0.2s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.5)"}
+              onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
+            >
+              Pick my goal first
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ 
+const IC = {
+  bolt: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col} xmlns="http://www.w3.org/2000/svg">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+    </svg>
+  ),
+  flame: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M12 1.5C12 1.5 7 6.5 7 11a5 5 0 0010 0c0-3.5-2.5-6-2.5-6S14 7 13 8.5C12 6.5 12 1.5 12 1.5z"/>
+      <circle cx="12" cy="14" r="1.5"/>
+    </svg>
+  ),
+  target: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/>
+    </svg>
+  ),
+  gauge: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M12 2C6.48 2 2 6.48 2 12c0 3.1 1.41 5.88 3.63 7.75L7.06 18.3A7.96 7.96 0 014 12a8 8 0 018-8 8 8 0 018 8 7.96 7.96 0 01-3.06 6.3l1.43 1.45A9.97 9.97 0 0022 12c0-5.52-4.48-10-10-10z"/>
+      <path d="M12 6a1 1 0 011 1v4.59l3.2 3.2-1.41 1.42L11 12.41V7a1 1 0 011-1z"/>
+    </svg>
+  ),
+  trophy: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M5 3H3a2 2 0 00-2 2v2a4 4 0 003.86 4A6 6 0 009 14.9V17H7v2h10v-2h-2v-2.1A6 6 0 0019.14 11 4 4 0 0023 7V5a2 2 0 00-2-2h-2V1H5v2zm0 2V5h-.5A.5.5 0 004 5.5v1.59A2 2 0 005 7V5zm14 0v2a2 2 0 001-1.91V5.5a.5.5 0 00-.5-.5H19z"/>
+    </svg>
+  ),
+  crown: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M12 1L8 9 2 6l3 13h14l3-13-6 3-4-8z"/>
+      <rect x="5" y="20" width="14" height="2" rx="1"/>
+    </svg>
+  ),
+  check: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+    </svg>
+  ),
+  xmark: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+    </svg>
+  ),
+  lock: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+    </svg>
+  ),
+  unlock: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M12 1C9.24 1 7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2H9V6c0-1.66 1.34-3 3-3s3 1.34 3 3v1h2V6c0-2.76-2.24-5-5-5zm0 11c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>
+    </svg>
+  ),
+  keyboard: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm9 0H8v-2h8v2zm1-5h-2v-2h2v2zm0-3h-2V8h2v2zm3 8h-2v-2h2v2zm0-5h-2v-2h2v2zm0-3h-2V8h2v2z"/>
+    </svg>
+  ),
+  gift: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M20 12v10H4V12H2v-2h20v2h-2zM6 12v8h12v-8H6zM12 4.5A2.5 2.5 0 009.5 7H11V6a1 1 0 012 0v1h1.5A2.5 2.5 0 0012 4.5zm0-2a4.5 4.5 0 014.45 3.83A4 4 0 0120 10H4a4 4 0 013.55-3.67A4.5 4.5 0 0112 2.5z"/>
+    </svg>
+  ),
+  star: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </svg>
+  ),
+  shield: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+    </svg>
+  ),
+  dumbbell: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29l-1.43-1.43z"/>
+    </svg>
+  ),
+  arrowRight: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/>
+    </svg>
+  ),
+  skip: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+    </svg>
+  ),
+  clock: (sz=16, col="currentColor") => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={col}>
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>
+    </svg>
+  ),
+};
+
+function EnergyShakeSection() {
+  const [phase,         setPhase]         = useState("invite");
+  const [energy,        setEnergy]        = useState(0);
+  const [summaryStats,  setSummaryStats]  = useState(null);
+  const [earnedTier,    setEarnedTier]    = useState(null);
+  const [earnedRewards, setEarnedRewards] = useState([]);
   const audioRef = useRef(null);
   const isFull   = energy >= 100;
-
+ 
   useEffect(() => { audioRef.current = createAudio(); }, []);
-
+ 
   const handleFinish = useCallback((stats) => {
     setSummaryStats(stats);
     setPhase("summary");
   }, []);
-
+ 
+  const handleRewardContinue = useCallback((tier, rewards) => {
+    setEarnedTier(tier);
+    setEarnedRewards(rewards);
+    setPhase("goals");
+  }, []);
+ 
   const barColor = energy < 30 ? "#FF6B00" : energy < 60 ? "#FFB800" : energy < 90 ? "#FF4400" : "#FF1A1A";
-
+ 
   return (
     <section style={{
-      padding: "7rem 2rem", position: "relative", overflow: "hidden",
+      padding: "7rem 1.25rem", position: "relative", overflow: "hidden",
       background: isFull
         ? "linear-gradient(180deg,#0d0000 0%,#160000 50%,#0d0000 100%)"
         : "linear-gradient(180deg,#000 0%,#060606 100%)",
@@ -2418,108 +3244,161 @@ function TrainerCard({ trainer, index }) {
           0%   { transform:translate(-50%,-50%) scale(1); opacity:1; }
           100% { transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(0); opacity:0; }
         }
-        @keyframes slideInRight {
-          from { transform:translateX(50px); opacity:0; }
-          to   { transform:translateX(0);    opacity:1; }
-        }
-        @keyframes bounceIn {
-          0%   { transform:scale(0.4); opacity:0; }
-          60%  { transform:scale(1.2); opacity:1; }
-          100% { transform:scale(1); }
+        @keyframes slideInRight { from{transform:translateX(50px);opacity:0} to{transform:translateX(0);opacity:1} }
+        @keyframes bounceIn { 0%{transform:scale(0.4);opacity:0} 60%{transform:scale(1.2);opacity:1} 100%{transform:scale(1)} }
+        @keyframes cheerPop {
+          0%   { opacity:0; transform:translate(-50%,-50%) scale(0.5); }
+          20%  { opacity:1; transform:translate(-50%,-50%) scale(1.1); }
+          80%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+          100% { opacity:0; transform:translate(-50%,-50%) scale(0.9); }
         }
       `}</style>
-
+ 
       {isFull && (
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 60% at 50% 50%,rgba(255,26,26,0.07),transparent)", animation: "pulse 3s ease infinite" }} />
       )}
+ 
 
-      {/* ── INVITE ── */}
-      {phase === "invite" && (
-        <div style={{ maxWidth: 560, width: "100%", textAlign: "center", animation: "fadeUp 0.5s ease forwards" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "1.25rem" }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FF1A1A", animation: "pulse 2s infinite", display: "inline-block" }} />
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "4px", color: "#FF1A1A", fontFamily: "'DM Sans',sans-serif" }}>ENERGY CHECK</span>
+{phase === "invite" && (
+  <div style={{ maxWidth: 540, width: "100%", textAlign: "center", animation: "fadeUp 0.5s ease forwards" }}>
+ 
+    {/* Eyebrow */}
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, marginBottom: "1.25rem" }}>
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="#FF1A1A" style={{ animation: "pulse 2s infinite" }}>
+        <circle cx="12" cy="12" r="10"/>
+      </svg>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "4px", color: "#FF1A1A", fontFamily: "'DM Sans',sans-serif" }}>ENERGY CHECK</span>
+    </div>
+ 
+    {/* Headline */}
+    <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(2.2rem,8vw,4rem)", letterSpacing: "2px", color: "#fff", lineHeight: 1.02, marginBottom: "0.65rem" }}>
+      HOW BAD DO<br/>
+      <span style={{ background: "linear-gradient(135deg,#FF1A1A,#FF6B00)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>YOU WANT IT?</span>
+    </h2>
+    <p style={{ color: "rgba(255,255,255,0.32)", fontSize: "clamp(0.82rem,3vw,0.92rem)", lineHeight: 1.65, maxWidth: 380, margin: "0 auto 1.5rem", fontFamily: "'DM Sans',sans-serif" }}>
+      Type 5 phrases. Speed × accuracy fills the bar — then we unlock your rewards.
+    </p>
+ 
+    {/* Rewards preview grid */}
+    <div style={{
+      display: "grid", gridTemplateColumns: "1fr 1fr",
+      gap: 8, marginBottom: "1.75rem",
+      padding: "1rem 1.1rem",
+      background: "rgba(255,255,255,0.015)",
+      border: "1px solid rgba(255,255,255,0.06)",
+      borderRadius: 14, textAlign: "left",
+    }}>
+      <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", gap: 6, marginBottom: 4, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)">
+          <path d="M20 12v10H4V12H2v-2h20v2h-2zM6 12v8h12v-8H6zM12 4.5A2.5 2.5 0 009.5 7H11V6a1 1 0 012 0v1h1.5A2.5 2.5 0 0012 4.5zm0-2a4.5 4.5 0 014.45 3.83A4 4 0 0120 10H4a4 4 0 013.55-3.67A4.5 4.5 0 0112 2.5z"/>
+        </svg>
+        <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "3px", color: "rgba(255,255,255,0.2)", fontFamily: "'DM Sans',sans-serif" }}>REWARDS UP FOR GRABS</span>
+      </div>
+      {[
+        { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/></svg>, label: "Free Assessment", tier: "All tiers" },
+        { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>, label: "No Joining Fee", tier: "All tiers" },
+        { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>, label: "Bonus Locker", tier: "50+ WPM" },
+        { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>, label: "Up to ₹500 off", tier: "80+ WPM" },
+        { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29l-1.43-1.43z"/></svg>, label: "Free PT Session", tier: "100+ WPM" },
+        { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>, label: "Bonus stack", tier: "Bonus round" },
+      ].map((r, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+            background: "rgba(255,255,255,0.04)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>{r.icon}</div>
+          <div>
+            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "clamp(10px,2.5vw,11px)", fontWeight: 700, color: "rgba(255,255,255,0.55)" }}>{r.label}</div>
+            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 9, color: "rgba(255,255,255,0.18)", letterSpacing: "0.5px" }}>{r.tier}</div>
           </div>
-          <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(2.4rem,5.5vw,4rem)", letterSpacing: "2px", color: "#fff", lineHeight: 1.02, marginBottom: "0.75rem" }}>
-            HOW BAD DO<br />
-            <span style={{ background: "linear-gradient(135deg,#FF1A1A,#FF6B00)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>YOU WANT IT?</span>
-          </h2>
-          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.95rem", lineHeight: 1.65, maxWidth: 400, margin: "0 auto 2rem", fontFamily: "'DM Sans',sans-serif" }}>
-            Type 5 FitZone phrases. Speed × accuracy fills the bar — then we build your program.
-          </p>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: "2.5rem", padding: "1.25rem", background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, textAlign: "left" }}>
-            {STANDARD_PHRASES.map((p, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 9, color: "rgba(255,26,26,0.45)", fontWeight: 800, fontFamily: "'DM Sans',sans-serif", letterSpacing: "1px", minWidth: 14, textAlign: "right" }}>{i + 1}</span>
-                <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.1rem", letterSpacing: "3px", color: "rgba(255,255,255,0.15)" }}>{p}</span>
-              </div>
-            ))}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-              <span style={{ fontSize: "0.8rem", minWidth: 14, textAlign: "right" }}>🔓</span>
-              <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.72rem", letterSpacing: "2px", color: "rgba(255,184,0,0.28)", fontWeight: 700 }}>BONUS PHRASES UNLOCK AFTER — +10 ENERGY EACH</span>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
-            <button onClick={() => setPhase("typing")} style={{
-              padding: "14px 36px", background: "linear-gradient(135deg,#FF1A1A,#991111)",
-              border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", fontWeight: 800,
-              fontSize: "0.95rem", letterSpacing: "1px", boxShadow: "0 6px 28px rgba(255,26,26,0.35)",
-              fontFamily: "'DM Sans',sans-serif", transition: "transform 0.15s, box-shadow 0.15s",
-            }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 36px rgba(255,26,26,0.45)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 6px 28px rgba(255,26,26,0.35)"; }}
-            >⚡ Let's Go →</button>
-            <button onClick={() => setPhase("goals")} style={{
-              padding: "14px 24px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)",
-              borderRadius: 8, cursor: "pointer", color: "rgba(255,255,255,0.4)", fontWeight: 600,
-              fontSize: "0.9rem", fontFamily: "'DM Sans',sans-serif", transition: "color 0.2s, border-color 0.2s",
-            }}
-              onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.65)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.4)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)"; }}
-            >Skip → View Plans</button>
-          </div>
-          <p style={{ marginTop: "1rem", fontSize: 11, color: "rgba(255,255,255,0.13)", letterSpacing: "1.5px", fontFamily: "'DM Sans',sans-serif" }}>~60 SECONDS · TOTALLY OPTIONAL</p>
         </div>
-      )}
-
+      ))}
+    </div>
+ 
+    {/* CTAs */}
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+      <button onClick={() => setPhase("typing")} style={{
+        padding: "13px 28px",
+        background: "linear-gradient(135deg,#FF1A1A,#CC1111)",
+        border: "none", borderRadius: 10, cursor: "pointer",
+        color: "#fff", fontWeight: 800,
+        fontSize: "clamp(0.82rem,3vw,0.92rem)", letterSpacing: "0.5px",
+        boxShadow: "0 6px 28px rgba(255,26,26,0.4)",
+        fontFamily: "'DM Sans',sans-serif",
+        display: "flex", alignItems: "center", gap: 8,
+        transition: "transform 0.15s, box-shadow 0.15s",
+      }}
+        onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 36px rgba(255,26,26,0.5)"; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 6px 28px rgba(255,26,26,0.4)"; }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+        Start & Earn Rewards
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff">
+          <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/>
+        </svg>
+      </button>
+      <button onClick={() => setPhase("goals")} style={{
+        padding: "13px 18px",
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.09)",
+        borderRadius: 10, cursor: "pointer",
+        color: "rgba(255,255,255,0.38)", fontWeight: 600,
+        fontSize: "clamp(0.78rem,3vw,0.88rem)",
+        fontFamily: "'DM Sans',sans-serif",
+        display: "flex", alignItems: "center", gap: 7,
+        transition: "color 0.2s, border-color 0.2s",
+      }}
+        onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.6)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)"; }}
+        onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.38)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)"; }}
+      >
+        Skip
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+        </svg>
+      </button>
+    </div>
+    <p style={{ marginTop: "0.75rem", fontSize: 10, color: "rgba(255,255,255,0.1)", letterSpacing: "1.5px", fontFamily: "'DM Sans',sans-serif" }}>
+      ~60 SECONDS · UNLOCK REAL REWARDS
+    </p>
+  </div>
+)}
+ 
       {/* ── TYPING ── */}
       {phase === "typing" && (
         <div style={{ maxWidth: 660, width: "100%", animation: "fadeUp 0.4s ease forwards" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.25rem" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "0.5rem" }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FF1A1A", animation: "pulse 2s infinite", display: "inline-block" }} />
                 <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "4px", color: "#FF1A1A", fontFamily: "'DM Sans',sans-serif" }}>ENERGY CHECK</span>
               </div>
-              <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", letterSpacing: "2px", color: "#fff", transition: "all 0.5s" }}>
-                TYPE TO CHARGE
+              <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.5rem,5vw,2.8rem)", letterSpacing: "2px", color: "#fff" }}>
+                TYPE TO UNLOCK REWARDS
               </h2>
             </div>
             <button onClick={() => setPhase("goals")} style={{
-              flexShrink: 0, marginTop: 4, padding: "8px 16px", borderRadius: 100,
+              flexShrink: 0, marginTop: 4, padding: "8px 14px", borderRadius: 100,
               background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
               cursor: "pointer", color: "rgba(255,255,255,0.35)", fontSize: 11, fontWeight: 700,
-              letterSpacing: "1.5px", fontFamily: "'DM Sans',sans-serif", transition: "color 0.2s",
-            }}
-              onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.6)"}
-              onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.35)"}
-            >SKIP →</button>
+              letterSpacing: "1.5px", fontFamily: "'DM Sans',sans-serif",
+            }}>SKIP →</button>
           </div>
-
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: "1.25rem" }}>
-            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(4rem,12vw,7rem)", letterSpacing: "-4px", lineHeight: 1, color: "#fff", transition: "all 0.3s" }}>
+ 
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: "1rem" }}>
+            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(3.5rem,12vw,7rem)", letterSpacing: "-4px", lineHeight: 1, color: "#fff" }}>
               {Math.floor(energy)}
             </span>
-            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.5rem,4vw,2.5rem)", color: "rgba(255,255,255,0.3)", marginTop: 8 }}>%</span>
+            <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(1.2rem,4vw,2.5rem)", color: "rgba(255,255,255,0.3)", marginTop: 8 }}>%</span>
           </div>
-
-          <div style={{ marginBottom: "2rem" }}>
+ 
+          <div style={{ marginBottom: "1.5rem" }}>
             <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 3 }}>
               <div style={{ height: "100%", borderRadius: 3, width: `${energy}%`, background: barColor, boxShadow: energy > 0 ? `0 0 12px ${barColor}50` : "none", transition: "width 0.15s, background 0.4s" }} />
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 7 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
               {[0,25,50,75,100].map(v => (
                 <div key={v} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                   <div style={{ width: 1, height: 4, background: energy >= v ? "#FF1A1A" : "rgba(255,255,255,0.07)" }} />
@@ -2528,21 +3407,35 @@ function TrainerCard({ trainer, index }) {
               ))}
             </div>
           </div>
-
+ 
           <TypingMechanic setEnergy={setEnergy} onFinish={handleFinish} audioRef={audioRef} />
         </div>
       )}
-
+ 
       {/* ── SUMMARY ── */}
       {phase === "summary" && summaryStats && (
         <div style={{ width: "100%", animation: "fadeUp 0.5s ease forwards" }}>
-          <Summary stats={summaryStats} onContinue={() => setPhase("goals")} />
+          <Summary stats={summaryStats} onContinue={() => setPhase("reward")} />
         </div>
       )}
-
+ 
+      {/* ── REWARD ── */}
+      {phase === "reward" && summaryStats && (
+        <div style={{ width: "100%", animation: "fadeUp 0.5s ease forwards" }}>
+          <RewardScreen stats={summaryStats} onContinue={handleRewardContinue} />
+        </div>
+      )}
+ 
       {/* ── GOALS ── */}
       {phase === "goals" && (
-        <GoalSelector onBack={() => { setPhase("invite"); setEnergy(0); setSummaryStats(null); }} />
+        <GoalSelector
+          earnedTier={earnedTier}
+          earnedRewards={earnedRewards}
+          onBack={() => {
+            if (summaryStats) setPhase("reward");
+            else { setPhase("invite"); setEnergy(0); setSummaryStats(null); }
+          }}
+        />
       )}
     </section>
   );
@@ -3101,113 +3994,6 @@ function CustomCursor() {
   );
 }
 
-function AboutPhotoCarousel() {
-  const [current, setCurrent] = useState(0);
-  const [prev, setPrev]       = useState(null);
-  const [dir, setDir]         = useState(1);
-  const [animating, setAnimating] = useState(false);
-  const timerRef = useRef(null);
-
-  const goTo = useCallback((next, direction = 1) => {
-    if (animating) return;
-    setDir(direction);
-    setPrev(current);
-    setCurrent(next);
-    setAnimating(true);
-    setTimeout(() => { setPrev(null); setAnimating(false); }, 600);
-  }, [animating, current]);
-
-  const next = useCallback(() => goTo((current + 1) % ABOUT_PHOTOS.length, 1),  [current, goTo]);
-  const back = useCallback(() => goTo((current - 1 + ABOUT_PHOTOS.length) % ABOUT_PHOTOS.length, -1), [current, goTo]);
-
-  useEffect(() => {
-    timerRef.current = setInterval(next, 3800);
-    return () => clearInterval(timerRef.current);
-  }, [next]);
-
-  const pause  = () => clearInterval(timerRef.current);
-  const resume = () => { timerRef.current = setInterval(next, 3800); };
-
-  const photo = ABOUT_PHOTOS[current];
-
-  return (
-    <div onMouseEnter={pause} onMouseLeave={resume}
-      style={{ position: "relative", width: "100%", userSelect: "none" }}>
-      <div style={{ position: "relative", height: "460px", borderRadius: "16px", overflow: "hidden", background: "#111" }}>
-
-        {prev !== null && (
-          <img src={ABOUT_PHOTOS[prev].src} alt="" style={{
-            position: "absolute", inset: 0, width: "100%", height: "100%",
-            objectFit: "cover",
-            transform: `translateX(${dir === 1 ? "-100%" : "100%"})`,
-            transition: "transform 0.6s cubic-bezier(0.77,0,0.175,1)",
-            zIndex: 1,
-          }} />
-        )}
-
-        <img key={current} src={photo.src} alt={photo.label} style={{
-          position: "absolute", inset: 0, width: "100%", height: "100%",
-          objectFit: "cover", zIndex: 2,
-          animation: animating ? `slideIn${dir === 1 ? "Right" : "Left"} 0.6s cubic-bezier(0.77,0,0.175,1) forwards` : "none",
-        }} />
-
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 3,
-          background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.75) 100%)",
-        }} />
-
-        <div style={{
-          position: "absolute", bottom: "1.25rem", left: "1.25rem", zIndex: 4,
-          display: "flex", alignItems: "center", gap: "8px",
-        }}>
-          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: photo.color, boxShadow: `0 0 8px ${photo.color}` }} />
-          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "10px", fontWeight: 800, letterSpacing: "3px", color: photo.color }}>{photo.label}</span>
-        </div>
-
-        <div style={{
-          position: "absolute", bottom: "1.25rem", right: "1.25rem", zIndex: 4,
-          fontFamily: "'Bebas Neue', sans-serif", fontSize: "1rem",
-          letterSpacing: "2px", color: "rgba(255,255,255,0.35)",
-        }}>
-          {String(current + 1).padStart(2, "0")} / {String(ABOUT_PHOTOS.length).padStart(2, "0")}
-        </div>
-
-        {[{ fn: back, label: "←", side: "left" }, { fn: next, label: "→", side: "right" }].map(({ fn, label, side }) => (
-          <button key={side} onClick={fn} style={{
-            position: "absolute", top: "50%", [side]: "1rem",
-            transform: "translateY(-50%)", zIndex: 4,
-            width: "36px", height: "36px", borderRadius: "50%",
-            background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.12)",
-            color: "#fff", fontSize: "14px", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "background 0.2s, border-color 0.2s",
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background = photo.color; e.currentTarget.style.borderColor = photo.color; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0.45)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
-          >{label}</button>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "center", gap: "6px", marginTop: "14px" }}>
-        {ABOUT_PHOTOS.map((p, i) => (
-          <button key={i} onClick={() => goTo(i, i > current ? 1 : -1)} style={{
-            width: current === i ? "24px" : "6px", height: "6px",
-            borderRadius: "3px", border: "none", cursor: "pointer", padding: 0,
-            background: current === i ? photo.color : "rgba(255,255,255,0.2)",
-            transition: "all 0.35s ease",
-            boxShadow: current === i ? `0 0 8px ${photo.color}80` : "none",
-          }} />
-        ))}
-      </div>
-
-      <style>{`
-        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        @keyframes slideInLeft  { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-      `}</style>
-    </div>
-  );
-}
-
 function ParallaxImage({ src }) {
   const ref = useRef(null);
 
@@ -3586,6 +4372,7 @@ input, textarea { cursor: text !important; }
           width: "100%",
           background: "linear-gradient(180deg, #000 0%, #060606 100%)",
           minHeight: isDesktop ? "160vh" : "auto",
+          marginTop: "2rem",
         }}
       >
         <div style={{
@@ -3610,6 +4397,7 @@ input, textarea { cursor: text !important; }
             position: "sticky", top: 0,
             height: "100vh", width: "100%",
             display: "flex", flexDirection: "column", justifyContent: "center",
+            paddingTop: "70px",  // ← add this — matches your navbar height
           }}>
             <div style={{
               textAlign: "center", paddingBottom: "1.75rem",

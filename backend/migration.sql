@@ -770,3 +770,189 @@ WHERE routine_schema = 'public'
 -- Indexes : 50+
 -- Triggers: 10+
 -- Functions: 5
+
+-- ============================================================
+-- FITZONE GYM — REWARD SYSTEM MIGRATION
+-- Version: 1.0
+-- Run AFTER the main migration.sql
+-- ============================================================
+
+-- ============================================================
+-- TABLE 19: reward_tiers
+-- Static config — defines each tier's perks and discount
+-- Seeded once, never changes at runtime
+-- ============================================================
+CREATE TABLE reward_tiers (
+    id               SERIAL PRIMARY KEY,
+    tier_key         VARCHAR(20) UNIQUE NOT NULL,   -- 'warming_up' | 'solid' | 'pro' | 'elite'
+    label            VARCHAR(50) NOT NULL,           -- display name
+    min_wpm          INTEGER NOT NULL DEFAULT 0,
+    max_wpm          INTEGER,                        -- NULL = no upper bound
+    discount_amount  DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    locker_free_days INTEGER NOT NULL DEFAULT 0,     -- 0 = no locker perk
+    pt_sessions_free INTEGER NOT NULL DEFAULT 0,     -- 0 = no PT perk
+    joining_fee_waived BOOLEAN NOT NULL DEFAULT true,-- always true for all tiers
+    free_assessment  BOOLEAN NOT NULL DEFAULT true,  -- always true for all tiers
+    color_hex        VARCHAR(10) DEFAULT '#FFFFFF',
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT check_tier_key CHECK (
+        tier_key IN ('warming_up', 'solid', 'pro', 'elite')
+    ),
+    CONSTRAINT check_wpm_range CHECK (
+        max_wpm IS NULL OR max_wpm > min_wpm
+    )
+);
+
+-- ── Seed the four tiers ──────────────────────────────────────
+INSERT INTO reward_tiers
+    (tier_key, label, min_wpm, max_wpm, discount_amount,
+     locker_free_days, pt_sessions_free, color_hex)
+VALUES
+    ('warming_up', 'Warming Up', 0,   49,  0.00,  0,  0, '#FFFFFF'),
+    ('solid',      'Solid',      50,  79,  0.00,  30, 0, '#FFB800'),
+    ('pro',        'Pro',        80,  99,  300.00,30, 0, '#FF6B00'),
+    ('elite',      'Elite',      100, NULL,500.00,30, 1, '#FF1A1A');
+
+
+-- ============================================================
+-- TABLE 20: customer_rewards
+-- One row per customer — created at registration,
+-- updated if the game is replayed (future feature)
+-- ============================================================
+CREATE TABLE customer_rewards (
+    id                   SERIAL PRIMARY KEY,
+    customer_id          INTEGER UNIQUE NOT NULL
+                         REFERENCES customers(id) ON DELETE CASCADE,
+    tier_key             VARCHAR(20) NOT NULL
+                         REFERENCES reward_tiers(tier_key),
+    peak_wpm             INTEGER NOT NULL DEFAULT 0,
+    accuracy             INTEGER NOT NULL DEFAULT 0   -- 0-100 percent
+                         CHECK (accuracy BETWEEN 0 AND 100),
+    phrases_typed        INTEGER NOT NULL DEFAULT 0,
+    bonus_round_done     BOOLEAN NOT NULL DEFAULT false,
+
+    -- monetary discount (copied from tier at registration time,
+    -- so tier config changes don't retro-affect existing rewards)
+    discount_amount      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    discount_used        BOOLEAN NOT NULL DEFAULT false,
+    discount_used_at     TIMESTAMP,
+
+    -- non-monetary perks — tracked as remaining credits
+    locker_free_days_remaining  INTEGER NOT NULL DEFAULT 0,
+    pt_sessions_remaining       INTEGER NOT NULL DEFAULT 0,
+
+    -- lifecycle
+    earned_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at           TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '1 day'),
+    is_expired           BOOLEAN NOT NULL DEFAULT false,
+
+    updated_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT check_tier_key_fk CHECK (
+        tier_key IN ('warming_up', 'solid', 'pro', 'elite')
+    )
+);
+
+CREATE INDEX idx_customer_rewards_customer_id ON customer_rewards(customer_id);
+CREATE INDEX idx_customer_rewards_tier_key    ON customer_rewards(tier_key);
+CREATE INDEX idx_customer_rewards_expires_at  ON customer_rewards(expires_at);
+CREATE INDEX idx_customer_rewards_discount_used ON customer_rewards(discount_used);
+
+CREATE TRIGGER trg_customer_rewards_updated_at
+    BEFORE UPDATE ON customer_rewards
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+
+-- ============================================================
+-- TABLE 21: reward_redemptions
+-- Append-only log of every perk that was redeemed
+-- One row per event (discount applied, locker activated, PT used)
+-- ============================================================
+CREATE TABLE reward_redemptions (
+    id              SERIAL PRIMARY KEY,
+    customer_reward_id INTEGER NOT NULL
+                    REFERENCES customer_rewards(id) ON DELETE RESTRICT,
+    customer_id     INTEGER NOT NULL
+                    REFERENCES customers(id) ON DELETE RESTRICT,
+    redemption_type VARCHAR(30) NOT NULL,
+    amount_value    DECIMAL(10,2),      -- for discount type
+    days_value      INTEGER,            -- for locker type
+    sessions_value  INTEGER,            -- for pt_session type
+    payment_id      INTEGER             -- FK to payments (nullable, set later)
+                    REFERENCES payments(id) ON DELETE SET NULL,
+    notes           TEXT,
+    redeemed_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT check_redemption_type CHECK (
+        redemption_type IN ('discount', 'locker_access', 'pt_session', 'assessment')
+    )
+);
+
+CREATE INDEX idx_redemptions_customer_reward_id ON reward_redemptions(customer_reward_id);
+CREATE INDEX idx_redemptions_customer_id        ON reward_redemptions(customer_id);
+CREATE INDEX idx_redemptions_type               ON reward_redemptions(redemption_type);
+CREATE INDEX idx_redemptions_payment_id         ON reward_redemptions(payment_id);
+
+
+-- ============================================================
+-- Add reward columns to payments table
+-- Links a payment to the reward that discounted it
+-- ============================================================
+ALTER TABLE payments
+    ADD COLUMN IF NOT EXISTS original_amount    DECIMAL(10,2),
+    ADD COLUMN IF NOT EXISTS discount_applied   DECIMAL(10,2) DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS customer_reward_id INTEGER
+        REFERENCES customer_rewards(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_payments_customer_reward_id
+    ON payments(customer_reward_id);
+
+
+-- ============================================================
+-- Add reward columns to members table
+-- Tracks which non-monetary perks are active on the membership
+-- ============================================================
+ALTER TABLE members
+    ADD COLUMN IF NOT EXISTS locker_free_until  DATE,
+    ADD COLUMN IF NOT EXISTS pt_sessions_credit INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS reward_tier        VARCHAR(20)
+        REFERENCES reward_tiers(tier_key) ON DELETE SET NULL;
+
+
+-- ============================================================
+-- FUNCTION: expire_rewards()
+-- Called by your existing node-cron cleanup job
+-- Marks rewards as expired after 24 hours if unused discount
+-- ============================================================
+CREATE OR REPLACE FUNCTION expire_rewards()
+RETURNS INTEGER AS $$
+DECLARE
+    expired_count INTEGER;
+BEGIN
+    UPDATE customer_rewards
+    SET is_expired = true
+    WHERE is_expired = false
+      AND discount_used = false
+      AND expires_at < NOW();
+
+    GET DIAGNOSTICS expired_count = ROW_COUNT;
+    RETURN expired_count;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ============================================================
+-- VERIFY
+-- ============================================================
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
+  AND table_name IN (
+      'reward_tiers', 'customer_rewards', 'reward_redemptions'
+  )
+ORDER BY table_name;
+
+SELECT tier_key, label, min_wpm, max_wpm,
+       discount_amount, locker_free_days, pt_sessions_free
+FROM reward_tiers
+ORDER BY min_wpm;

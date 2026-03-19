@@ -59,4 +59,32 @@ router.get('/:id',
   }
 );
 
+// GET /api/customers/me/reward
+// Customer sees their own earned reward + tier details
+router.get('/me/reward', authorize(ROLES.CUSTOMER), async (req, res, next) => {
+  try {
+    const customer = await Customer.findByUserId(req.user.id);
+    if (!customer) return res.status(404).json({ error: 'Profile not found' });
+ 
+    const reward = await Reward.findByCustomerId(customer.id);
+ 
+    // Always 200 — reward is null if the game was never played
+    return res.json({ reward: reward || null });
+  } catch (err) { next(err); }
+});
+ 
+// GET /api/customers/me/reward/redemptions
+// Customer sees their full perk redemption history
+router.get('/me/reward/redemptions', authorize(ROLES.CUSTOMER), async (req, res, next) => {
+  try {
+    const customer = await Customer.findByUserId(req.user.id);
+    if (!customer) return res.status(404).json({ error: 'Profile not found' });
+ 
+    const redemptions = await Reward.getRedemptions(customer.id);
+    return res.json({ redemptions });
+  } catch (err) { next(err); }
+});
+ 
+
+
 module.exports = router;

@@ -7,6 +7,7 @@ const User     = require('../models/User');
 const Token    = require('../models/Token');
 const Customer = require('../models/Customer');
 const Lead     = require('../models/Lead');
+const Reward   = require('../models/Reward');          // ← NEW
 const { validate }      = require('../middleware/validate');
 const { authenticate }  = require('../middleware/auth');
 const { ROLES }         = require('../constants/roles');
@@ -16,17 +17,15 @@ const { redis } = require('../middleware/rateLimiter');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-// ── Cookie options (DRY) ──────────────────────────────────────────────────────
+// ── Cookie options ────────────────────────────────────────────
 const refreshCookieOptions = {
   httpOnly: true,
   secure:   IS_PROD,
-  sameSite: IS_PROD ? 'lax' : 'strict', // 'lax' works across subdomains in prod
-  maxAge:   7 * 24 * 60 * 60 * 1000,    // 7 days
-  // In production, set domain to share cookie across subdomains:
-  // domain: IS_PROD ? '.fitzoneGym.in' : undefined,
+  sameSite: IS_PROD ? 'lax' : 'strict',
+  maxAge:   7 * 24 * 60 * 60 * 1000,
 };
 
-// ── Validation Rules ──────────────────────────────────────────────────────────
+// ── Validation Rules ──────────────────────────────────────────
 const registerRules = [
   body('username')
     .trim().notEmpty().withMessage('Username required')
@@ -51,7 +50,7 @@ const loginRules = [
   body('password').notEmpty().withMessage('Password required'),
 ];
 
-// ── POST /api/auth/register ───────────────────────────────────────────────────
+// ── POST /api/auth/register ───────────────────────────────────
 router.post('/register', registerRules, validate, async (req, res, next) => {
   try {
     const { username, email, password, full_name, phone } = req.body;
@@ -78,7 +77,8 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
       await notify.trainerRegistered(user);
       await pool.query(
         `INSERT INTO trainers
-           (user_id, status, specialization, experience_years, certifications, bio, availability, hourly_rate)
+           (user_id, status, specialization, experience_years,
+            certifications, bio, availability, hourly_rate)
          VALUES ($1, 'inactive', $2, $3, $4, $5, $6, $7)`,
         [
           user.id,
@@ -91,14 +91,33 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
         ]
       );
     } else {
+      // ── CUSTOMER PATH ─────────────────────────────────────
       await notify.customerRegistered(user);
-      await Customer.create(user.id);
+
+      // 1. Create the customer row (your existing call)
+      const customer = await Customer.create(user.id);
+
+      // 2. Save reward — always runs, even if user skipped the game
+      //    (peakWpm = 0 → warming_up tier with no discount, still a valid row)
+      await Reward.createForCustomer({
+        customerId:     customer.id,
+        peakWpm:        Number(req.body.reward_peak_wpm)    || 0,
+        accuracy:       Number(req.body.reward_accuracy)    || 0,
+        phrasesTyped:   Number(req.body.reward_phrases_typed) || 0,
+        bonusRoundDone: req.body.reward_bonus_round === true ||
+                        req.body.reward_bonus_round === 'true',
+        // no `client` here — runs outside transaction, same as Customer.create
+        // this is safe: if it fails, the user is already created and can still
+        // log in. Worst case their reward row is missing (dashboard shows empty).
+      });
     }
 
     await Lead.linkToUser(email, user.id);
 
     const accessToken  = Token.generateAccessToken(user);
-    const refreshToken = await Token.createRefreshToken(user.id, req.ip, req.headers['user-agent']);
+    const refreshToken = await Token.createRefreshToken(
+      user.id, req.ip, req.headers['user-agent']
+    );
 
     res.cookie('refreshToken', refreshToken, refreshCookieOptions);
 
@@ -116,7 +135,7 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── POST /api/auth/login ──────────────────────────────────────────────────────
+// ── POST /api/auth/login ──────────────────────────────────────
 router.post('/login', loginRules, validate, async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -167,9 +186,7 @@ router.post('/login', loginRules, validate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── POST /api/auth/refresh ────────────────────────────────────────────────────
-// KEY FIX: now returns `user` object alongside `accessToken`
-// This is what AuthContext uses to restore user state on page load
+// ── POST /api/auth/refresh ────────────────────────────────────
 router.post('/refresh', async (req, res, next) => {
   try {
     const rawToken = req.cookies?.refreshToken;
@@ -220,21 +237,20 @@ router.post('/refresh', async (req, res, next) => {
 
     res.cookie('refreshToken', newRefreshToken, refreshCookieOptions);
 
-    // ✅ FIXED: return user object so AuthContext can restore user state
     res.json({
       accessToken,
       user: {
         id:        tokenRecord.user_id,
         username:  tokenRecord.username,
-        email:     tokenRecord.email,     // ensure your Token.findRefreshToken JOIN includes email
+        email:     tokenRecord.email,
         role:      tokenRecord.role,
-        full_name: tokenRecord.full_name || null, // ensure JOIN includes full_name
+        full_name: tokenRecord.full_name || null,
       },
     });
   } catch (err) { next(err); }
 });
 
-// ── POST /api/auth/logout ─────────────────────────────────────────────────────
+// ── POST /api/auth/logout ─────────────────────────────────────
 router.post('/logout', authenticate, async (req, res, next) => {
   try {
     await Promise.all([
@@ -246,7 +262,7 @@ router.post('/logout', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── GET /api/auth/me ──────────────────────────────────────────────────────────
+// ── GET /api/auth/me ──────────────────────────────────────────
 router.get('/me', authenticate, async (req, res, next) => {
   try {
     const cacheKey = `user:${req.user.id}`;
