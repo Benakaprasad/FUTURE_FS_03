@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import DashLayout from "../../components/DashLayout";
-import { Toast } from "../../components/AdminUI";
+import { Toast } from "../../components/AdminUi";
 import api from "../../api/axios";
 
 const DAYS  = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
