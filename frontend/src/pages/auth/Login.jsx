@@ -107,7 +107,7 @@ export default function Login() {
   };
 
   return (
-    <div style={s.root}>
+    <div style={{ fontFamily: "'Barlow', sans-serif", minHeight: "100vh", background: "#050505", color: "#F5F5F0", display: "flex", position: "relative", overflow: "hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@400;600;700;800&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -140,11 +140,12 @@ export default function Login() {
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes glitch {
-          0%,100% { clip-path: none; transform: none; }
-          92%     { clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%); transform: translateX(-2px); }
-          94%     { clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%); transform: translateX(2px); }
-          96%     { clip-path: none; transform: none; }
-        }
+        0%,89%,100% { clip-path: none; transform: none; opacity: 1; }
+        90%  { clip-path: polygon(0 15%, 100% 15%, 100% 35%, 0 35%); transform: translateX(-3px); opacity: 0.9; }
+        92%  { clip-path: polygon(0 55%, 100% 55%, 100% 75%, 0 75%); transform: translateX(3px); opacity: 0.9; }
+        94%  { clip-path: none; transform: translateX(-1px); }
+        96%  { transform: none; }
+      }
 
         .fz-input {
           width: 100%;
@@ -310,15 +311,8 @@ export default function Login() {
 
             {/* Logo */}
             <Link to="/" style={{ display: "flex", alignItems: "center", gap: "14px", textDecoration: "none", marginBottom: "auto" }}>
-              <div style={{
-                width: "46px", height: "46px",
-                background: "#FF1A1A",
-                borderRadius: "3px",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 0 0 1px rgba(255,26,26,0.5), 0 4px 20px rgba(255,26,26,0.4)",
-                flexShrink: 0,
-              }}>
-                <IconDumbbell size={22} color="#fff" />
+              <div style={{ width: "46px", height: "46px", background: "linear-gradient(135deg, #FF1A1A, #991111)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Bebas Neue', sans-serif", fontSize: "20px", color: "#fff", letterSpacing: "1px", boxShadow: "0 4px 20px rgba(255,26,26,0.4)", flexShrink: 0 }}>
+                FZ
               </div>
               <div>
                 <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "22px", letterSpacing: "4px", color: "#fff", lineHeight: 1 }}>FITZONE</div>
@@ -333,11 +327,6 @@ export default function Login() {
               transform: mounted ? "none" : "translateX(-20px)",
               transition: "opacity 0.7s ease, transform 0.7s ease",
             }}>
-              {/* Eyebrow */}
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1.5rem" }}>
-                <div style={{ width: "32px", height: "2px", background: "#FF1A1A" }} />
-                <span style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "4px", color: "#FF1A1A", fontFamily: "'Barlow', sans-serif" }}>MEMBER PORTAL</span>
-              </div>
 
               {/* Headline with glitch */}
               <h1 style={{
@@ -345,6 +334,7 @@ export default function Login() {
                 fontSize: "clamp(4rem, 6vw, 7rem)",
                 lineHeight: 0.88, letterSpacing: "-1px",
                 color: "#fff", marginBottom: "1.75rem",
+                marginTop: "1.5rem",
                 animation: "glitch 8s ease-in-out infinite",
               }}>
                 WELCOME<br />
@@ -400,7 +390,7 @@ export default function Login() {
                     transition: `opacity 0.5s ease ${0.4 + i * 0.08}s`,
                   }}>
                     <div style={{
-                      width: "34px", height: "34px", borderRadius: "3px",
+                      width: "34px", height: "34px", borderRadius: "8px",
                       background: `${item.color}15`,
                       border: `1px solid ${item.color}30`,
                       display: "flex", alignItems: "center", justifyContent: "center",
@@ -422,8 +412,8 @@ export default function Login() {
 
             {/* Bottom tagline */}
             <div style={{ display: "flex", alignItems: "center", gap: "10px", paddingTop: "2rem" }}>
-              <IconTarget size={14} color="rgba(255,255,255,0.15)" />
-              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "11px", letterSpacing: "3px", color: "rgba(255,255,255,0.12)", textTransform: "uppercase" }}>Train Hard · Transform Strong</span>
+              <IconTarget size={14} color="rgba(255,255,255,0.4)" />
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "11px", letterSpacing: "3px", color: "rgba(255,255,255,0.45)", textTransform: "uppercase" }}>Train Hard · Transform Strong</span>
             </div>
           </div>
 
@@ -464,8 +454,8 @@ export default function Login() {
             padding: "1.5rem 1.5rem 0",
             width: "100%",
           }}>
-            <div style={{ width: "36px", height: "36px", background: "#FF1A1A", borderRadius: "3px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <IconDumbbell size={18} color="#fff" />
+            <div style={{ width: "46px", height: "46px", background: "linear-gradient(135deg, #FF1A1A, #991111)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Bebas Neue', sans-serif", fontSize: "20px", color: "#fff", letterSpacing: "1px", boxShadow: "0 4px 20px rgba(255,26,26,0.4)", flexShrink: 0 }}>
+              FZ
             </div>
             <div>
               <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "18px", letterSpacing: "3px", color: "#fff" }}>FITZONE GYM</div>
@@ -484,7 +474,7 @@ export default function Login() {
             {/* Card header */}
             <div style={{ marginBottom: "2rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "0.75rem" }}>
-                <div style={{ width: "3px", height: "20px", background: "#FF1A1A", borderRadius: "2px" }} />
+                <div style={{ width: "3px", height: "20px", background: "#FF1A1A", borderRadius: "8px" }} />
                 <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: "10px", fontWeight: 800, letterSpacing: "4px", color: "#FF1A1A", textTransform: "uppercase" }}>Sign In</span>
               </div>
               <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "3rem", letterSpacing: "3px", color: "#fff", lineHeight: 1, marginBottom: "0.5rem" }}>
@@ -512,7 +502,7 @@ export default function Login() {
                 background: "rgba(255,26,26,0.08)",
                 border: "1px solid rgba(255,26,26,0.25)",
                 borderLeft: "3px solid #FF1A1A",
-                borderRadius: "4px", padding: "12px 14px",
+                borderRadius: "8px", padding: "12px 14px",
                 marginBottom: "1.5rem",
                 animation: "fadeSlideUp 0.3s ease",
               }}>
@@ -623,7 +613,7 @@ export default function Login() {
               display: "flex", alignItems: "flex-start", gap: "10px",
               background: "rgba(255,255,255,0.015)",
               border: "1px solid rgba(255,255,255,0.05)",
-              borderRadius: "4px", padding: "12px 14px",
+              borderRadius: "8px", padding: "12px 14px",
               marginBottom: "2rem",
             }}>
               <div style={{ color: "rgba(255,255,255,0.2)", flexShrink: 0, marginTop: "1px" }}>
