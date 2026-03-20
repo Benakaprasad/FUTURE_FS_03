@@ -40,7 +40,7 @@ const keyGenerator = (req) => {
 // ── 429 Handler ───────────────────────────────────────────────
 const rateLimitHandler = (_req, res, _next, options) => {
   res.status(429).json({
-    error:      'Too many requests. Please slow down.',
+    error:      'Too many requests. Please slow down. Try again after 2 minutes',
     retryAfter: Math.ceil(options.windowMs / 1000 / 60),
     limit:      options.max,
   });
@@ -98,7 +98,7 @@ const init = async () => {
   });
 
   authLimiter = makeLimiter({
-    windowMs:               15 * 60 * 1000,
+    windowMs:               2 * 60 * 1000,
     max:                    10,
     store:                  makeStore('auth'),
     skipSuccessfulRequests: true,
