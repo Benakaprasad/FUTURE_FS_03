@@ -21,7 +21,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 const refreshCookieOptions = {
   httpOnly: true,
   secure:   IS_PROD,
-  sameSite: IS_PROD ? 'lax' : 'strict',
+  sameSite: IS_PROD ? 'none' : 'strict',
   maxAge:   7 * 24 * 60 * 60 * 1000,
 };
 
