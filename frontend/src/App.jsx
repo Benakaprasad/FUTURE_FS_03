@@ -29,15 +29,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        {/* NotificationProvider must be INSIDE AuthProvider so it can
-            access the auth token via your api/axios interceptors.     */}
         <NotificationProvider>
           <Routes>
 
             {/* ── Public ──────────────────────────── */}
             <Route path="/" element={<Home />} />
 
-            {/* ── Auth (redirect if already logged in) ── */}
+            {/* ── Auth ────────────────────────────── */}
             <Route element={<RedirectIfAuth />}>
               <Route path="/login"    element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -58,8 +56,8 @@ export default function App() {
               <Route path="/trainer/schedule" element={<TrainerSchedule />} />
             </Route>
 
-            {/* ── Admin / Manager / Staff ─────────── */}
-            <Route element={<RequireRole roles={["admin", "manager", "staff"]} />}>
+            {/* ── Admin / Staff ────────────────────── */}
+            <Route element={<RequireRole roles={["admin", "staff"]} />}>
               <Route path="/admin"              element={<AdminDashboard />} />
               <Route path="/admin/leads"        element={<AdminLeads />} />
               <Route path="/admin/members"      element={<AdminMembers />} />

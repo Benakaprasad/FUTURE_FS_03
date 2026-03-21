@@ -11,6 +11,8 @@ FUTURE_FS_03
 │  │  └─ statuses.js
 │  ├─ env.js
 │  ├─ helpers
+│  │  ├─ emailTemplates.js
+│  │  ├─ mailer.js
 │  │  └─ notify.js
 │  ├─ jobs
 │  │  └─ cleanupTokens.js
@@ -29,18 +31,23 @@ FUTURE_FS_03
 │  │  ├─ Member.js
 │  │  ├─ Payment.js
 │  │  ├─ Request.js
+│  │  ├─ Reward.js
 │  │  ├─ Token.js
 │  │  ├─ Trainer.js
 │  │  ├─ TrainerApplication.js
 │  │  └─ User.js
+│  ├─ nginx-fitzone.conf
+│  ├─ nginx-http-block-additions.conf
 │  ├─ package-lock.json
 │  ├─ package.json
+│  ├─ proxy_params
 │  ├─ routes
 │  │  ├─ assignments.js
 │  │  ├─ auth.js
 │  │  ├─ customers.js
 │  │  ├─ leads.js
 │  │  ├─ members.js
+│  │  ├─ notifications.js
 │  │  ├─ payments.js
 │  │  ├─ public.js
 │  │  ├─ requests.js
@@ -56,8 +63,16 @@ FUTURE_FS_03
 │  ├─ package-lock.json
 │  ├─ package.json
 │  ├─ public
+│  │  ├─ favicon.svg
 │  │  ├─ hero-loop.mp4
 │  │  └─ images
+│  │     ├─ about
+│  │     │  ├─ boxing-ring.png
+│  │     │  ├─ cardio-deck.png
+│  │     │  ├─ deadlift-for-background-1.png
+│  │     │  ├─ functional-training.png
+│  │     │  ├─ group-classes.png
+│  │     │  └─ strength-zone.png
 │  │     ├─ sessions
 │  │     │  ├─ boxing.png
 │  │     │  ├─ cardio-conditioning.png

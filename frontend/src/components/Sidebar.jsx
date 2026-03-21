@@ -15,16 +15,6 @@ const NAV = {
     { icon: "📅", label: "Schedule",   href: "/trainer/schedule" },
   ],
   admin: [
-    { icon: "⊞", label: "Dashboard",     href: "/admin" },
-    { icon: "🎯", label: "Leads",         href: "/admin/leads" },
-    { icon: "👥", label: "Members",       href: "/admin/members" },
-    { icon: "📋", label: "Requests",      href: "/admin/requests" },
-    { icon: "🏋️", label: "Trainers",      href: "/admin/trainers" },
-    { icon: "📄", label: "Applications",  href: "/admin/applications" },
-    { icon: "💳", label: "Payments",      href: "/admin/payments" },
-    { icon: "🔑", label: "Staff",         href: "/admin/users" },
-  ],
-  manager: [
     { icon: "⊞", label: "Dashboard",    href: "/admin" },
     { icon: "🎯", label: "Leads",        href: "/admin/leads" },
     { icon: "👥", label: "Members",      href: "/admin/members" },
@@ -32,6 +22,7 @@ const NAV = {
     { icon: "🏋️", label: "Trainers",     href: "/admin/trainers" },
     { icon: "📄", label: "Applications", href: "/admin/applications" },
     { icon: "💳", label: "Payments",     href: "/admin/payments" },
+    { icon: "🔑", label: "Staff",        href: "/admin/users" },
   ],
   staff: [
     { icon: "⊞", label: "Dashboard", href: "/admin" },
@@ -51,7 +42,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   const roleColors = {
     admin:    "#FF1A1A",
-    manager:  "#FF6B00",
     staff:    "#FFB800",
     trainer:  "#00C2FF",
     customer: "#22C55E",

@@ -880,7 +880,7 @@ export default function Register() {
                 </h2>
                 <p style={{ fontFamily: "'Barlow', sans-serif", color: "rgba(255,255,255,0.4)", lineHeight: 1.75, marginBottom: "1.5rem", fontSize: "0.9rem" }}>
                   {form.role === "trainer"
-                    ? "Your application is under review. Visit our gym with your original documents to complete verification — once approved, you can log in"
+                    ? "Your trainer profile has been submitted for review. We'll be in touch soon."
                     : "Welcome to FitZone Gym. Redirecting to your dashboard..."}
                 </p>
 

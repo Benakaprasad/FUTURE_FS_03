@@ -156,7 +156,7 @@ export default function AdminDashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const canSeeFinance = ["admin", "manager"].includes(user?.role);
+const canSeeFinance = user?.role === "admin";
 
   // ── Revenue chart data — last 6 months from stats ─────────────────────────
   const revenueData = revenue?.monthly_breakdown

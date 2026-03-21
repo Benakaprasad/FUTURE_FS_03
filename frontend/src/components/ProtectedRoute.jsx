@@ -175,7 +175,6 @@ export function RequireRole({ roles }) {
   if (!roles.includes(user.role)) {
     const dashMap = {
       admin:    "/admin",
-      manager:  "/admin",
       staff:    "/admin",
       trainer:  "/trainer",
       customer: "/dashboard",
@@ -194,7 +193,6 @@ export function RedirectIfAuth() {
   if (user) {
     const dashMap = {
       admin:    "/admin",
-      manager:  "/admin",
       staff:    "/admin",
       trainer:  "/trainer",
       customer: "/dashboard",

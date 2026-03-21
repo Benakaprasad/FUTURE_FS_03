@@ -4,7 +4,7 @@ import Sidebar from "./Sidebar";
 import { useNotifications } from "../context/NotificationContext";
 
 function NotificationBell() {
-  const { notifications, unreadCount, silenced, markRead, markAllRead, toggleSilence } = useNotifications();
+const { notifications, unreadCount, silenced, sseDown, markRead, markAllRead, toggleSilence, fetchNotifications } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -15,12 +15,14 @@ function NotificationBell() {
   }, []);
 
   const typeIcon = (type) => ({
-    trainer_registration:  "💪",
-    customer_registration: "🏋️",
-    membership_request:    "📋",
-    payment:               "💳",
-    expiry:                "⚠️",
-    system:                "🔔",
+  trainer_registration:  "💪",
+  customer_registration: "🏋️",
+  membership_request:    "📋",
+  payment:               "💳",
+  expiry:                "⚠️",
+  application_approved:  "✅",
+  application_rejected:  "❌",
+  system:                "🔔",
   }[type] || "🔔");
 
   const timeAgo = (date) => {
@@ -122,6 +124,27 @@ function NotificationBell() {
               </span>
             </div>
           )}
+
+          {sseDown && (
+          <div style={{
+            background: "rgba(255,184,0,0.06)",
+            borderBottom: "1px solid rgba(255,184,0,0.15)",
+            padding: "10px 18px",
+            display: "flex", alignItems: "center", gap: "8px",
+          }}>
+            <span style={{ fontSize: "12px", color: "#FFB800" }}>
+              ⚠️ Live updates paused —{" "}
+              <button onClick={fetchNotifications} style={{
+                background: "none", border: "none",
+                color: "#FFB800", fontWeight: 700,
+                fontSize: "12px", cursor: "pointer", padding: 0,
+                textDecoration: "underline",
+              }}>
+                refresh manually
+              </button>
+            </span>
+          </div>
+        )}
 
           {/* List */}
           <div style={{ overflowY: "auto", flex: 1 }}>
