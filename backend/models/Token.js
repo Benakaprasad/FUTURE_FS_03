@@ -3,7 +3,6 @@ const crypto = require('crypto');
 const jwt    = require('jsonwebtoken');
 
 class Token {
-  // ── Helpers ──────────────────────────────────────────────────
   static hashToken(rawToken) {
     return crypto.createHash('sha256').update(rawToken).digest('hex');
   }
@@ -12,7 +11,6 @@ class Token {
     return crypto.randomBytes(64).toString('hex');
   }
 
-  // ── Access Token ─────────────────────────────────────────────
   static generateAccessToken(user) {
     return jwt.sign(
       { id: user.id, role: user.role, username: user.username },
@@ -21,7 +19,6 @@ class Token {
     );
   }
 
-  // ── Refresh Token ─────────────────────────────────────────────
   static async createRefreshToken(userId, ipAddress = null, userAgent = null) {
     const rawToken  = this.generateRawToken();
     const tokenHash = this.hashToken(rawToken);
@@ -34,7 +31,7 @@ class Token {
       [userId, tokenHash, expiresAt, ipAddress, userAgent]
     );
 
-    return rawToken; // Return raw — never store raw
+    return rawToken; 
   }
 
   static async findRefreshToken(rawToken) {
@@ -61,7 +58,6 @@ class Token {
     try {
       await client.query('BEGIN');
 
-      // Revoke old token
       const oldHash = this.hashToken(oldRawToken);
       const { rowCount } = await client.query(
         `UPDATE refresh_tokens
@@ -70,9 +66,7 @@ class Token {
         [oldHash]
       );
 
-      // Detect reuse attack — token already revoked
       if (rowCount === 0) {
-        // Revoke ALL tokens for this user
         await client.query(
           `UPDATE refresh_tokens SET is_revoked = true WHERE user_id = $1`,
           [userId]
@@ -80,8 +74,6 @@ class Token {
         await client.query('COMMIT');
         throw new Error('REUSE_DETECTED');
       }
-
-      // Issue new token
       const newRawToken  = this.generateRawToken();
       const newTokenHash = this.hashToken(newRawToken);
       const expiresAt    = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -110,13 +102,11 @@ class Token {
     );
   }
 
-  // ── Password Reset ───────────────────────────────────────────
   static async createPasswordResetToken(userId) {
     const rawToken  = this.generateRawToken();
     const tokenHash = this.hashToken(rawToken);
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); 
 
-    // Invalidate any existing reset tokens for this user
     await pool.query(
       `DELETE FROM password_resets WHERE user_id = $1`,
       [userId]
@@ -150,11 +140,10 @@ class Token {
     );
   }
 
-  // ── Email Verification ───────────────────────────────────────
   static async createEmailVerificationToken(userId) {
     const rawToken  = this.generateRawToken();
     const tokenHash = this.hashToken(rawToken);
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); 
 
     await pool.query(
       `INSERT INTO email_verifications (user_id, token_hash, expires_at)

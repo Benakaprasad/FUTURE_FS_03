@@ -3,18 +3,15 @@ import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { RequireAuth, RequireRole, RedirectIfAuth } from "./components/ProtectedRoute";
 
-// Public pages
 import Home     from "./pages/public/Home";
 import Login    from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
-// Customer pages
 import CustomerDashboard  from "./pages/customer/Dashboard";
 import CustomerProfile    from "./pages/customer/Profile";
 import CustomerMembership from "./pages/customer/Membership";
 import CustomerRequest    from "./pages/customer/Request";
 
-// Admin / Manager / Staff pages
 import AdminDashboard    from "./pages/admin/Dashboard";
 import AdminLeads        from "./pages/admin/Leads";
 import AdminMembers      from "./pages/admin/Members";
@@ -24,7 +21,6 @@ import { AdminApplications } from "./pages/admin/Applications";
 import AdminUsers        from "./pages/admin/Users";
 import AdminPayments     from "./pages/admin/Payments";
 
-// Trainer pages
 import TrainerDashboard from "./pages/trainer/Dashboard";
 import TrainerMembers   from "./pages/trainer/Members";
 import TrainerSchedule  from "./pages/trainer/Schedule";

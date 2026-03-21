@@ -1,6 +1,6 @@
 const pool = require('../config/database');
 let pushToRole;
-// Lazy import to avoid circular dependency
+
 function getPush() {
   if (!pushToRole) ({ pushToRole } = require('../routes/notifications'));
   return pushToRole;

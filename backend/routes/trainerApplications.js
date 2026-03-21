@@ -32,7 +32,6 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // PATCH /api/trainer-applications/:id/approve
-// Full transaction: approve app + create user + create trainer profile
 router.patch('/:id/approve', [
   body('admin_notes').optional().trim(),
   body('username').trim().notEmpty().withMessage('Username required for trainer account'),
@@ -55,7 +54,6 @@ router.patch('/:id/approve', [
       return res.status(400).json({ error: 'Application already processed' });
     }
 
-    // Check username not taken
     const existingUser = await User.findByUsername(req.body.username);
     if (existingUser) {
       await client.query('ROLLBACK');

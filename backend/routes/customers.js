@@ -68,13 +68,11 @@ router.get('/me/reward', authorize(ROLES.CUSTOMER), async (req, res, next) => {
  
     const reward = await Reward.findByCustomerId(customer.id);
  
-    // Always 200 — reward is null if the game was never played
     return res.json({ reward: reward || null });
   } catch (err) { next(err); }
 });
  
 // GET /api/customers/me/reward/redemptions
-// Customer sees their full perk redemption history
 router.get('/me/reward/redemptions', authorize(ROLES.CUSTOMER), async (req, res, next) => {
   try {
     const customer = await Customer.findByUserId(req.user.id);

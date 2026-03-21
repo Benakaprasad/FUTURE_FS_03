@@ -169,7 +169,6 @@ function RewardCard({ reward }) {
   );
 }
 
-// ── Unchanged sub-components ───────────────────────────────────
 function KpiCard({ icon: Icon, label, value, color, delay = 0 }) {
   return (
     <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderTop: `2px solid ${color}`, borderRadius: "14px", padding: "1.4rem", animation: `fadeUp 0.5s ease ${delay}s both`, transition: "transform 0.2s, box-shadow 0.2s", cursor: "default" }}
@@ -237,19 +236,19 @@ export default function CustomerDashboard() {
   const { user } = useAuth();
   const [membership, setMembership] = useState(null);
   const [requests,   setRequests]   = useState([]);
-  const [reward,     setReward]     = useState(null);  // ← NEW
+  const [reward,     setReward]     = useState(null);  
   const [loading,    setLoading]    = useState(true);
 
   useEffect(() => {
     Promise.all([
       api.get("/members/my").catch(() => ({ data: { members: [] } })),
       api.get("/requests/my").catch(() => ({ data: { requests: [] } })),
-      api.get("/customers/me/reward").catch(() => ({ data: { reward: null } })),  // ← NEW
+      api.get("/customers/me/reward").catch(() => ({ data: { reward: null } })), 
     ]).then(([memRes, reqRes, rewRes]) => {
       const members = memRes.data.members || [];
       setMembership(members.find(m => m.status === "active") || members[0] || null);
       setRequests(reqRes.data.requests || []);
-      setReward(rewRes.data.reward || null);  // ← NEW
+      setReward(rewRes.data.reward || null);  
     }).finally(() => setLoading(false));
   }, []);
 

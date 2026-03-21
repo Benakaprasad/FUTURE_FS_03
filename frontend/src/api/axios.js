@@ -86,7 +86,7 @@ api.interceptors.response.use(
         authChannel?.postMessage({
           type:     "TOKEN_REFRESH",
           token:    newToken,
-          userData: { id: payload?.id }, // ← scoped: other tabs check this
+          userData: { id: payload?.id }, 
         });
 
         processQueue(null, newToken);
@@ -112,8 +112,6 @@ api.interceptors.response.use(
         isRefreshing = false;
       }
     }
-
-    // Other 401 — let component handle it
     return Promise.reject(err);
   }
 );

@@ -2,7 +2,6 @@ const pool    = require('../config/database');
 const bcrypt  = require('bcryptjs');
 
 class User {
-  // ── Find ────────────────────────────────────────────────────
   static async findById(id) {
     const { rows } = await pool.query(
       `SELECT id, username, email, role, full_name, phone,
@@ -57,7 +56,6 @@ class User {
     return rows;
   }
 
-  // ── Create ──────────────────────────────────────────────────
   static async create({ username, email, password, role = 'customer', full_name, phone, created_by = null }) {
   const hash = await bcrypt.hash(password, 12);
   const { rows } = await pool.query(
@@ -79,7 +77,6 @@ class User {
   return rows[0];
 }
 
-  // ── Password ─────────────────────────────────────────────────
   static async comparePassword(plainPassword, hashedPassword) {
     return bcrypt.compare(plainPassword, hashedPassword);
   }
@@ -95,7 +92,6 @@ class User {
     return rows[0] || null;
   }
 
-  // ── Status ───────────────────────────────────────────────────
   static async deactivate(userId) {
     const { rows } = await pool.query(
       `UPDATE users SET is_active = false
@@ -126,7 +122,6 @@ class User {
     return rows[0] || null;
   }
 
-  // ── Login Attempts ───────────────────────────────────────────
   static async recordLoginAttempt(email, ipAddress, success, userAgent = null) {
     await pool.query(
       `INSERT INTO login_attempts (email, ip_address, success, user_agent)

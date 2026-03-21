@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 
-// ── Data ─────────────────────────────────────────────────────────────────────
-
 const PHRASES = [
   "TRAIN HARD.",
   "PUSH LIMITS.",
@@ -704,7 +702,6 @@ function MemberCountUp({ active }) {
   return <>{count.toLocaleString()}+</>;
 }
 
-// Add this near StatCard and MemberCountUp
 function AboutMemberStat() {
   const [ref, inView] = useInView(0.3);
   const count = useCountUp(2400, 2000, inView);
@@ -744,10 +741,6 @@ function AboutMemberStat() {
     </div>
   );
 }
-
-// ── Main Component ────────────────────────────────────────────────────────────
-
-
 
 // ── Energy Section Styles ─────────────────────────────────────────────────────
 const energyStyles = {
@@ -1006,8 +999,8 @@ const BONUS_PHRASES = [
   "EARN YOUR REST EVERY SINGLE DAY",
 ];
 const MAX_WPM = 100;
-const FAST_WPM = 80;          // threshold for streak + fast-typer experience
-const BONUS_WPM_GATE = 50;    // minimum WPM to unlock bonus phrases
+const FAST_WPM = 80;          
+const BONUS_WPM_GATE = 50;    
 
 const RANKS = [
   {
@@ -1333,15 +1326,6 @@ function Summary({ stats, onContinue }) {
   );
 }
 
-// ─── Typing Mechanic — Fixed ──────────────────────────────────────────────────
-// Changes:
-//   1. WPM stability — only show WPM when ≥3 keystrokes in window
-//   2. "SO CLOSE — PUSH!" nudge at 50-59 WPM on phrase 5
-//   3. Animated pulse on bonus gate bar when close
-//   4. Slow typer encouragement — phrase completion celebration
-//   5. Medium typer — "ALMOST THERE" banner at phrase 4
-//   6. Fast typer streak flash is more visible
-
 function TypingMechanic({ setEnergy, onFinish, audioRef }) {
   const [phraseIdx, setPhraseIdx]     = useState(0);
   const [typed, setTyped]             = useState("");
@@ -1369,10 +1353,7 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
   const [bestStreak, setBestStreak]   = useState(0);
   const [streakFlash, setStreakFlash] = useState(false);
 
-  // FIX 1: Stable WPM — only meaningful once ≥3 stamps
   const [stableWpm, setStableWpm] = useState(0);
-
-  // FIX 3: Phrase completion cheer for slow typers
   const [showCheer, setShowCheer] = useState(0);
 
   const peakWpmRef     = useRef(0);
@@ -1387,7 +1368,6 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
   const bonusCompleted = phraseDone.filter(i => i >= STANDARD_PHRASES.length).length;
   const nextIsBonus   = nextPhraseIdx != null && nextPhraseIdx >= STANDARD_PHRASES.length;
 
-  // Closeness to bonus gate
   const onLastPhrase  = phraseIdx === STANDARD_PHRASES.length - 1;
   const isClose       = onLastPhrase && stableWpm >= 50 && stableWpm < 60;
   const almostThere   = phraseIdx === STANDARD_PHRASES.length - 2 && stableWpm >= 55;
@@ -1487,7 +1467,6 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
         setPhraseIdx(nextIdx);
         if (navigator.vibrate) navigator.vibrate([20,10,20,10,20]);
 
-        // FIX 3: Slow typer cheer on each phrase completion
         if (cleanPhraseWpm < FAST_WPM && !isDone && !allStdDone) {
           setShowCheer(std);
           setTimeout(() => setShowCheer(0), 1200);
@@ -1541,18 +1520,16 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
     return () => window.removeEventListener("keydown", handleKey);
   }, [handleKey]);
 
-  // Live WPM tick — FIX 1: only show when ≥3 stamps
   useEffect(() => {
     const iv = setInterval(() => {
       const now    = Date.now();
       const recent = stampRef.current.filter(t => now - t < 5000);
-      // FIX 1: need at least 3 keystrokes to show meaningful WPM
       const cWpm = recent.length >= 3
         ? Math.round((recent.length / 5) * 12)
         : 0;
       const cAcc = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
       setWpm(cWpm);
-      setStableWpm(cWpm); // stable version used for gate checks
+      setStableWpm(cWpm); 
       setAcc(cAcc);
       if (cWpm > peakWpmRef.current) peakWpmRef.current = cWpm;
       const liveScore = computeScore(cWpm, cAcc, phraseDone);
@@ -1568,7 +1545,6 @@ function TypingMechanic({ setEnergy, onFinish, audioRef }) {
   const streakColor = streak >= 5 ? "#FFD700" : streak >= 3 ? "#FFB800" : "#FF6B00";
   const stdDone     = phraseDone.filter(i => i < STANDARD_PHRASES.length).length;
 
-  // Gate bar color — pulses orange when close
   const gateBarColor = stableWpm >= BONUS_WPM_GATE ? "#22C55E"
     : isClose ? "#FF6B00"
     : "#FFB800";
@@ -2845,7 +2821,6 @@ function RewardScreen({ stats, onContinue }) {
     return () => clearInterval(iv);
   }, [allRevealed]);
  
-  // reward icon map — SVG filled
   const rewardIcons = {
     "🎯": <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3a7 7 0 110 14A7 7 0 0112 5zm0 3a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 110 2 1 1 0 010-2z"/></svg>,
     "🚫": <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>,
@@ -3496,7 +3471,6 @@ function MasonryPhotoGrid() {
   const [entered, setEntered] = useState(false);
   const [hovered, setHovered] = useState(null);
 
-  // Trigger once when the grid enters the viewport
   useEffect(() => {
     const obs = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setEntered(true); },
@@ -3514,7 +3488,6 @@ function MasonryPhotoGrid() {
     { src: "/images/about/group-classes.png",       label: "Group Classes",   stat: "12 Classes/Week", color: "#A855F7", from: "translateX(120px) translateY(40px) rotate(6deg)"    },
   ];
 
-  // Stagger delays so cards arrive one by one
   const DELAYS = [0, 0.08, 0.16, 0.22, 0.30];
 
   return (
@@ -3557,7 +3530,6 @@ function MasonryPhotoGrid() {
         {PHOTOS.map((photo, i) => {
           const isHovered = hovered === i;
 
-          // Grid placement — matches original masonry layout
           const gridStyle = i === 0 ? { gridRow: "1 / 3" } : {};
 
           return (
@@ -3570,7 +3542,6 @@ function MasonryPhotoGrid() {
                 borderRadius: "14px",
                 overflow:     "hidden",
                 cursor:       "pointer",
-                // Slide in from each card's unique direction
                 opacity:      entered ? 1 : 0,
                 transform:    entered ? "none" : photo.from,
                 transition:   `opacity 0.7s ease ${DELAYS[i]}s, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${DELAYS[i]}s`,
@@ -3684,7 +3655,6 @@ function AboutTimeline() {
   const bodyRef  = useRef(null);
 
   useEffect(() => {
-  // Entrance animation — reveal all cards on mount
   itemRefs.current.forEach((el, i) => {
     if (el) {
       setTimeout(() => el.style.opacity = "1", i * 80);
@@ -3710,7 +3680,6 @@ function AboutTimeline() {
 
     setActiveIdx(closestIdx);
 
-    // Grow spine smoothly to the active node
     const activeEl = itemRefs.current[closestIdx];
     if (activeEl && bodyRef.current) {
       const node = activeEl.querySelector("[data-node]");
@@ -3722,7 +3691,6 @@ function AboutTimeline() {
     }
   };
 
-  // Run once on mount to set initial state
   handleScroll();
 
   window.addEventListener("scroll", handleScroll, { passive: true });
@@ -3910,20 +3878,17 @@ function CustomCursor() {
     };
 
     const animate = () => {
-      // Dot snaps to cursor
       if (dotRef.current) {
         dotRef.current.style.left = `${pos.current.x}px`;
         dotRef.current.style.top  = `${pos.current.y}px`;
 
         if (hovering.current) {
-          // Dot expands into big circle
           dotRef.current.style.width      = "56px";
           dotRef.current.style.height     = "56px";
           dotRef.current.style.background = "rgba(255,107,0,0.13)";
           dotRef.current.style.border     = "1.5px solid #FF6B00";
           dotRef.current.style.boxShadow  = "0 0 20px rgba(255,107,0,0.25)";
         } else {
-          // Back to small dot
           dotRef.current.style.width      = "7px";
           dotRef.current.style.height     = "7px";
           dotRef.current.style.background = "#fff";
@@ -3932,7 +3897,6 @@ function CustomCursor() {
         }
       }
 
-      // Ring lerps behind
       ringPos.current.x += (pos.current.x - ringPos.current.x) * 0.28;
       ringPos.current.y += (pos.current.y - ringPos.current.y) * 0.28;
 
@@ -3941,12 +3905,10 @@ function CustomCursor() {
         ringRef.current.style.top  = `${ringPos.current.y}px`;
 
         if (hovering.current) {
-          // Ring vanishes completely
           ringRef.current.style.opacity = "0";
           ringRef.current.style.width   = "8px";
           ringRef.current.style.height  = "8px";
         } else {
-          // Ring visible and following
           ringRef.current.style.opacity = "1";
           ringRef.current.style.width   = "32px";
           ringRef.current.style.height  = "32px";
@@ -4056,7 +4018,6 @@ export default function Home() {
   return () => clearInterval(interval);
 }, []);
 
-  // Scroll
   useEffect(() => {
     const fn = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", fn, { passive: true });
@@ -4069,7 +4030,6 @@ export default function Home() {
   window.addEventListener("resize", check);
   return () => window.removeEventListener("resize", check);
 }, []);
-// ── REPLACE the sessions scroll useEffect in Home.jsx ────────────────────────
 
 useEffect(() => {
   if (!isDesktop) return;
@@ -4086,7 +4046,6 @@ useEffect(() => {
   return () => window.removeEventListener("scroll", handleScroll);
 }, [isDesktop, sessionsEntered]);
 
-  // Init video A
   useEffect(() => {
   if (videoRef.current) {
     videoRef.current.play().catch(() => {});
@@ -4528,8 +4487,8 @@ input, textarea { cursor: text !important; }
       </section>
 
       {/* ════════════════════════════════════════════
-    TRAINERS
-════════════════════════════════════════════ */}
+           TRAINERS
+         ════════════════════════════════════════════ */}
 <section id="trainers" style={{ padding: "7rem 0", background: "#050505", position: "relative", overflow: "hidden" }}>
 
   {/* Background grid */}
@@ -4566,8 +4525,8 @@ input, textarea { cursor: text !important; }
 </section>
 
       {/* ════════════════════════════════════════════
-    PLANS
-════════════════════════════════════════════ */}
+           PLANS
+          ════════════════════════════════════════════ */}
 <section id="plans" style={{
   padding: "7rem 0",
   background: "#000",
@@ -4660,8 +4619,8 @@ input, textarea { cursor: text !important; }
 </section>
 
       {/* ════════════════════════════════════════════
-    ABOUT
-════════════════════════════════════════════ */}
+           ABOUT
+          ════════════════════════════════════════════ */}
 <section id="about" style={{
   padding: "0",
   background: "#050505",
@@ -4728,7 +4687,7 @@ input, textarea { cursor: text !important; }
     gap: "4rem",
     alignItems: "center",
   }}>
-    {/* Left — text (keep all your ScrollCard blocks exactly as they are) */}
+    {/* Left — text */}
     <div>
       <ScrollCard direction="left" delay={0}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "2rem" }}>
@@ -4781,7 +4740,7 @@ input, textarea { cursor: text !important; }
       </ScrollCard>
     </div>
 
-    {/* Right — intentionally empty, deadlift image shows through */}
+    {/* Right */}
     <div />
   </div>
 
@@ -4799,7 +4758,7 @@ input, textarea { cursor: text !important; }
   {/* ══ MARQUEE STRIP ══ */}
   <AboutMarquee />
 
-  {/* ══ MASONRY PHOTO GRID — needs its own section so sticky works ══ */}
+  {/* ══ MASONRY PHOTO GRID ══ */}
 <section style={{ background: "#050505", position: "relative" }}>
   <MasonryPhotoGrid />
 </section>
@@ -4947,8 +4906,8 @@ input, textarea { cursor: text !important; }
 </section>
 
      {/* ════════════════════════════════════════════
-    CONTACT
-════════════════════════════════════════════ */}
+         CONTACT
+        ════════════════════════════════════════════ */}
 <section id="contact" style={{
   padding: "0",
   background: "#000",
@@ -5965,7 +5924,6 @@ const s = {
     textDecoration: "none", transition: "color 0.2s",
   },
 
-  // VERTICAL NAV DOTS
   verticalNav: {
     position: "fixed", right: "1.5rem",
     top: "50%", transform: "translateY(-50%)",
@@ -5979,7 +5937,6 @@ const s = {
     transition: "all 0.2s",
   },
 
-  // SESSION IMAGE PLACEHOLDER
   sessionImgWrap: {
     width: "100%",
     height: "200px",
@@ -5996,7 +5953,6 @@ const s = {
     display: "block",
   },
 
-  // TRAINER IMAGE PLACEHOLDER
   trainerImgWrap: {
     width: "100%",
     height: "220px",

@@ -48,7 +48,6 @@ class Request {
     return rows;
   }
 
-  // ✅ request_type added
   static async create({ customer_id, preferred_trainer_id, membership_type, message, request_type }) {
     const { rows } = await pool.query(
       `INSERT INTO requests
@@ -60,7 +59,7 @@ class Request {
         preferred_trainer_id || null,
         membership_type      || null,
         message              || null,
-        request_type         || null,   // ✅
+        request_type         || null,   
       ]
     );
     return rows[0];

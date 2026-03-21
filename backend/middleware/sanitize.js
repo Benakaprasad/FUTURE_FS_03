@@ -6,7 +6,6 @@ const sanitizeValue = (value) => {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;');
-    // removed slash — breaks legitimate URLs and paths
 };
 
 const sanitizeObject = (obj) => {
@@ -24,7 +23,7 @@ const sanitizeObject = (obj) => {
 const sanitize = (req, _res, next) => {
   sanitizeObject(req.body);
   sanitizeObject(req.query);
-  sanitizeObject(req.params);  // ← also sanitize URL params
+  sanitizeObject(req.params); 
   next();
 };
 

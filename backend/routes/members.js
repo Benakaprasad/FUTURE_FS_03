@@ -7,13 +7,13 @@ const Customer         = require('../models/Customer');
 const { authenticate }       = require('../middleware/auth');
 const { authorize }          = require('../middleware/role');
 const { validate }           = require('../middleware/validate');
-const { ROLE_GROUPS, ROLES } = require('../constants/roles');  // ✅ added ROLES
+const { ROLE_GROUPS, ROLES } = require('../constants/roles'); 
 const { MEMBERSHIP_TYPES, MEMBER_STATUSES } = require('../constants/statuses');
-const pool = require('../config/database');  // ✅ added pool import
+const pool = require('../config/database');  
 
 router.use(authenticate);
 
-// ✅ /my BEFORE /expiring, / and /:id
+// /my BEFORE /expiring, / and /:id
 router.get('/my', authorize(ROLES.CUSTOMER), async (req, res, next) => {
   try {
     const customer = await Customer.findByUserId(req.user.id);
@@ -34,7 +34,7 @@ router.get('/my', authorize(ROLES.CUSTOMER), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ✅ /expiring BEFORE /:id
+// /expiring BEFORE /:id
 router.get('/expiring',
   authorize(ROLE_GROUPS.DECISION_MAKER),
   async (req, res, next) => {
@@ -57,7 +57,7 @@ router.get('/',
   }
 );
 
-// ✅ /:id LAST
+// /:id LAST
 router.get('/:id',
   authorize(ROLE_GROUPS.INTERNAL_STAFF),
   async (req, res, next) => {

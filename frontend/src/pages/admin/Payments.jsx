@@ -1,7 +1,3 @@
-// frontend/src/pages/admin/Payments.jsx
-// Replaces your existing AdminPayments.jsx
-// Adds: discount column, gross vs net revenue cards, reward tier badge
-
 import { useState, useEffect, useCallback } from "react";
 import DashLayout from "../../components/DashLayout";
 import { DataTable, Badge, Toast } from "../../components/AdminUi";
@@ -55,7 +51,6 @@ export default function AdminPayments() {
           : "—",
     },
     {
-      // Shows original → discounted with a strike-through if discount applied
       key: "amount",
       label: "Amount",
       render: (r) => {
@@ -80,7 +75,6 @@ export default function AdminPayments() {
       },
     },
     {
-      // Discount column — shows tier badge + amount
       key: "discount_applied",
       label: "Discount",
       render: (r) => {

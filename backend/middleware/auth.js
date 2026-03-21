@@ -4,7 +4,6 @@ const pool = require('../config/database');
 
 const authenticate = async (req, res, next) => {
   try {
-    // 1. Get token — header first, then query param (for SSE)
     const authHeader = req.headers.authorization;
     const token =
       (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null) ||
@@ -15,7 +14,6 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    // 2. Verify token
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -26,7 +24,6 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // 3. Check user still exists and is active
     const { rows } = await pool.query(
       `SELECT id, username, email, role, is_active, is_email_verified
        FROM users WHERE id = $1`,

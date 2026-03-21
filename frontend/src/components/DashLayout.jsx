@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useNotifications } from "../context/NotificationContext";
 
-// ── Notification Bell + Dropdown ──────────────────────────────
 function NotificationBell() {
   const { notifications, unreadCount, silenced, markRead, markAllRead, toggleSilence } = useNotifications();
   const [open, setOpen] = useState(false);

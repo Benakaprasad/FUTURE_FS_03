@@ -98,7 +98,6 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
       const customer = await Customer.create(user.id);
 
       // 2. Save reward — always runs, even if user skipped the game
-      //    (peakWpm = 0 → warming_up tier with no discount, still a valid row)
       await Reward.createForCustomer({
         customerId:     customer.id,
         peakWpm:        Number(req.body.reward_peak_wpm)    || 0,
@@ -106,9 +105,6 @@ router.post('/register', registerRules, validate, async (req, res, next) => {
         phrasesTyped:   Number(req.body.reward_phrases_typed) || 0,
         bonusRoundDone: req.body.reward_bonus_round === true ||
                         req.body.reward_bonus_round === 'true',
-        // no `client` here — runs outside transaction, same as Customer.create
-        // this is safe: if it fails, the user is already created and can still
-        // log in. Worst case their reward row is missing (dashboard shows empty).
       });
     }
 

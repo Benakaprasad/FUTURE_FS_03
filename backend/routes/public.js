@@ -11,7 +11,6 @@ const { validate }       = require('../middleware/validate');
 router.get('/trainers', async (req, res, next) => {
   try {
     const trainers = await Trainer.findAll({ status: 'active' });
-    // Strip sensitive info for public view
     const publicTrainers = trainers.map(t => ({
       id:               t.id,
       full_name:        t.full_name,

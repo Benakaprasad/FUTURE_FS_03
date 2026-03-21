@@ -35,15 +35,11 @@ export function NotificationProvider({ children }) {
     }
   }, []);
 
-  // ── SSE connection ──────────────────────────────────────────────────────
-  // We read the in-memory token at connection time via getAccessToken()
-  // This is safe because SSE doesn't support custom headers,
-  // so we pass the token as a query param (already validated server-side)
   const connectSSE = useCallback(() => {
-    if (esRef.current) return; // already connected
+    if (esRef.current) return; 
 
-    const token = getAccessToken(); // ← in-memory, never localStorage
-    if (!token) return;            // no token = don't connect
+    const token = getAccessToken(); 
+    if (!token) return;           
 
     const url = `${import.meta.env.VITE_API_URL || "http://localhost:3000/api"}/notifications/stream?token=${token}`;
     const es  = new EventSource(url);
@@ -51,7 +47,6 @@ export function NotificationProvider({ children }) {
     es.onmessage = (e) => {
       try {
         const notification = JSON.parse(e.data);
-        // Ignore heartbeat pings (if your backend sends them)
         if (notification.type === "ping") return;
         setNotifications((prev) => [notification, ...prev]);
         setUnreadCount((prev) => prev + 1);
@@ -61,18 +56,16 @@ export function NotificationProvider({ children }) {
     };
 
     es.onerror = () => {
-      // Close the broken connection
       es.close();
       esRef.current = null;
 
-      // Retry after 5s if user is still logged in
       retryTimer.current = setTimeout(() => {
         if (user) connectSSE();
       }, 5000);
     };
 
     esRef.current = es;
-  }, [user]); // Note: getAccessToken is a stable module-level export, not a dep
+  }, [user]); 
 
   const disconnectSSE = useCallback(() => {
     if (retryTimer.current) {
@@ -89,7 +82,6 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      // Small delay to let the access token settle into memory after login/restore
       const t = setTimeout(connectSSE, 100);
       return () => {
         clearTimeout(t);
@@ -100,7 +92,7 @@ export function NotificationProvider({ children }) {
       setNotifications([]);
       setUnreadCount(0);
     }
-  }, [user?.id]); // only re-run when user id changes, not on every render
+  }, [user?.id]);
 
   // ── Actions ─────────────────────────────────────────────────────────────
   const markRead = useCallback(async (id) => {

@@ -1,6 +1,3 @@
-// backend/models/Payment.js  (reward-aware version)
-// Replaces your existing Payment.js entirely.
-
 const pool     = require('../config/database');
 const Razorpay = require('razorpay');
 const crypto   = require('crypto');
@@ -14,22 +11,19 @@ const razorpay = new Razorpay({
 
 class Payment {
 
-  // ── Razorpay order creation — NOW reward-aware ──────────────
   static async createOrder({ amount, currency = 'INR', customerId, membershipType }) {
     const idempotencyKey = uuidv4();
     const receiptNumber  = `FZ-${Date.now()}`;
 
-    // ── Check for applicable reward discount ──────────────────
     const { discountAmount, customerRewardId } =
       await Reward.getApplicableDiscount(customerId);
 
     const originalAmount  = Number(amount);
-    // Never go below ₹1 (Razorpay minimum)
+
     const discountedAmount = Math.max(1, originalAmount - discountAmount);
 
-    // ── Create Razorpay order with discounted amount ──────────
     const order = await razorpay.orders.create({
-      amount:   Math.round(discountedAmount * 100), // paise
+      amount:   Math.round(discountedAmount * 100), 
       currency,
       receipt:  receiptNumber,
       notes: {
@@ -40,7 +34,6 @@ class Payment {
       },
     });
 
-    // ── Store in DB ────────────────────────────────────────────
     const { rows } = await pool.query(
       `INSERT INTO payments
          (customer_id, razorpay_order_id, amount, currency,
@@ -50,14 +43,14 @@ class Payment {
        RETURNING *`,
       [
         customerId, order.id,
-        discountedAmount,          // amount = what Razorpay charged
+        discountedAmount,          
         currency,
         membershipType || null,
         receiptNumber,
         idempotencyKey,
-        originalAmount,            // original before discount
-        discountAmount,            // how much was knocked off
-        customerRewardId || null,  // null if no discount
+        originalAmount,            
+        discountAmount,            
+        customerRewardId || null,  
       ]
     );
 
@@ -71,11 +64,9 @@ class Payment {
     };
   }
 
-  // ── Verify + capture — marks discount as used ───────────────
   static async verifyAndCapture({
     razorpay_order_id, razorpay_payment_id, razorpay_signature,
   }) {
-    // Verify HMAC signature
     const body     = razorpay_order_id + '|' + razorpay_payment_id;
     const expected = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -90,7 +81,6 @@ class Payment {
     try {
       await client.query('BEGIN');
 
-      // Update payment record
       const { rows } = await client.query(
         `UPDATE payments
          SET razorpay_payment_id=$1, razorpay_signature=$2,
@@ -104,7 +94,6 @@ class Payment {
       const payment = rows[0];
       if (!payment) throw new Error('PAYMENT_NOT_FOUND');
 
-      // ── Mark reward discount as used (if one was applied) ───
       if (payment.customer_reward_id && payment.discount_applied > 0) {
         await Reward.markDiscountUsed(
           payment.customer_reward_id,
@@ -123,9 +112,7 @@ class Payment {
       client.release();
     }
   }
-
-  // ── All other methods unchanged ──────────────────────────────
-
+  
   static async findByMemberId(memberId) {
     const { rows } = await pool.query(
       `SELECT * FROM payments WHERE member_id=$1

@@ -24,20 +24,16 @@ class Assignment {
     return rows;
   }
 
-  // Full transaction: assign + increment current_clients
   static async create({ member_id, trainer_id, notes, created_by }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-
-      // Reassign any existing active assignment
       await client.query(
         `UPDATE assignments SET status='reassigned', end_date=CURRENT_DATE
          WHERE member_id=$1 AND status='active'`,
         [member_id]
       );
 
-      // Create new assignment (trigger handles current_clients increment)
       const { rows } = await client.query(
         `INSERT INTO assignments
            (member_id, trainer_id, notes, created_by)

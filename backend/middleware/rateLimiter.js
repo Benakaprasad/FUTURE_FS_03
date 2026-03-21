@@ -6,7 +6,6 @@ const Redis = require('ioredis');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-// ── Redis Client ──────────────────────────────────────────────
 const redis = new Redis({
   host:                 process.env.REDIS_HOST     || '127.0.0.1',
   port:                 parseInt(process.env.REDIS_PORT) || 6379,
@@ -30,14 +29,12 @@ redis.on('close',        ()    => { redisReady = false; console.warn('[Redis] Co
 redis.on('reconnecting', ()    => { redisReady = false; });
 redis.on('error',        (err) => console.error('[Redis] Error:', err.message));
 
-// ── Key Generator ─────────────────────────────────────────────
 const keyGenerator = (req) => {
   const forwarded = req.headers['x-forwarded-for']?.split(',')[0].trim();
   if (forwarded) return forwarded;
   return ipKeyGenerator(req);
 };
 
-// ── 429 Handler ───────────────────────────────────────────────
 const rateLimitHandler = (_req, res, _next, options) => {
   res.status(429).json({
     error:      'Too many requests. Please slow down. Try again after 2 minutes',
@@ -46,7 +43,6 @@ const rateLimitHandler = (_req, res, _next, options) => {
   });
 };
 
-// ── Store Factory ─────────────────────────────────────────────
 const makeStore = (prefix) => {
   if (!IS_PROD || !redisReady) return undefined;
   return new RedisStore({
@@ -55,17 +51,14 @@ const makeStore = (prefix) => {
   });
 };
 
-// ── No-op middleware for dev ──────────────────────────────────
 const noop = (_req, _res, next) => next();
 
-// ── Limiter placeholders (populated by init()) ────────────────
 let globalLimiter  = noop;
 let authLimiter    = noop;
 let paymentLimiter = noop;
 let publicLimiter  = noop;
 let writeLimiter   = noop;
 
-// ── init() — call this in server.js BEFORE registering routes ─
 const init = async () => {
   if (IS_PROD) {
     try {
@@ -77,7 +70,7 @@ const init = async () => {
     }
   }
 
-  if (!IS_PROD) return; // leave all limiters as noop in dev
+  if (!IS_PROD) return; 
 
   const makeLimiter = (options) =>
     rateLimit({

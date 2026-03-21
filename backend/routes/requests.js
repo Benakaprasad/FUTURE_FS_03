@@ -8,13 +8,13 @@ const Customer   = require('../models/Customer');
 const { authenticate }     = require('../middleware/auth');
 const { authorize }        = require('../middleware/role');
 const { validate }         = require('../middleware/validate');
-const { ROLE_GROUPS, ROLES } = require('../constants/roles');  // ✅ added ROLES
+const { ROLE_GROUPS, ROLES } = require('../constants/roles');  
 const { MEMBERSHIP_TYPES }   = require('../constants/statuses');
 const pool = require('../config/database');
 
 router.use(authenticate);
 
-// ✅ /my BEFORE / and /:id
+// GET /my BEFORE / and /:id
 router.get('/my', authorize(ROLES.CUSTOMER), async (req, res, next) => {
   try {
     const customer = await Customer.findByUserId(req.user.id);
@@ -50,7 +50,7 @@ router.get('/:id',
 
 // POST /api/requests — customer submits request
 router.post('/',
-  authorize(ROLES.CUSTOMER),  // ✅ ROLES.CUSTOMER instead of plain string
+  authorize(ROLES.CUSTOMER),  
   [
     body('membership_type').optional().isIn(MEMBERSHIP_TYPES),
     body('request_type').optional().trim(),
@@ -69,7 +69,7 @@ router.post('/',
         preferred_trainer_id: req.body.preferred_trainer_id || null,
         membership_type:      req.body.membership_type || null,
         message:              req.body.notes || req.body.message || null,
-        request_type:         req.body.request_type || null,  // ✅ added
+        request_type:         req.body.request_type || null,  
       });
 
       await Customer.updateStatus(customer.id, 'pending_approval');

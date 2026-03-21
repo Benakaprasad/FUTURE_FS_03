@@ -56,7 +56,6 @@ router.post('/', createStaffRules, validate, async (req, res, next) => {
 // PATCH /api/users/:id/deactivate
 router.patch('/:id/deactivate', async (req, res, next) => {
   try {
-    // Prevent admin from deactivating themselves
     if (parseInt(req.params.id) === req.user.id) {
       return res.status(400).json({ error: 'Cannot deactivate your own account' });
     }

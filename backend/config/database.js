@@ -31,7 +31,6 @@ pool.on('error', (err) => {
   console.error('PostgreSQL pool error:', err.message);
 });
 
-// Retry on startup
 const connectWithRetry = async (retries = 5, delay = 3000) => {
   for (let i = 1; i <= retries; i++) {
     try {

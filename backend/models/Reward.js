@@ -1,7 +1,5 @@
-// backend/models/Reward.js
 const pool = require('../config/database');
 
-// ── Tier config (mirrors DB seed — used for in-memory lookups) ────────────────
 const TIER_MAP = {
   warming_up: { minWpm: 0,   maxWpm: 49,  discount: 0,   lockerDays: 0,  ptSessions: 0 },
   solid:      { minWpm: 50,  maxWpm: 79,  discount: 0,   lockerDays: 30, ptSessions: 0 },
@@ -22,8 +20,6 @@ function resolveTierKey(peakWpm) {
 }
 
 class Reward {
-
-  // ── Read ────────────────────────────────────────────────────────────────────
 
   /**
    * Get the full reward record for a customer (with tier details joined).
@@ -56,8 +52,6 @@ class Reward {
     );
     return rows;
   }
-
-  // ── Create ──────────────────────────────────────────────────────────────────
 
   /**
    * Create a customer_rewards row at registration time.
@@ -119,8 +113,6 @@ class Reward {
     return rows[0];
   }
 
-  // ── Apply discount at payment creation ─────────────────────────────────────
-
   /**
    * Returns the effective discount for a customer if they have a valid,
    * unused, non-expired reward. Returns 0 if no discount applies.
@@ -178,8 +170,6 @@ class Reward {
     );
   }
 
-  // ── Apply non-monetary perks to member record ───────────────────────────────
-
   /**
    * After a member row is created, copy locker / PT perks onto it.
    * Called inside the same DB transaction as members INSERT.
@@ -191,7 +181,6 @@ class Reward {
   static async applyPerksToMember(memberId, customerId, client) {
     const db = client || pool;
 
-    // Fetch reward (only apply if not expired)
     const { rows } = await db.query(
       `SELECT id, tier_key, locker_free_days_remaining, pt_sessions_remaining
        FROM customer_rewards
@@ -218,7 +207,6 @@ class Reward {
       [memberId, lockerDays, ptSessions, reward.tier_key]
     );
 
-    // Log locker redemption
     if (lockerDays > 0) {
       await db.query(
         `INSERT INTO reward_redemptions (
@@ -229,7 +217,6 @@ class Reward {
       );
     }
 
-    // Log PT session redemption
     if (ptSessions > 0) {
       await db.query(
         `INSERT INTO reward_redemptions (
@@ -240,8 +227,6 @@ class Reward {
       );
     }
   }
-
-  // ── Helpers ─────────────────────────────────────────────────────────────────
 
   static resolveTierKey = resolveTierKey;
   static TIER_MAP       = TIER_MAP;

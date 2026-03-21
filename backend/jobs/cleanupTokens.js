@@ -13,12 +13,10 @@ const runCleanup = async () => {
     console.log(`[CRON] Complete in ${duration}ms — expired ${rows[0].expire_memberships} memberships`);
   } catch (err) {
     console.error('[CRON] Cleanup failed:', err.message);
-    // Don't rethrow — cron should keep running on next schedule
   }
 };
 
 // Run at 2AM daily
 cron.schedule('0 2 * * *', runCleanup);
 
-// Also run once on startup to catch any missed window (e.g. server was down at 2AM)
 runCleanup();

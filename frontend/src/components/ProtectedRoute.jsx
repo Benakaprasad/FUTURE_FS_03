@@ -3,7 +3,6 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 
-// ── Spinner ───────────────────────────────────────────────────────────────────
 function Spinner() {
   return (
     <div style={{
@@ -22,7 +21,6 @@ function Spinner() {
   );
 }
 
-// ── TrainerPendingScreen ──────────────────────────────────────────────────────
 function TrainerPendingScreen({ status }) {
   const isRejected = status === "on_leave";
   const { logout } = useAuth();
@@ -118,7 +116,6 @@ function TrainerPendingScreen({ status }) {
           </div>
         )}
 
-        {/* Use proper logout — syncs all tabs */}
         <button
           onClick={logout}
           style={{
@@ -141,8 +138,6 @@ function TrainerPendingScreen({ status }) {
   );
 }
 
-// ── RequireAuth ───────────────────────────────────────────────────────────────
-// Requires login — redirects to /login if not authenticated
 export function RequireAuth() {
   const { user, loading, restoring } = useAuth();
 
@@ -151,15 +146,13 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-// ── RequireRole ───────────────────────────────────────────────────────────────
-// Requires specific role(s) + handles trainer approval gate
+
 export function RequireRole({ roles }) {
   const { user, loading, restoring } = useAuth();
   const [trainerStatus,   setTrainerStatus]   = useState(null);
   const [checkingTrainer, setCheckingTrainer] = useState(false);
 
   useEffect(() => {
-    // Only fetch trainer status once user is known and role matches
     if (!user) return;
     if (user.role !== "trainer" || !roles.includes("trainer")) return;
 
@@ -168,19 +161,17 @@ export function RequireRole({ roles }) {
       .then(({ data }) => setTrainerStatus(data.trainer?.status || "inactive"))
       .catch(() => setTrainerStatus("inactive"))
       .finally(() => setCheckingTrainer(false));
-  }, [user?.id, roles.join(",")]); // only re-run if user id or roles change
+  }, [user?.id, roles.join(",")]); 
 
   if (loading || restoring || checkingTrainer) return <Spinner />;
   if (!user) return <Navigate to="/login" replace />;
 
-  // ── Trainer approval gate ──────────────────────────────────────────────────
   if (user.role === "trainer" && roles.includes("trainer")) {
     if (trainerStatus !== "active") {
       return <TrainerPendingScreen status={trainerStatus} />;
     }
   }
 
-  // ── Wrong role — redirect to their own dashboard ───────────────────────────
   if (!roles.includes(user.role)) {
     const dashMap = {
       admin:    "/admin",
@@ -195,14 +186,9 @@ export function RequireRole({ roles }) {
   return <Outlet />;
 }
 
-// ── RedirectIfAuth ────────────────────────────────────────────────────────────
-// Redirects logged-in users away from /login and /register
-// Shows "Signing you back in..." while restoring session
 export function RedirectIfAuth() {
   const { user, loading, restoring } = useAuth();
 
-  // Still restoring session from cookie — show inline restore UI
-  // (this is the "Signing you back in..." state)
   if (loading || restoring) return <RestoringScreen />;
 
   if (user) {
@@ -219,9 +205,6 @@ export function RedirectIfAuth() {
   return <Outlet />;
 }
 
-// ── RestoringScreen ───────────────────────────────────────────────────────────
-// Shows when we're silently restoring a session from the httpOnly cookie.
-// This is what the user sees instead of a flash of the login form.
 function RestoringScreen() {
   return (
     <div style={{

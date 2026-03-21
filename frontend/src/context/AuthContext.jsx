@@ -22,8 +22,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading]     = useState(true);
   const [restoring, setRestoring] = useState(false);
 
-  // Stable ref to current user for use inside broadcast listener
-  // Avoids stale closure — listener is registered once but needs latest user value
   const userRef = useRef(null);
   useEffect(() => { userRef.current = user; }, [user]);
 
@@ -38,17 +36,12 @@ export function AuthProvider({ children }) {
       switch (type) {
 
         case "LOGIN":
-          // Only adopt if this tab has NO user yet
-          // (handles: new blank tab opened after another tab logged in)
-          // If this tab already has ANY user (same or different) → ignore
           if (currentUser) break;
           setAccessToken(token);
           setUser(userData);
           break;
 
         case "LOGOUT":
-          // Only log out if SAME user logged out in another tab
-          // Tab with a different user active → completely ignore
           if (!currentUser) break;
           if (userData?.id && currentUser.id !== userData.id) break;
           clearAccessToken();
@@ -57,7 +50,6 @@ export function AuthProvider({ children }) {
           break;
 
         case "TOKEN_REFRESH":
-          // Only adopt new token if it belongs to the SAME user in this tab
           if (!currentUser) break;
           if (userData?.id && currentUser.id !== userData.id) break;
           setAccessToken(token);
@@ -69,14 +61,13 @@ export function AuthProvider({ children }) {
     };
 
     return () => { authChannel.onmessage = null; };
-  }, []); // registered once — userRef handles latest value without re-registering
+  }, []);
 
   // ── Session restore on mount ──────────────────────────────────────────────
   useEffect(() => {
     const hasSession = localStorage.getItem("fz_has_session");
 
     if (!hasSession) {
-      // Brand new visitor — skip refresh entirely
       setLoading(false);
       return;
     }
@@ -89,7 +80,6 @@ export function AuthProvider({ children }) {
         setUser(data.user);
       })
       .catch(() => {
-        // Cookie dead — clear flag so we don't retry on next visit
         localStorage.removeItem("fz_has_session");
         clearAccessToken();
         setUser(null);
@@ -108,8 +98,6 @@ export function AuthProvider({ children }) {
     setUser(data.user);
     localStorage.setItem("fz_has_session", "true");
 
-    // Broadcast to other tabs — but only tabs with NO user adopt this
-    // Tabs already logged in as someone else ignore it (see listener above)
     authChannel?.postMessage({
       type:     "LOGIN",
       token:    data.accessToken,
@@ -148,7 +136,6 @@ export function AuthProvider({ children }) {
     setUser(null);
     localStorage.removeItem("fz_has_session");
 
-    // Include userId so other tabs can check if this logout applies to them
     authChannel?.postMessage({
       type:     "LOGOUT",
       userData: { id: currentUser?.id },

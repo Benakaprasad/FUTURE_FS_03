@@ -14,7 +14,6 @@ function StatCard({ icon, label, value, accent }) {
   );
 }
 
-// ── Shared screen shell (logo + sign out) ─────────────────────
 function StatusScreen({ children }) {
   const { logout } = useAuth();
   return (
@@ -52,7 +51,6 @@ function StatusScreen({ children }) {
   );
 }
 
-// ── Pending Screen ────────────────────────────────────────────
 function PendingScreen({ user }) {
   return (
     <StatusScreen>
@@ -124,7 +122,6 @@ function PendingScreen({ user }) {
   );
 }
 
-// ── Rejection Screen ──────────────────────────────────────────
 function RejectionScreen({ profile, user }) {
   return (
     <StatusScreen>
@@ -191,7 +188,6 @@ function RejectionScreen({ profile, user }) {
   );
 }
 
-// ── Main Dashboard (active trainers only) ─────────────────────
 export default function TrainerDashboard() {
   const { user } = useAuth();
   const [profile,  setProfile]  = useState(null);

@@ -219,7 +219,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   );
 }
 
-// ── Desktop sidebar styles (unchanged from original) ──────────────────────────
+// ── Desktop sidebar styles ──────────────────────────
 const s = {
   sidebar: {
     position: "fixed", top: 0, left: 0, bottom: 0,

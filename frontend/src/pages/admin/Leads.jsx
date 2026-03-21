@@ -10,7 +10,7 @@ export default function AdminLeads() {
   const [leads,   setLeads]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast,   setToast]   = useState(null);
-  const [modal,   setModal]   = useState(null); // { type: 'add'|'edit'|'convert', data? }
+  const [modal,   setModal]   = useState(null); 
   const [confirm, setConfirm] = useState(null);
 
   const [form, setForm] = useState({
@@ -104,7 +104,6 @@ export default function AdminLeads() {
     }
   };
 
-  // Auto-calculate end date when plan + start date changes
   const calcEndDate = (type, start) => {
     if (!start) return "";
     const d = new Date(start);

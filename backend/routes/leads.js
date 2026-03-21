@@ -7,7 +7,7 @@ const Lead                   = require('../models/Lead');
 const { authenticate }       = require('../middleware/auth');
 const { authorize }          = require('../middleware/role');
 const { validate }           = require('../middleware/validate');
-const { ROLE_GROUPS, ROLES } = require('../constants/roles');  // ✅ added ROLES
+const { ROLE_GROUPS, ROLES } = require('../constants/roles');  
 const { LEAD_STATUSES, LEAD_SOURCES } = require('../constants/statuses');
 
 const leadRules = [
@@ -19,10 +19,7 @@ const leadRules = [
   body('notes').optional().trim().isLength({ max: 1000 }),
 ];
 
-// ✅ NO router.use() global gate — every route has explicit authenticate + authorize
-
 // POST /api/leads/enquire — customers self-submit enquiries
-// ✅ must be before /:id and before any staff-only routes
 router.post('/enquire',
   authenticate,
   authorize(ROLES.CUSTOMER),
@@ -51,7 +48,7 @@ router.post('/enquire',
   }
 );
 
-// GET /api/leads/stats — ✅ before /:id
+// GET /api/leads/stats — before /:id
 router.get('/stats',
   authenticate, authorize(ROLE_GROUPS.INTERNAL_STAFF),
   async (req, res, next) => {
@@ -74,7 +71,7 @@ router.get('/',
   }
 );
 
-// GET /api/leads/:id — ✅ after all named routes
+// GET /api/leads/:id — after all named routes
 router.get('/:id',
   authenticate, authorize(ROLE_GROUPS.INTERNAL_STAFF),
   async (req, res, next) => {
@@ -174,7 +171,6 @@ router.post('/:id/convert',
         return res.status(400).json({ error: 'Lead already converted' });
       }
 
-      // 2. Find or create user account
       let userId = lead.user_id;
 
       if (!userId) {
@@ -205,7 +201,6 @@ router.post('/:id/convert',
         }
       }
 
-      // 3. Find or create customer profile
       const { rows: existingCustomer } = await client.query(
         `SELECT id FROM customers WHERE user_id = $1`, [userId]
       );

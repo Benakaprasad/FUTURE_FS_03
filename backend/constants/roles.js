@@ -6,7 +6,6 @@ const ROLES = {
   CUSTOMER: 'customer',
 };
 
-// Role groups for middleware
 const ROLE_GROUPS = {
   INTERNAL_STAFF:  [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
   DECISION_MAKER:  [ROLES.ADMIN, ROLES.MANAGER],

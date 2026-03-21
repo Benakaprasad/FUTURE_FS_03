@@ -2,11 +2,9 @@ const pool = require('../config/database');
 
 const auditLog = (tableName, action) => {
   return async (req, res, next) => {
-    // Store original json method
     const originalJson = res.json.bind(res);
 
     res.json = async function (data) {
-      // Only log successful mutating operations
       if (res.statusCode >= 200 && res.statusCode < 300) {
         try {
           await pool.query(
@@ -24,7 +22,6 @@ const auditLog = (tableName, action) => {
             ]
           );
         } catch (err) {
-          // Never let audit log failure break the response
           console.error('Audit log error:', err.message);
         }
       }

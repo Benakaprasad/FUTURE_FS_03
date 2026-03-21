@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-// ── Badge ──────────────────────────────────────────────────────────────────────
 export function Badge({ status, colorMap }) {
   const defaults = {
     active:    { color: "#22C55E", bg: "#22C55E15", border: "#22C55E30" },
@@ -33,7 +32,6 @@ export function Badge({ status, colorMap }) {
   );
 }
 
-// ── Toast ──────────────────────────────────────────────────────────────────────
 export function Toast({ toast }) {
   if (!toast) return null;
   return (
@@ -50,7 +48,6 @@ export function Toast({ toast }) {
   );
 }
 
-// ── Loader ─────────────────────────────────────────────────────────────────────
 export function Loader({ color = "#FF1A1A" }) {
   return (
     <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
@@ -63,7 +60,6 @@ export function Loader({ color = "#FF1A1A" }) {
   );
 }
 
-// ── Confirm modal ──────────────────────────────────────────────────────────────
 export function ConfirmModal({ open, title, message, onConfirm, onCancel, confirmLabel = "Confirm", danger = false }) {
   if (!open) return null;
   return (
@@ -85,15 +81,14 @@ export function ConfirmModal({ open, title, message, onConfirm, onCancel, confir
   );
 }
 
-// ── DataTable ──────────────────────────────────────────────────────────────────
 export function DataTable({
-  cols,         // [{ key, label, render?, width? }]
-  rows,         // array of objects
+  cols,        
+  rows,         
   loading,
-  searchKeys,   // keys to search in
-  filterKey,    // key to filter by
-  filterOptions,// [{ value, label }]
-  actions,      // (row) => JSX
+  searchKeys,   
+  filterKey,    
+  filterOptions,
+  actions,      
   emptyText,
   pageSize = 15,
 }) {
