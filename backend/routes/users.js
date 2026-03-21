@@ -2,13 +2,13 @@ const express  = require('express');
 const { body } = require('express-validator');
 const router   = express.Router();
 
+const notify           = require('../helpers/notify');
 const User             = require('../models/User');
 const { authenticate } = require('../middleware/auth');
 const { authorize }    = require('../middleware/role');
 const { validate }     = require('../middleware/validate');
 const { ROLE_GROUPS, ROLES } = require('../constants/roles');
 
-// All user management — admin only
 router.use(authenticate, authorize(ROLE_GROUPS.ADMIN_ONLY));
 
 const createStaffRules = [
@@ -17,8 +17,8 @@ const createStaffRules = [
   body('email').trim().isEmail().normalizeEmail(),
   body('password').isLength({ min: 8 })
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
-  body('role').isIn([ROLES.MANAGER, ROLES.STAFF])
-    .withMessage('Can only create manager or staff accounts'),
+  body('role').isIn([ROLES.STAFF])
+    .withMessage('Can only create staff accounts'),
   body('full_name').optional().trim().isLength({ max: 100 }),
   body('phone').optional().trim().matches(/^[0-9+\-\s]{7,15}$/),
 ];
@@ -31,7 +31,7 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/users — create manager or staff
+// POST /api/users — create staff
 router.post('/', createStaffRules, validate, async (req, res, next) => {
   try {
     const { username, email, password, role, full_name, phone } = req.body;
@@ -49,7 +49,10 @@ router.post('/', createStaffRules, validate, async (req, res, next) => {
       created_by: req.user.id,
     });
 
-    res.status(201).json({ message: `${role} account created`, user });
+    // Notify admin a new staff account was created
+    await notify.staffCreated(user);
+
+    res.status(201).json({ message: 'Staff account created', user });
   } catch (err) { next(err); }
 });
 

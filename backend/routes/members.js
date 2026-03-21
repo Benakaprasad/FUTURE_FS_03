@@ -2,18 +2,19 @@ const express  = require('express');
 const { body } = require('express-validator');
 const router   = express.Router();
 
-const Member           = require('../models/Member');
-const Customer         = require('../models/Customer');
-const { authenticate }       = require('../middleware/auth');
-const { authorize }          = require('../middleware/role');
-const { validate }           = require('../middleware/validate');
-const { ROLE_GROUPS, ROLES } = require('../constants/roles'); 
+const notify               = require('../helpers/notify');
+const Member               = require('../models/Member');
+const Customer             = require('../models/Customer');
+const { authenticate }     = require('../middleware/auth');
+const { authorize }        = require('../middleware/role');
+const { validate }         = require('../middleware/validate');
+const { ROLE_GROUPS, ROLES }               = require('../constants/roles');
 const { MEMBERSHIP_TYPES, MEMBER_STATUSES } = require('../constants/statuses');
-const pool = require('../config/database');  
+const pool = require('../config/database');
 
 router.use(authenticate);
 
-// /my BEFORE /expiring, / and /:id
+// GET /api/members/my
 router.get('/my', authorize(ROLES.CUSTOMER), async (req, res, next) => {
   try {
     const customer = await Customer.findByUserId(req.user.id);
@@ -34,9 +35,9 @@ router.get('/my', authorize(ROLES.CUSTOMER), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// /expiring BEFORE /:id
+// GET /api/members/expiring
 router.get('/expiring',
-  authorize(ROLE_GROUPS.DECISION_MAKER),
+  authorize(ROLE_GROUPS.ADMIN_ONLY),
   async (req, res, next) => {
     try {
       const days    = parseInt(req.query.days) || 7;
@@ -46,7 +47,7 @@ router.get('/expiring',
   }
 );
 
-// GET /api/members — internal staff
+// GET /api/members
 router.get('/',
   authorize(ROLE_GROUPS.INTERNAL_STAFF),
   async (req, res, next) => {
@@ -57,7 +58,7 @@ router.get('/',
   }
 );
 
-// /:id LAST
+// GET /api/members/:id
 router.get('/:id',
   authorize(ROLE_GROUPS.INTERNAL_STAFF),
   async (req, res, next) => {
@@ -69,9 +70,9 @@ router.get('/:id',
   }
 );
 
-// POST /api/members — manual walk-in creation (manager/admin)
+// POST /api/members — manual walk-in creation
 router.post('/',
-  authorize(ROLE_GROUPS.DECISION_MAKER),
+  authorize(ROLE_GROUPS.ADMIN_ONLY),
   [
     body('customer_id').notEmpty().isInt(),
     body('membership_type').isIn(MEMBERSHIP_TYPES),
@@ -98,11 +99,16 @@ router.post('/',
         customer_id, membership_type, start_date, end_date,
         payment_status: amount_paid ? 'paid' : 'pending',
         amount_paid, admission_notes,
-        request_id: null,
-        created_by: req.user.id,
+        request_id:  null,
+        created_by:  req.user.id,
       });
 
       await Customer.updateStatus(customer_id, 'active');
+
+      // Notify admin — use customer name from the fetched customer object
+      const customerName = customer.full_name || customer.username || `Customer #${customer_id}`;
+      await notify.membershipRequest(customerName, membership_type);
+
       res.status(201).json({ message: 'Member created', member });
     } catch (err) { next(err); }
   }
@@ -110,7 +116,7 @@ router.post('/',
 
 // PATCH /api/members/:id/status
 router.patch('/:id/status',
-  authorize(ROLE_GROUPS.DECISION_MAKER),
+  authorize(ROLE_GROUPS.ADMIN_ONLY),
   [
     body('status').isIn(MEMBER_STATUSES),
   ],
@@ -124,7 +130,7 @@ router.patch('/:id/status',
   }
 );
 
-// DELETE /api/members/:id — admin only
+// DELETE /api/members/:id
 router.delete('/:id',
   authorize(ROLE_GROUPS.ADMIN_ONLY),
   async (req, res, next) => {

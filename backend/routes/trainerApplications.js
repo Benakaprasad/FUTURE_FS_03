@@ -1,7 +1,9 @@
 const express  = require('express');
 const { body } = require('express-validator');
+const bcrypt   = require('bcryptjs');
 const router   = express.Router();
 
+const notify             = require('../helpers/notify');
 const TrainerApplication = require('../models/TrainerApplication');
 const User               = require('../models/User');
 const Trainer            = require('../models/Trainer');
@@ -9,11 +11,11 @@ const { authenticate }   = require('../middleware/auth');
 const { authorize }      = require('../middleware/role');
 const { validate }       = require('../middleware/validate');
 const { ROLE_GROUPS }    = require('../constants/roles');
-const pool = require('../config/database');
+const pool               = require('../config/database');
 
-router.use(authenticate, authorize(ROLE_GROUPS.DECISION_MAKER));
+router.use(authenticate, authorize(ROLE_GROUPS.ADMIN_ONLY));
 
-// GET /api/trainer-applications
+// ── GET /api/trainer-applications ────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
     const { status } = req.query;
@@ -22,7 +24,7 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/trainer-applications/:id
+// ── GET /api/trainer-applications/:id ────────────────────────
 router.get('/:id', async (req, res, next) => {
   try {
     const application = await TrainerApplication.findById(req.params.id);
@@ -31,20 +33,23 @@ router.get('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PATCH /api/trainer-applications/:id/approve
+// ── PATCH /api/trainer-applications/:id/approve ───────────────
 router.patch('/:id/approve', [
   body('admin_notes').optional().trim(),
   body('username').trim().notEmpty().withMessage('Username required for trainer account'),
-  body('password').isLength({ min: 8 })
+  body('password')
+    .isLength({ min: 8 })
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage('Password must have uppercase, lowercase and number'),
   body('hourly_rate').optional().isFloat({ min: 0 }),
 ], validate, async (req, res, next) => {
   const client = await pool.connect();
+  let application = null;
+
   try {
     await client.query('BEGIN');
 
-    const application = await TrainerApplication.findById(req.params.id);
+    application = await TrainerApplication.findById(req.params.id);
     if (!application) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Application not found' });
@@ -61,8 +66,7 @@ router.patch('/:id/approve', [
     }
 
     // 1. Create user account for trainer
-    const bcrypt  = require('bcryptjs');
-    const hash    = await bcrypt.hash(req.body.password, 12);
+    const hash = await bcrypt.hash(req.body.password, 12);
 
     const { rows: userRows } = await client.query(
       `INSERT INTO users
@@ -90,11 +94,11 @@ router.patch('/:id/approve', [
       [
         newUserId,
         application.id,
-        application.specialization || null,
+        application.specialization   || null,
         application.experience_years || null,
-        application.certifications || null,
-        application.bio || null,
-        req.body.hourly_rate || null,
+        application.certifications   || null,
+        application.bio              || null,
+        req.body.hourly_rate         || null,
       ]
     );
 
@@ -109,19 +113,28 @@ router.patch('/:id/approve', [
 
     await client.query('COMMIT');
 
-    res.json({
-      message: 'Application approved. Trainer account created.',
-      trainer_username: req.body.username,
-    });
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
+    return;
   } finally {
     client.release();
   }
+
+  // ── Outside transaction — email + SSE notification ────────
+  await notify.trainerApproved({
+    full_name: application.full_name,
+    username:  req.body.username,
+    email:     application.email,
+  });
+
+  res.json({
+    message:          'Application approved. Trainer account created.',
+    trainer_username: req.body.username,
+  });
 });
 
-// PATCH /api/trainer-applications/:id/reject
+// ── PATCH /api/trainer-applications/:id/reject ────────────────
 router.patch('/:id/reject', [
   body('admin_notes').optional().trim(),
 ], validate, async (req, res, next) => {
@@ -133,8 +146,19 @@ router.patch('/:id/reject', [
     }
 
     await TrainerApplication.reject(
-      req.params.id, req.user.id, req.body.admin_notes
+      req.params.id, req.user.id, req.body.admin_notes || null
     );
+
+    // ── Outside DB call — email + SSE notification ────────
+    await notify.trainerRejected(
+      {
+        full_name: application.full_name,
+        username:  application.email,
+        email:     application.email,
+      },
+      req.body.admin_notes || null
+    );
+
     res.json({ message: 'Application rejected' });
   } catch (err) { next(err); }
 });

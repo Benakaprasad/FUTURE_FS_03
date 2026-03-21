@@ -3,16 +3,18 @@ const { body } = require('express-validator');
 const crypto   = require('crypto');
 const router   = express.Router();
 
+const notify               = require('../helpers/notify');
 const Payment              = require('../models/Payment');
 const Member               = require('../models/Member');
 const Customer             = require('../models/Customer');
 const { authenticate }     = require('../middleware/auth');
 const { authorize }        = require('../middleware/role');
 const { validate }         = require('../middleware/validate');
-const { ROLE_GROUPS, ROLES } = require('../constants/roles');
+const { ROLE_GROUPS, ROLES }              = require('../constants/roles');
 const { MEMBERSHIP_TYPES, PAYMENT_METHODS } = require('../constants/statuses');
+const pool = require('../config/database');
 
-// ── POST /api/payments/create-order (customer) ────────────────
+// POST /api/payments/create-order
 router.post('/create-order',
   authenticate, authorize(ROLES.CUSTOMER),
   [
@@ -41,7 +43,7 @@ router.post('/create-order',
   }
 );
 
-// ── POST /api/payments/verify (customer) ─────────────────────
+// POST /api/payments/verify
 router.post('/verify',
   authenticate, authorize(ROLES.CUSTOMER),
   [
@@ -53,6 +55,12 @@ router.post('/verify',
     try {
       const payment = await Payment.verifyAndCapture(req.body);
       if (!payment) return res.status(400).json({ error: 'Payment record not found' });
+
+      // Notify admin of online payment
+      const customer     = await Customer.findById(payment.customer_id);
+      const customerName = customer?.full_name || customer?.username || `Customer #${payment.customer_id}`;
+      await notify.paymentReceived(customerName, payment.amount);
+
       res.json({ message: 'Payment verified successfully', payment });
     } catch (err) {
       if (err.message === 'INVALID_SIGNATURE') {
@@ -63,7 +71,7 @@ router.post('/verify',
   }
 );
 
-// ── POST /api/payments/webhook (Razorpay server → your server) ─
+// POST /api/payments/webhook
 router.post('/webhook',
   express.raw({ type: 'application/json' }),
   async (req, res, next) => {
@@ -83,14 +91,22 @@ router.post('/webhook',
       const event = JSON.parse(body);
 
       if (event.event === 'payment.captured') {
-        const { order_id, id: payment_id, signature: sig } = event.payload.payment.entity;
-        // Idempotent — only update if still pending
-        await require('../config/database').query(
+        const { order_id, id: payment_id, amount } = event.payload.payment.entity;
+
+        const { rows } = await pool.query(
           `UPDATE payments
            SET status='captured', razorpay_payment_id=$1
-           WHERE razorpay_order_id=$2 AND status != 'captured'`,
+           WHERE razorpay_order_id=$2 AND status != 'captured'
+           RETURNING customer_id, amount`,
           [payment_id, order_id]
         );
+
+        // Notify admin via webhook capture too (idempotent — only fires if row updated)
+        if (rows[0]) {
+          const customer     = await Customer.findById(rows[0].customer_id);
+          const customerName = customer?.full_name || customer?.username || `Customer #${rows[0].customer_id}`;
+          await notify.paymentReceived(customerName, (rows[0].amount / 100).toFixed(2));
+        }
       }
 
       res.json({ received: true });
@@ -98,7 +114,7 @@ router.post('/webhook',
   }
 );
 
-// ── GET /api/payments (admin/manager) ────────────────────────
+// GET /api/payments
 router.get('/',
   authenticate, authorize(ROLE_GROUPS.DECISION_MAKER),
   async (req, res, next) => {
@@ -109,7 +125,7 @@ router.get('/',
   }
 );
 
-// ── POST /api/payments/manual (admin/manager) ────────────────
+// POST /api/payments/manual
 router.post('/manual',
   authenticate, authorize(ROLE_GROUPS.DECISION_MAKER),
   [
@@ -122,10 +138,17 @@ router.post('/manual',
   ], validate,
   async (req, res, next) => {
     try {
-      const payment = await Payment.recordManual({
-        ...req.body,
-        recorded_by: req.user.id,
-      });
+      const payment = await Payment.recordManual({ ...req.body, recorded_by: req.user.id });
+
+      if (payment) {
+        let customerName = `Customer #${req.body.customer_id || '?'}`;
+        if (req.body.customer_id) {
+          const customer = await Customer.findById(req.body.customer_id);
+          customerName   = customer?.full_name || customer?.username || customerName;
+        }
+        await notify.paymentReceived(customerName, req.body.amount);
+      }
+
       res.status(201).json({ message: 'Payment recorded', payment });
     } catch (err) { next(err); }
   }
