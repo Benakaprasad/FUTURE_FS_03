@@ -47,18 +47,18 @@ export default function CustomerMembership() {
         name: "FitZone Gym", description: `${plan.label} Membership`,
         order_id: data.order_id,
         handler: async (response) => {
-          try {
-            await api.post("/payments/verify", {
-              razorpay_order_id:   response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature:  response.razorpay_signature,
-              member_id:           data.member_id,
-            });
-            showToast("Payment successful! Membership activated. 🎉");
-            const res = await api.get("/members/my");
-            setMembership(res.data.members?.find((m) => m.status === "active") || null);
-          } catch { showToast("Verification failed. Contact support.", "error"); }
-        },
+        try {
+          await api.post("/payments/verify", {
+            razorpay_order_id:   response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature:  response.razorpay_signature,
+            membership_type:     plan.key,  // ← add this
+          });
+          showToast("Payment successful! Membership activated. 🎉");
+          const res = await api.get("/members/my");
+          setMembership(res.data.members?.find(m => m.status === "active") || null);
+        } catch { showToast("Verification failed. Contact support.", "error"); }
+      },
         prefill: { name: "", email: "", contact: "" },
         theme: { color: "#FF1A1A" },
       };

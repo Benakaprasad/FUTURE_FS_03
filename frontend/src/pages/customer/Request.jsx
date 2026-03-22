@@ -6,31 +6,35 @@ import { useAuth } from "../../context/AuthContext";
 import {
   Phone, Settings, CreditCard, ClipboardList, ChevronRight,
   Clock, CheckCircle, XCircle, Eye, Snowflake, TrendingUp,
-  Dumbbell, MessageSquare, ArrowRight, Check, BarChart2
+  Dumbbell, MessageSquare, ArrowRight, Check, BarChart2, Lock,
 } from "lucide-react";
 
 const T = {
-  red: "#FF1A1A", redDim: "rgba(255,26,26,0.12)",
-  gold: "#FFB800", cyan: "#00C2FF", green: "#22C55E", purple: "#A855F7",
-  glass: "rgba(255,255,255,0.03)", border: "rgba(255,255,255,0.07)",
-  muted: "rgba(255,255,255,0.35)", sub: "rgba(255,255,255,0.15)",
+  red:    "#FF1A1A", redDim: "rgba(255,26,26,0.12)",
+  gold:   "#FFB800", cyan:   "#00C2FF",
+  green:  "#22C55E", purple: "#A855F7",
+  glass:  "rgba(255,255,255,0.03)",
+  border: "rgba(255,255,255,0.07)",
+  muted:  "rgba(255,255,255,0.35)",
+  sub:    "rgba(255,255,255,0.15)",
 };
 
 const ENQUIRY_INTENTS = [
-  { value: "visit_gym",         label: "Visit the Gym",      icon: Dumbbell,      desc: "Come in and see our facilities" },
-  { value: "custom_plan",       label: "Custom Plan",        icon: Settings,      desc: "Discuss a tailored membership" },
-  { value: "personal_training", label: "Personal Training",  icon: TrendingUp,    desc: "1-on-1 coaching enquiry" },
-  { value: "group_classes",     label: "Group Classes",      icon: BarChart2,     desc: "Yoga, Zumba, HIIT and more" },
-  { value: "pricing",           label: "Pricing Query",      icon: CreditCard,    desc: "Ask about costs and offers" },
-  { value: "other",             label: "Other",              icon: MessageSquare, desc: "Any other question" },
+  { value: "visit_gym",         label: "Visit the Gym",     icon: Dumbbell,      desc: "Come in and see our facilities"   },
+  { value: "custom_plan",       label: "Custom Plan",       icon: Settings,      desc: "Discuss a tailored membership"    },
+  { value: "personal_training", label: "Personal Training", icon: TrendingUp,    desc: "1-on-1 coaching enquiry"          },
+  { value: "group_classes",     label: "Group Classes",     icon: BarChart2,     desc: "Yoga, Zumba, HIIT and more"       },
+  { value: "pricing",           label: "Pricing Query",     icon: CreditCard,    desc: "Ask about costs and offers"       },
+  { value: "other",             label: "Other",             icon: MessageSquare, desc: "Any other question"               },
 ];
 
+// ── Only shown to active members ──────────────────────────────
 const MEMBER_ACTIONS = [
   { value: "freeze",          label: "Freeze Membership", icon: Snowflake,     desc: "Temporarily pause your membership" },
-  { value: "cancellation",    label: "Cancel Membership", icon: XCircle,       desc: "Cancel your active membership" },
-  { value: "upgrade",         label: "Upgrade Plan",      icon: TrendingUp,    desc: "Move to a higher plan" },
-  { value: "trainer_request", label: "Trainer Request",   icon: Dumbbell,      desc: "Request a specific trainer" },
-  { value: "other",           label: "Other",             icon: ClipboardList, desc: "Any other account request" },
+  { value: "cancellation",    label: "Cancel Membership", icon: XCircle,       desc: "Cancel your active membership"     },
+  { value: "upgrade",         label: "Upgrade Plan",      icon: TrendingUp,    desc: "Move to a higher plan"             },
+  { value: "trainer_request", label: "Trainer Request",   icon: Dumbbell,      desc: "Request a specific trainer"        },
+  { value: "other",           label: "Other",             icon: ClipboardList, desc: "Any other account request"         },
 ];
 
 const TIME_SLOTS = [
@@ -40,51 +44,74 @@ const TIME_SLOTS = [
 ];
 
 const STATUS_MAP = {
-  pending:  { color: T.gold,   bg: "rgba(255,184,0,0.1)",   border: "rgba(255,184,0,0.25)",  icon: Clock,        label: "PENDING"  },
-  approved: { color: T.green,  bg: "rgba(34,197,94,0.1)",   border: "rgba(34,197,94,0.25)",  icon: CheckCircle,  label: "APPROVED" },
-  rejected: { color: T.red,    bg: "rgba(255,26,26,0.1)",   border: "rgba(255,26,26,0.25)",  icon: XCircle,      label: "REJECTED" },
-  reviewed: { color: T.cyan,   bg: "rgba(0,194,255,0.1)",   border: "rgba(0,194,255,0.25)",  icon: Eye,          label: "REVIEWED" },
+  pending:  { color: T.gold,  bg: "rgba(255,184,0,0.1)",  border: "rgba(255,184,0,0.25)",  icon: Clock,       label: "PENDING"  },
+  approved: { color: T.green, bg: "rgba(34,197,94,0.1)",  border: "rgba(34,197,94,0.25)",  icon: CheckCircle, label: "APPROVED" },
+  rejected: { color: T.red,   bg: "rgba(255,26,26,0.1)",  border: "rgba(255,26,26,0.25)",  icon: XCircle,     label: "REJECTED" },
+  reviewed: { color: T.cyan,  bg: "rgba(0,194,255,0.1)",  border: "rgba(0,194,255,0.25)",  icon: Eye,         label: "REVIEWED" },
 };
 
 const inputStyle = {
   width: "100%", background: "rgba(255,255,255,0.04)",
   border: "1px solid rgba(255,255,255,0.09)", borderRadius: 9,
   padding: "12px 15px", color: "#fff", fontSize: "0.875rem",
-  fontFamily: "'DM Sans', sans-serif", outline: "none",
-  transition: "border-color 0.2s",
+  fontFamily: "'DM Sans', sans-serif", outline: "none", transition: "border-color 0.2s",
 };
 
 export default function CustomerRequest() {
   const { user } = useAuth();
-  const [requests,   setRequests]   = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [toast,      setToast]      = useState(null);
-  const [activeFlow, setActiveFlow] = useState(null);
-  const [enquiryForm, setEnquiryForm] = useState({ intent: "", preferred_time: "", phone: "", notes: "" });
-  const [actionForm,  setActionForm]  = useState({ request_type: "", notes: "" });
+  const [requests,     setRequests]     = useState([]);
+  const [membership,   setMembership]   = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [submitting,   setSubmitting]   = useState(false);
+  const [toast,        setToast]        = useState(null);
+  const [activeFlow,   setActiveFlow]   = useState(null);
+  const [enquiryDone,  setEnquiryDone]  = useState(false);
+  const [enquiryForm,  setEnquiryForm]  = useState({ intent: "", preferred_time: "", phone: "", notes: "" });
+  const [actionForm,   setActionForm]   = useState({ request_type: "", notes: "" });
 
-  const fetchRequests = () => {
+  const hasActiveMembership = membership?.status === "active";
+
+  const fetchData = () => {
     setLoading(true);
-    api.get("/requests/my").then(({ data }) => setRequests(data.requests || [])).catch(() => setRequests([])).finally(() => setLoading(false));
+    Promise.all([
+      api.get("/requests/my").catch(() => ({ data: { requests: [] } })),
+      api.get("/members/my").catch(() => ({ data: { members: [] } })),
+    ]).then(([reqRes, memRes]) => {
+      setRequests(reqRes.data.requests || []);
+      const members = memRes.data.members || [];
+      setMembership(members.find(m => m.status === "active") || members[0] || null);
+    }).finally(() => setLoading(false));
   };
-  useEffect(() => { fetchRequests(); }, []);
 
-  const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
+  useEffect(() => { fetchData(); }, []);
 
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  // ── Enquiry: creates a Lead via authenticated endpoint ──────
   const handleEnquiry = async (e) => {
     e.preventDefault();
     if (!enquiryForm.intent) { showToast("Please select what you're enquiring about.", "error"); return; }
     setSubmitting(true);
     try {
-      await api.post("/leads/enquire", { name: user.full_name || user.username, email: user.email, phone: enquiryForm.phone || undefined, intent: enquiryForm.intent, preferred_time: enquiryForm.preferred_time || undefined, notes: enquiryForm.notes || undefined });
-      showToast("Enquiry sent! Our team will contact you within 24 hours. 🎉");
+      await api.post("/leads/enquire", {
+        intent:         enquiryForm.intent,
+        phone:          enquiryForm.phone   || undefined,
+        preferred_time: enquiryForm.preferred_time || undefined,
+        notes:          enquiryForm.notes   || undefined,
+      });
+      setEnquiryDone(true);
       setEnquiryForm({ intent: "", preferred_time: "", phone: "", notes: "" });
-      setActiveFlow(null);
-    } catch (err) { showToast(err.response?.data?.error || "Failed to send enquiry.", "error"); }
-    finally { setSubmitting(false); }
+    } catch (err) {
+      showToast(err.response?.data?.error || "Failed to send enquiry.", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
+  // ── Account action: creates a Request (members only) ────────
   const handleAction = async (e) => {
     e.preventDefault();
     if (!actionForm.request_type) { showToast("Please select an action type.", "error"); return; }
@@ -94,13 +121,16 @@ export default function CustomerRequest() {
       showToast("Request submitted! We'll respond within 24 hours.");
       setActionForm({ request_type: "", notes: "" });
       setActiveFlow(null);
-      fetchRequests();
-    } catch (err) { showToast(err.response?.data?.error || "Failed to submit request.", "error"); }
-    finally { setSubmitting(false); }
+      fetchData();
+    } catch (err) {
+      showToast(err.response?.data?.error || "Failed to submit request.", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const pendingCount  = requests.filter((r) => r.status === "pending").length;
-  const approvedCount = requests.filter((r) => r.status === "approved").length;
+  const pendingCount  = requests.filter(r => r.status === "pending").length;
+  const approvedCount = requests.filter(r => r.status === "approved").length;
 
   return (
     <DashLayout title="HELP & REQUESTS" subtitle="Get in touch or manage your membership">
@@ -113,6 +143,7 @@ export default function CustomerRequest() {
         .intent-card:hover { border-color:rgba(255,255,255,0.18)!important; }
         .req-input:focus, textarea:focus { border-color:#FF1A1A!important; box-shadow:0 0 0 3px rgba(255,26,26,0.1)!important; }
         .req-input::placeholder, textarea::placeholder { color:rgba(255,255,255,0.2); }
+        .flow-card-locked { opacity:0.5; cursor:not-allowed!important; }
         @media(max-width:768px){
           .flow-grid   { grid-template-columns:1fr!important; }
           .intent-grid { grid-template-columns:repeat(2,1fr)!important; }
@@ -139,43 +170,105 @@ export default function CustomerRequest() {
       </div>
 
       {/* ── Flow chooser ── */}
-      {!activeFlow && (
+      {!activeFlow && !enquiryDone && (
         <>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem" }}>
             <ChevronRight size={13} color={T.muted} />
             <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "2px", color: T.muted }}>WHAT WOULD YOU LIKE TO DO?</span>
           </div>
+
           <div className="flow-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "2rem" }}>
 
-            {[
-              { icon: Phone,        title: "Talk to Us",     desc: "Enquire about pricing, visit, or discuss a custom plan. We'll reach out within 24 hours.", tag: "Enquiry → Admin follows up", color: T.cyan,   flow: "enquire" },
-              { icon: Settings,     title: "Account Request",desc: "Freeze, cancel, upgrade or request a trainer change for your active membership.", tag: "Member action → Admin reviews", color: T.gold,   flow: "action"  },
-            ].map((c, i) => (
-              <div key={i} className="flow-card" style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 14, padding: "1.5rem", cursor: "pointer", transition: "all 0.2s", animation: `fadeUp 0.5s ease ${0.1 + i*0.07}s both`, position: "relative", overflow: "hidden" }}
-                onClick={() => setActiveFlow(c.flow)}>
-                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: c.color }} />
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: c.color + "15", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
-                  <c.icon size={20} color={c.color} />
-                </div>
-                <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.1rem", letterSpacing: "1px", color: "#fff", marginBottom: 6 }}>{c.title}</h3>
-                <p style={{ fontSize: "13px", color: T.muted, lineHeight: 1.5, marginBottom: 12 }}>{c.desc}</p>
-                <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.5px", padding: "3px 10px", borderRadius: 100, border: `1px solid ${c.color}30`, color: c.color, background: c.color + "0a" }}>{c.tag}</span>
-                <ArrowRight size={14} color={T.sub} style={{ position: "absolute", top: "1.5rem", right: "1.5rem" }} />
+            {/* Talk to Us — always available */}
+            <div className="flow-card" style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 14, padding: "1.5rem", cursor: "pointer", transition: "all 0.2s", animation: "fadeUp 0.5s ease 0.1s both", position: "relative", overflow: "hidden" }}
+              onClick={() => setActiveFlow("enquire")}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: T.cyan }} />
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: T.cyan + "15", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
+                <Phone size={20} color={T.cyan} />
               </div>
-            ))}
+              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.1rem", letterSpacing: "1px", color: "#fff", marginBottom: 6 }}>Talk to Us</h3>
+              <p style={{ fontSize: "13px", color: T.muted, lineHeight: 1.5, marginBottom: 12 }}>
+                Enquire about pricing, visit, or discuss a custom plan. We'll reach out within 24 hours.
+              </p>
+              <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.5px", padding: "3px 10px", borderRadius: 100, border: `1px solid ${T.cyan}30`, color: T.cyan, background: T.cyan + "0a" }}>
+                Enquiry → Admin follows up
+              </span>
+              <ArrowRight size={14} color={T.sub} style={{ position: "absolute", top: "1.5rem", right: "1.5rem" }} />
+            </div>
 
+            {/* Account Request — members only */}
+            <div
+              className={`flow-card${!hasActiveMembership ? " flow-card-locked" : ""}`}
+              style={{ background: T.glass, border: `1px solid ${hasActiveMembership ? T.border : "rgba(255,255,255,0.04)"}`, borderRadius: 14, padding: "1.5rem", cursor: hasActiveMembership ? "pointer" : "not-allowed", transition: "all 0.2s", animation: "fadeUp 0.5s ease 0.17s both", position: "relative", overflow: "hidden" }}
+              onClick={() => hasActiveMembership && setActiveFlow("action")}
+            >
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: hasActiveMembership ? T.gold : "rgba(255,255,255,0.08)" }} />
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: hasActiveMembership ? T.gold + "15" : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
+                {hasActiveMembership
+                  ? <Settings size={20} color={T.gold} />
+                  : <Lock    size={20} color="rgba(255,255,255,0.2)" />
+                }
+              </div>
+              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.1rem", letterSpacing: "1px", color: hasActiveMembership ? "#fff" : "rgba(255,255,255,0.25)", marginBottom: 6 }}>
+                Account Request
+              </h3>
+              <p style={{ fontSize: "13px", color: hasActiveMembership ? T.muted : "rgba(255,255,255,0.15)", lineHeight: 1.5, marginBottom: 12 }}>
+                {hasActiveMembership
+                  ? "Freeze, cancel, upgrade or request a trainer change for your active membership."
+                  : "Available once you have an active membership."}
+              </p>
+              {hasActiveMembership
+                ? <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.5px", padding: "3px 10px", borderRadius: 100, border: `1px solid ${T.gold}30`, color: T.gold, background: T.gold + "0a" }}>Member action → Admin reviews</span>
+                : <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.5px", padding: "3px 10px", borderRadius: 100, border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.02)" }}>🔒 Active membership required</span>
+              }
+              {hasActiveMembership && <ArrowRight size={14} color={T.sub} style={{ position: "absolute", top: "1.5rem", right: "1.5rem" }} />}
+            </div>
+
+            {/* Buy a Plan — always available */}
             <Link to="/dashboard/membership" className="flow-card" style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 14, padding: "1.5rem", textDecoration: "none", transition: "all 0.2s", animation: "fadeUp 0.5s ease 0.24s both", display: "block", position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: T.red }} />
               <div style={{ width: 44, height: 44, borderRadius: 12, background: T.redDim, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
                 <CreditCard size={20} color={T.red} />
               </div>
-              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.1rem", letterSpacing: "1px", color: "#fff", marginBottom: 6 }}>Buy a Plan</h3>
-              <p style={{ fontSize: "13px", color: T.muted, lineHeight: 1.5, marginBottom: 12 }}>Choose a plan and pay instantly via Razorpay. Membership activates immediately.</p>
-              <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.5px", padding: "3px 10px", borderRadius: 100, border: "1px solid rgba(255,26,26,0.3)", color: T.red, background: T.redDim }}>Instant payment → Auto activation</span>
+              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.1rem", letterSpacing: "1px", color: "#fff", marginBottom: 6 }}>
+                {hasActiveMembership ? "Renew / Upgrade" : "Buy a Plan"}
+              </h3>
+              <p style={{ fontSize: "13px", color: T.muted, lineHeight: 1.5, marginBottom: 12 }}>
+                {hasActiveMembership
+                  ? "Renew your plan or upgrade to a higher tier anytime."
+                  : "Choose a plan and pay instantly via Razorpay. Membership activates immediately."}
+              </p>
+              <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.5px", padding: "3px 10px", borderRadius: 100, border: "1px solid rgba(255,26,26,0.3)", color: T.red, background: T.redDim }}>
+                Instant payment → Auto activation
+              </span>
               <ArrowRight size={14} color={T.sub} style={{ position: "absolute", top: "1.5rem", right: "1.5rem" }} />
             </Link>
           </div>
         </>
+      )}
+
+      {/* ── Enquiry submitted confirmation ── */}
+      {enquiryDone && (
+        <div style={{ textAlign: "center", padding: "3rem 2rem", background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 16, marginBottom: "2rem", animation: "fadeUp 0.4s ease both" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(34,197,94,0.1)", border: "2px solid rgba(34,197,94,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
+            <Check size={24} color={T.green} />
+          </div>
+          <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.5rem", color: "#fff", letterSpacing: "2px", marginBottom: "0.75rem" }}>ENQUIRY RECEIVED</h3>
+          <p style={{ fontSize: "0.9rem", color: T.muted, marginBottom: "0.5rem" }}>
+            Our team will contact you on your registered phone number within 24 hours.
+          </p>
+          <p style={{ fontSize: "12px", color: T.sub, marginBottom: "1.5rem" }}>
+            In the meantime, you can browse our plans and pay online if you're ready.
+          </p>
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <button onClick={() => setEnquiryDone(false)} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 8, color: T.muted, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, cursor: "pointer", fontSize: "13px" }}>
+              Submit Another
+            </button>
+            <Link to="/dashboard/membership" style={{ padding: "10px 20px", background: "linear-gradient(135deg,#FF1A1A,#cc0000)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "13px", borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              Browse Plans <ArrowRight size={13} />
+            </Link>
+          </div>
+        </div>
       )}
 
       {/* ── Enquiry form ── */}
@@ -197,7 +290,7 @@ export default function CustomerRequest() {
             <div className="intent-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: "0.75rem", marginBottom: "1.5rem" }}>
               {ENQUIRY_INTENTS.map((t) => (
                 <div key={t.value} className="intent-card"
-                  onClick={() => setEnquiryForm((p) => ({ ...p, intent: t.value }))}
+                  onClick={() => setEnquiryForm(p => ({ ...p, intent: t.value }))}
                   style={{ border: `1px solid ${enquiryForm.intent === t.value ? T.cyan : T.border}`, borderRadius: 10, padding: "0.875rem", cursor: "pointer", transition: "all 0.2s", background: enquiryForm.intent === t.value ? "rgba(0,194,255,0.08)" : T.glass }}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: T.cyan + "15", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
                     <t.icon size={15} color={enquiryForm.intent === t.value ? T.cyan : T.muted} />
@@ -212,7 +305,7 @@ export default function CustomerRequest() {
             <div className="time-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.625rem", marginBottom: "1.5rem" }}>
               {TIME_SLOTS.map((t) => (
                 <button key={t.value} type="button"
-                  onClick={() => setEnquiryForm((p) => ({ ...p, preferred_time: p.preferred_time === t.value ? "" : t.value }))}
+                  onClick={() => setEnquiryForm(p => ({ ...p, preferred_time: p.preferred_time === t.value ? "" : t.value }))}
                   style={{ padding: "10px", background: enquiryForm.preferred_time === t.value ? "rgba(0,194,255,0.08)" : T.glass, border: `1px solid ${enquiryForm.preferred_time === t.value ? T.cyan : T.border}`, borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", transition: "all 0.2s", textAlign: "center" }}>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: enquiryForm.preferred_time === t.value ? T.cyan : "#fff" }}>{t.label}</div>
                   <div style={{ fontSize: "11px", color: T.muted, marginTop: 2 }}>{t.sub}</div>
@@ -221,27 +314,31 @@ export default function CustomerRequest() {
             </div>
 
             <div style={{ marginBottom: "1.25rem" }}>
-              <FieldLabel>Phone number (optional)</FieldLabel>
-              <input className="req-input" type="tel" placeholder="+91 98765 43210" value={enquiryForm.phone} onChange={(e) => setEnquiryForm((p) => ({ ...p, phone: e.target.value }))} style={inputStyle} />
+              <FieldLabel>Phone number (optional — for callback)</FieldLabel>
+              <input className="req-input" type="tel" placeholder="+91 98765 43210" value={enquiryForm.phone} onChange={e => setEnquiryForm(p => ({ ...p, phone: e.target.value }))} style={inputStyle} />
             </div>
-
             <div style={{ marginBottom: "1.75rem" }}>
               <FieldLabel>Anything else you'd like us to know?</FieldLabel>
-              <textarea rows={3} placeholder="e.g. I'm interested in the quarterly plan and want to know about group yoga classes..." value={enquiryForm.notes} onChange={(e) => setEnquiryForm((p) => ({ ...p, notes: e.target.value }))} style={{ ...inputStyle, resize: "vertical" }} />
+              <textarea rows={3} placeholder="e.g. Interested in quarterly plan, want to know about yoga classes..." value={enquiryForm.notes} onChange={e => setEnquiryForm(p => ({ ...p, notes: e.target.value }))} style={{ ...inputStyle, resize: "vertical" }} />
+            </div>
+
+            {/* What happens next */}
+            <div style={{ background: "rgba(0,194,255,0.04)", border: "1px solid rgba(0,194,255,0.15)", borderRadius: 10, padding: "0.875rem 1rem", marginBottom: "1.5rem", fontSize: "12px", color: T.muted, lineHeight: 1.6 }}>
+              📞 After submitting, our staff will call you within 24 hours. If you're ready, you can also <Link to="/dashboard/membership" style={{ color: T.cyan, textDecoration: "none", fontWeight: 700 }}>buy a plan directly</Link> anytime.
             </div>
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button type="button" onClick={() => setActiveFlow(null)} style={{ padding: "12px 24px", background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 9, color: T.muted, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, cursor: "pointer" }}>Cancel</button>
               <button type="submit" disabled={submitting} style={{ flex: 1, padding: 13, background: `linear-gradient(135deg, ${T.cyan}, #0099cc)`, color: "#fff", fontFamily: "'DM Sans',sans-serif", fontWeight: 700, fontSize: "0.95rem", border: "none", borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                {submitting ? <><Spin/> Sending…</> : <>Send Enquiry <ArrowRight size={14}/></>}
+                {submitting ? <><Spin /> Sending…</> : <>Send Enquiry <ArrowRight size={14} /></>}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* ── Action form ── */}
-      {activeFlow === "action" && (
+      {/* ── Account action form — members only ── */}
+      {activeFlow === "action" && hasActiveMembership && (
         <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 16, padding: "2rem", marginBottom: "2rem", animation: "fadeUp 0.3s ease both" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem" }}>
             <div>
@@ -259,7 +356,7 @@ export default function CustomerRequest() {
             <div className="intent-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: "0.75rem", marginBottom: "1.5rem" }}>
               {MEMBER_ACTIONS.map((t) => (
                 <div key={t.value} className="intent-card"
-                  onClick={() => setActionForm((p) => ({ ...p, request_type: t.value }))}
+                  onClick={() => setActionForm(p => ({ ...p, request_type: t.value }))}
                   style={{ border: `1px solid ${actionForm.request_type === t.value ? T.gold : T.border}`, borderRadius: 10, padding: "0.875rem", cursor: "pointer", transition: "all 0.2s", background: actionForm.request_type === t.value ? "rgba(255,184,0,0.08)" : T.glass }}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: T.gold + "15", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
                     <t.icon size={15} color={actionForm.request_type === t.value ? T.gold : T.muted} />
@@ -269,16 +366,14 @@ export default function CustomerRequest() {
                 </div>
               ))}
             </div>
-
             <div style={{ marginBottom: "1.75rem" }}>
               <FieldLabel>Details / Message</FieldLabel>
-              <textarea rows={4} placeholder="Describe your request in detail..." value={actionForm.notes} onChange={(e) => setActionForm((p) => ({ ...p, notes: e.target.value }))} style={{ ...inputStyle, resize: "vertical" }} />
+              <textarea rows={4} placeholder="Describe your request in detail..." value={actionForm.notes} onChange={e => setActionForm(p => ({ ...p, notes: e.target.value }))} style={{ ...inputStyle, resize: "vertical" }} />
             </div>
-
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button type="button" onClick={() => setActiveFlow(null)} style={{ padding: "12px 24px", background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 9, color: T.muted, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, cursor: "pointer" }}>Cancel</button>
               <button type="submit" disabled={submitting} style={{ flex: 1, padding: 13, background: `linear-gradient(135deg,${T.gold},#cc9200)`, color: "#000", fontFamily: "'DM Sans',sans-serif", fontWeight: 700, fontSize: "0.95rem", border: "none", borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                {submitting ? <><Spin dark/> Submitting…</> : <>Submit Request <ArrowRight size={14}/></>}
+                {submitting ? <><Spin dark /> Submitting…</> : <>Submit Request <ArrowRight size={14} /></>}
               </button>
             </div>
           </form>
@@ -286,7 +381,7 @@ export default function CustomerRequest() {
       )}
 
       {/* ── Past requests ── */}
-      {!activeFlow && (
+      {!activeFlow && !enquiryDone && (
         <>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: "2rem", marginBottom: "1rem" }}>
             <ChevronRight size={13} color={T.muted} />
@@ -301,7 +396,7 @@ export default function CustomerRequest() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {requests.map((r, i) => {
                 const sc      = STATUS_MAP[r.status] || { color: "#fff", bg: T.glass, border: T.border, icon: ClipboardList, label: r.status?.toUpperCase() };
-                const action  = MEMBER_ACTIONS.find((a) => a.value === r.request_type);
+                const action  = MEMBER_ACTIONS.find(a => a.value === r.request_type);
                 const IconComp = action?.icon || ClipboardList;
                 return (
                   <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", background: T.glass, border: `1px solid ${T.border}`, borderRadius: 12, padding: "1.25rem 1.5rem", gap: "1rem", animation: `fadeUp 0.4s ease ${i * 0.04}s both` }}>
@@ -311,7 +406,7 @@ export default function CustomerRequest() {
                       </div>
                       <div>
                         <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "#fff", marginBottom: 3 }}>
-                          {action?.label || r.membership_type?.replace(/_/g," ") || "Account Request"}
+                          {action?.label || r.request_type?.replace(/_/g," ") || "Account Request"}
                         </p>
                         <p style={{ fontSize: "12px", color: T.muted, marginBottom: 4 }}>
                           {new Date(r.created_at).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
@@ -326,8 +421,7 @@ export default function CustomerRequest() {
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "10px", fontWeight: 800, letterSpacing: "1px", padding: "4px 10px", borderRadius: 100, flexShrink: 0, color: sc.color, background: sc.bg, border: `1px solid ${sc.border}` }}>
-                      <sc.icon size={10} />
-                      {sc.label}
+                      <sc.icon size={10} /> {sc.label}
                     </div>
                   </div>
                 );
@@ -349,7 +443,6 @@ export default function CustomerRequest() {
 function FieldLabel({ children }) {
   return <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "0.75rem" }}>{children}</div>;
 }
-
 function Loader() {
   return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "5rem", gap: 16 }}>
@@ -358,11 +451,9 @@ function Loader() {
     </div>
   );
 }
-
 function SmallLoader() {
   return <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}><div style={{ width: 24, height: 24, border: "2px solid rgba(255,26,26,0.15)", borderTop: "2px solid #FF1A1A", borderRadius: "50%", animation: "spin 0.75s linear infinite" }} /></div>;
 }
-
 function Spin({ dark }) {
-  return <span style={{ width: 14, height: 14, border: `2px solid ${dark?"rgba(0,0,0,0.2)":"rgba(255,255,255,0.3)"}`, borderTop: `2px solid ${dark?"#000":"#fff"}`, borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />;
+  return <span style={{ width: 14, height: 14, border: `2px solid ${dark ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.3)"}`, borderTop: `2px solid ${dark ? "#000" : "#fff"}`, borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />;
 }

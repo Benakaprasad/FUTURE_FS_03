@@ -4,7 +4,8 @@ class Lead {
   static async findAll({ search, status, createdBy } = {}) {
     let query = `
       SELECT l.*,
-             u.username AS created_by_username,
+             l.user_id,
+             u.username  AS created_by_username,
              u.full_name AS created_by_fullname
       FROM leads l
       LEFT JOIN users u ON l.created_by = u.id
@@ -37,6 +38,7 @@ class Lead {
   static async findById(id) {
     const { rows } = await pool.query(
       `SELECT l.*,
+              l.user_id,
               u.username AS created_by_username
        FROM leads l
        LEFT JOIN users u ON l.created_by = u.id
@@ -46,13 +48,22 @@ class Lead {
     return rows[0] || null;
   }
 
-  static async create({ name, email, phone, source, status, notes, created_by }) {
+  // ── Fixed: now accepts user_id ─────────────────────────────
+  static async create({ name, email, phone, source, status, notes, created_by, user_id }) {
     const { rows } = await pool.query(
-      `INSERT INTO leads (name, email, phone, source, status, notes, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO leads (name, email, phone, source, status, notes, created_by, user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [name, email, phone || null, source || 'walk-in',
-       status || 'new', notes || null, created_by]
+      [
+        name,
+        email,
+        phone      || null,
+        source     || 'walk-in',
+        status     || 'new',
+        notes      || null,
+        created_by || null,
+        user_id    || null,   // ← new
+      ]
     );
     return rows[0];
   }
