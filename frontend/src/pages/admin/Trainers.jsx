@@ -33,42 +33,112 @@ const STATUS_CONFIG = {
 
 function StatusDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
-  const cfg = STATUS_CONFIG[value] || STATUS_CONFIG.inactive;
-
+  const ref             = useRef(null);
+  const cfg             = STATUS_CONFIG[value] || STATUS_CONFIG.inactive;
+ 
+  // Close on outside click or Escape
+  useEffect(() => {
+    if (!open) return;
+ 
+    const onClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+ 
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown",   onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown",   onKeyDown);
+    };
+  }, [open]);
+ 
   return (
-    <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
-      <button onClick={() => setOpen(o => !o)} style={{
-        display: "flex", alignItems: "center", gap: "6px",
-        padding: "5px 10px 5px 8px", borderRadius: "100px",
-        background: cfg.bg, border: `1px solid ${cfg.border}`,
-        color: cfg.color, fontSize: "11px", fontWeight: 800,
-        cursor: "pointer", fontFamily: "'DM Sans',sans-serif",
-      }}>
-        <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color }} />
+    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
+ 
+      {/* Toggle pill — stopPropagation here prevents row click */}
+      <button
+        onMouseDown={(e) => e.stopPropagation()}   // stops DataTable row handler
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        style={{
+          display:    "flex",
+          alignItems: "center",
+          gap:        "6px",
+          padding:    "5px 10px 5px 8px",
+          borderRadius: "100px",
+          background: cfg.bg,
+          border:     `1px solid ${cfg.border}`,
+          color:      cfg.color,
+          fontSize:   "11px",
+          fontWeight: 800,
+          cursor:     "pointer",
+          fontFamily: "'DM Sans', sans-serif",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, flexShrink: 0 }} />
         {cfg.label}
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="3" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+        <svg
+          width="10" height="10" viewBox="0 0 24 24"
+          fill="none" stroke={cfg.color} strokeWidth="3"
+          style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}
+        >
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
+ 
+      {/* Dropdown menu */}
       {open && (
-        <>
-          <div style={{ position: "fixed", inset: 0, zIndex: 999 }} onClick={() => setOpen(false)} />
-          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", overflow: "hidden", zIndex: 1000, boxShadow: "0 8px 32px rgba(0,0,0,0.6)", minWidth: "130px" }}>
-            {Object.entries(STATUS_CONFIG).map(([key, c]) => (
-              <button key={key} onClick={() => { onChange(key); setOpen(false); }} style={{
-                display: "flex", alignItems: "center", gap: "8px",
-                width: "100%", padding: "10px 14px",
+        <div style={{
+          position:  "absolute",
+          top:       "calc(100% + 6px)",
+          left:      0,
+          background: "#111",
+          border:    "1px solid rgba(255,255,255,0.1)",
+          borderRadius: "10px",
+          overflow:  "hidden",
+          zIndex:    1000,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+          minWidth:  "130px",
+        }}>
+          {Object.entries(STATUS_CONFIG).map(([key, c]) => (
+            <button
+              key={key}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(key);
+                setOpen(false);
+              }}
+              style={{
+                display:    "flex",
+                alignItems: "center",
+                gap:        "8px",
+                width:      "100%",
+                padding:    "10px 14px",
                 background: key === value ? c.bg : "transparent",
-                border: "none", cursor: "pointer",
-                fontFamily: "'DM Sans',sans-serif",
+                border:     "none",
+                cursor:     "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                transition: "background 0.15s",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color, flexShrink: 0 }} />
+              <span style={{
+                fontSize:   "12px",
+                fontWeight: 700,
+                color:      key === value ? c.color : "rgba(255,255,255,0.6)",
               }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color }} />
-                <span style={{ fontSize: "12px", fontWeight: 700, color: key === value ? c.color : "rgba(255,255,255,0.6)" }}>{c.label}</span>
-                {key === value && <span style={{ marginLeft: "auto", fontSize: "10px", color: c.color }}>✓</span>}
-              </button>
-            ))}
-          </div>
-        </>
+                {c.label}
+              </span>
+              {key === value && (
+                <span style={{ marginLeft: "auto", fontSize: "10px", color: c.color }}>✓</span>
+              )}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
