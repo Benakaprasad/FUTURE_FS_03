@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-
+import FitZoneChatbot from "../../components/FitZoneChatbot";
 const PHRASES = [
   "TRAIN HARD.",
   "PUSH LIMITS.",
@@ -5279,6 +5279,7 @@ input, textarea { cursor: text !important; }
           />
         ))}
       </div>
+      <FitZoneChatbot /> 
     </div>
   );
 }

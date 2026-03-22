@@ -107,4 +107,11 @@ module.exports = {
     message:      `₹${amount} received from ${customer_name}.`,
     target_roles: ['admin', 'staff'],
   }),
+
+  chatbotLead: (name, summary) => createNotification({
+  type:         'membership_request',
+  title:        '💬 Chatbot Lead Captured',
+  message:      `${name} enquired via chatbot${summary ? ` — "${summary.slice(0, 80)}"` : ''}.`,
+  target_roles: ['admin', 'staff'],
+}),
 };
