@@ -83,8 +83,7 @@ export default function App() {
 
           </Routes>
 
-          {/* Chatbot — outside Routes so it never unmounts on navigation.
-              ChatbotGate hides it on all private/auth routes.           */}
+          {/* Chatbot — outside Routes so it never unmounts on navigation. */}
           <ChatbotGate />
 
         </NotificationProvider>
