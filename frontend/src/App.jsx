@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { RequireAuth, RequireRole, RedirectIfAuth } from "./components/ProtectedRoute";
@@ -24,6 +24,16 @@ import AdminPayments     from "./pages/admin/Payments";
 import TrainerDashboard from "./pages/trainer/Dashboard";
 import TrainerMembers   from "./pages/trainer/Members";
 import TrainerSchedule  from "./pages/trainer/Schedule";
+
+import FitZoneChatbot from "./components/FitZoneChatbot";
+
+const PRIVATE_PREFIXES = ["/admin", "/trainer", "/dashboard", "/login", "/register"];
+
+function ChatbotGate() {
+  const { pathname } = useLocation();
+  const isPrivate = PRIVATE_PREFIXES.some(p => pathname.startsWith(p));
+  return isPrivate ? null : <FitZoneChatbot />;
+}
 
 export default function App() {
   return (
@@ -72,6 +82,11 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
 
           </Routes>
+
+          {/* Chatbot — outside Routes so it never unmounts on navigation.
+              ChatbotGate hides it on all private/auth routes.           */}
+          <ChatbotGate />
+
         </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
