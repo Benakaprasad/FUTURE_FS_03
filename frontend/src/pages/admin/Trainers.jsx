@@ -430,7 +430,7 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div style={{ padding: "1.5rem 2rem", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, background: "#0a0a0a", zIndex: 1 }}>
+          <div style={{ padding: "1.5rem 2rem 1.5rem", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, background: "#0a0a0a", zIndex: 10 }}>
 
             {/* Inactive ribbon */}
             {isInactive && (
@@ -506,7 +506,7 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                       background:  disabled ? "rgba(255,255,255,0.03)" : "linear-gradient(135deg,#FF1A1A,#cc1010)",
                       border:      disabled ? "1px solid rgba(255,255,255,0.07)" : "none",
                       borderRadius: "10px",
-                      color:       disabled ? T.sub : "#fff",
+                      color:       disabled ? T.muted : "#fff",
                       fontSize:    "12px", fontWeight: 700,
                       fontFamily:  "'DM Sans',sans-serif",
                       cursor:      disabled ? "not-allowed" : "pointer",
