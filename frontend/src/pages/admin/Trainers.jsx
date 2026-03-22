@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import DashLayout from "../../components/DashLayout";
 import { DataTable, Toast } from "../../components/AdminUi";
 import { useAuth } from "../../context/AuthContext";
@@ -26,83 +27,106 @@ const SPEC_COLORS = {
 };
 
 const STATUS_CONFIG = {
-  active:   { color: T.green,  bg: "rgba(34,197,94,0.1)",   border: "rgba(34,197,94,0.25)",  label: "Active"   },
-  on_leave: { color: T.gold,   bg: "rgba(255,184,0,0.1)",   border: "rgba(255,184,0,0.25)",  label: "On Leave" },
+  active:   { color: T.green,  bg: "rgba(34,197,94,0.1)",    border: "rgba(34,197,94,0.25)",  label: "Active"   },
+  on_leave: { color: T.gold,   bg: "rgba(255,184,0,0.1)",    border: "rgba(255,184,0,0.25)",  label: "On Leave" },
   inactive: { color: T.muted,  bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.1)", label: "Inactive" },
 };
 
+// ── Portal dropdown — escapes any overflow:hidden/auto parent ──
 function StatusDropdown({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ref             = useRef(null);
-  const cfg             = STATUS_CONFIG[value] || STATUS_CONFIG.inactive;
- 
+  const [open,    setOpen]   = useState(false);
+  const btnRef              = useRef(null);
+  const menuRef             = useRef(null);
+  const [pos,     setPos]   = useState({ top: 0, left: 0, width: 0 });
+  const cfg = STATUS_CONFIG[value] || STATUS_CONFIG.inactive;
+
+  // Recalculate menu position whenever it opens
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    setPos({ top: r.bottom + 6, left: r.left, width: r.width });
+  }, [open]);
+
   // Close on outside click or Escape
   useEffect(() => {
     if (!open) return;
- 
-    const onClickOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    const onDown = (e) => {
+      if (
+        btnRef.current  && !btnRef.current.contains(e.target) &&
+        menuRef.current && !menuRef.current.contains(e.target)
+      ) setOpen(false);
     };
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") setOpen(false);
-    };
- 
-    document.addEventListener("mousedown", onClickOutside);
-    document.addEventListener("keydown",   onKeyDown);
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown",   onKey);
     return () => {
-      document.removeEventListener("mousedown", onClickOutside);
-      document.removeEventListener("keydown",   onKeyDown);
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown",   onKey);
     };
   }, [open]);
- 
+
+  // Close + reposition on scroll/resize
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("scroll",  close, true);
+    window.addEventListener("resize",  close);
+    return () => {
+      window.removeEventListener("scroll",  close, true);
+      window.removeEventListener("resize",  close);
+    };
+  }, [open]);
+
   return (
-    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
- 
-      {/* Toggle pill — stopPropagation here prevents row click */}
+    <>
+      {/* Trigger pill */}
       <button
-        onMouseDown={(e) => e.stopPropagation()}   // stops DataTable row handler
-        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        ref={btnRef}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e)     => { e.stopPropagation(); setOpen(o => !o); }}
         style={{
-          display:    "flex",
-          alignItems: "center",
-          gap:        "6px",
-          padding:    "5px 10px 5px 8px",
+          display:      "flex",
+          alignItems:   "center",
+          gap:          "6px",
+          padding:      "5px 10px 5px 8px",
           borderRadius: "100px",
-          background: cfg.bg,
-          border:     `1px solid ${cfg.border}`,
-          color:      cfg.color,
-          fontSize:   "11px",
-          fontWeight: 800,
-          cursor:     "pointer",
-          fontFamily: "'DM Sans', sans-serif",
-          whiteSpace: "nowrap",
+          background:   cfg.bg,
+          border:       `1px solid ${cfg.border}`,
+          color:        cfg.color,
+          fontSize:     "11px",
+          fontWeight:   800,
+          cursor:       "pointer",
+          fontFamily:   "'DM Sans', sans-serif",
+          whiteSpace:   "nowrap",
         }}
       >
         <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, flexShrink: 0 }} />
         {cfg.label}
-        <svg
-          width="10" height="10" viewBox="0 0 24 24"
-          fill="none" stroke={cfg.color} strokeWidth="3"
-          style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}
-        >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+          stroke={cfg.color} strokeWidth="3"
+          style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}>
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
- 
-      {/* Dropdown menu */}
-      {open && (
-        <div style={{
-          position:  "absolute",
-          top:       "calc(100% + 6px)",
-          left:      0,
-          background: "#111",
-          border:    "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "10px",
-          overflow:  "hidden",
-          zIndex:    1000,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-          minWidth:  "130px",
-        }}>
+
+      {/* Menu rendered in <body> via portal — no overflow clipping */}
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            position:     "fixed",
+            top:          pos.top,
+            left:         pos.left,
+            minWidth:     "130px",
+            background:   "#111",
+            border:       "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "10px",
+            overflow:     "hidden",
+            zIndex:       99999,
+            boxShadow:    "0 8px 32px rgba(0,0,0,0.7)",
+          }}
+        >
           {Object.entries(STATUS_CONFIG).map(([key, c]) => (
             <button
               key={key}
@@ -126,11 +150,7 @@ function StatusDropdown({ value, onChange }) {
               }}
             >
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color, flexShrink: 0 }} />
-              <span style={{
-                fontSize:   "12px",
-                fontWeight: 700,
-                color:      key === value ? c.color : "rgba(255,255,255,0.6)",
-              }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: key === value ? c.color : "rgba(255,255,255,0.6)" }}>
                 {c.label}
               </span>
               {key === value && (
@@ -138,7 +158,49 @@ function StatusDropdown({ value, onChange }) {
               )}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+// ── Expandable text block ──────────────────────────────────────
+const BIO_LIMIT = 160;
+
+function ExpandableText({ text, label = "BIO" }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text && text.length > BIO_LIMIT;
+  const shown  = expanded || !isLong ? text : text.slice(0, BIO_LIMIT).trimEnd() + "…";
+
+  return (
+    <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 10, padding: "1rem" }}>
+      <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, marginBottom: 6 }}>
+        {label}
+      </p>
+      <p style={{ fontSize: "0.875rem", color: T.muted, lineHeight: 1.7, margin: 0 }}>
+        {shown}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          style={{
+            marginTop:  "8px",
+            background: "none",
+            border:     "none",
+            padding:    0,
+            cursor:     "pointer",
+            fontSize:   "12px",
+            fontWeight: 700,
+            color:      T.red,
+            fontFamily: "'DM Sans', sans-serif",
+            display:    "flex",
+            alignItems: "center",
+            gap:        "4px",
+          }}
+        >
+          {expanded ? "Show less ↑" : "View full ↓"}
+        </button>
       )}
     </div>
   );
@@ -152,7 +214,6 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
   const [toast,      setToast]      = useState(null);
 
   const specColor = SPEC_COLORS[trainer.specialization] || T.red;
-  const statusCfg = STATUS_CONFIG[trainer.status] || STATUS_CONFIG.active;
 
   const handleAssign = async (e) => {
     e.preventDefault();
@@ -170,15 +231,17 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
     }
   };
 
-  // Unassigned members only
   const unassigned = members.filter(m => !m.trainer_id && m.status === "active");
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", justifyContent: "flex-end", zIndex: 9000, backdropFilter: "blur(4px)" }}
-      onClick={onClose}>
-      <div style={{ width: "100%", maxWidth: "460px", height: "100%", background: "#0a0a0a", borderLeft: "1px solid rgba(255,255,255,0.08)", overflowY: "auto", animation: "slideRight 0.3s cubic-bezier(0.16,1,0.3,1)" }}
-        onClick={e => e.stopPropagation()}>
-
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", justifyContent: "flex-end", zIndex: 9000, backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <div
+        style={{ width: "100%", maxWidth: "460px", height: "100%", background: "#0a0a0a", borderLeft: "1px solid rgba(255,255,255,0.08)", overflowY: "auto", animation: "slideRight 0.3s cubic-bezier(0.16,1,0.3,1)" }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div style={{ padding: "1.5rem 2rem", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, background: "#0a0a0a", zIndex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -187,25 +250,26 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                 {(trainer.full_name || trainer.username || "T")[0].toUpperCase()}
               </div>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: 4 }}>
-                  <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.3rem", letterSpacing: "1px", color: "#fff" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: 4, flexWrap: "wrap" }}>
+                  <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.3rem", letterSpacing: "1px", color: "#fff", margin: 0 }}>
                     {trainer.full_name || trainer.username}
                   </h2>
+                  {/* StatusDropdown in sticky header — portal renders above everything */}
                   <StatusDropdown value={trainer.status} onChange={(s) => onStatusChange(trainer.id, s)} />
                 </div>
-                <p style={{ fontSize: "12px", color: T.muted }}>{trainer.email}</p>
+                <p style={{ fontSize: "12px", color: T.muted, margin: 0 }}>{trainer.email}</p>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: "none", border: "none", color: T.muted, fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: T.muted, fontSize: "1.2rem", cursor: "pointer", flexShrink: 0 }}>✕</button>
           </div>
         </div>
 
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           {[
-            { id: "profile",  label: "👤 Profile"  },
-            { id: "assign",   label: "🔗 Assign"   },
-            { id: "members",  label: `👥 Members (${trainer.current_clients || 0})` },
+            { id: "profile", label: "👤 Profile" },
+            { id: "assign",  label: "🔗 Assign"  },
+            { id: "members", label: `👥 Members (${trainer.current_clients || 0})` },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding: "12px 20px", background: "none", border: "none", cursor: "pointer",
@@ -221,10 +285,9 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
 
         <div style={{ padding: "1.5rem 2rem" }}>
 
-          {/* Profile tab */}
+          {/* ── Profile tab ─────────────────────────────────── */}
           {tab === "profile" && (
             <div>
-              {/* Specialization + stats */}
               <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "1px", padding: "4px 12px", borderRadius: "100px", background: specColor + "15", color: specColor, border: `1px solid ${specColor}30` }}>
                   {trainer.specialization || "General"}
@@ -249,8 +312,8 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                 </div>
                 <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
                   <div style={{
-                    height: "100%",
-                    width: `${Math.min(100, ((trainer.current_clients || 0) / (trainer.max_clients || 10)) * 100)}%`,
+                    height:     "100%",
+                    width:      `${Math.min(100, ((trainer.current_clients || 0) / (trainer.max_clients || 10)) * 100)}%`,
                     background: `linear-gradient(90deg, ${T.cyan}80, ${T.cyan})`,
                     borderRadius: 3,
                     transition: "width 1s ease",
@@ -260,33 +323,29 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.25rem" }}>
                 {[
-                  { label: "Phone",       value: trainer.phone         || "—" },
-                  { label: "Availability", value: trainer.availability  || "—" },
+                  { label: "Phone",        value: trainer.phone        || "—" },
+                  { label: "Availability", value: trainer.availability || "—" },
                 ].map(({ label, value }) => (
                   <div key={label} style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 10, padding: "0.875rem" }}>
                     <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, marginBottom: 4 }}>{label.toUpperCase()}</p>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#fff" }}>{value}</p>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#fff", margin: 0 }}>{value}</p>
                   </div>
                 ))}
               </div>
 
               {trainer.certifications && (
-                <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 10, padding: "1rem", marginBottom: "1.25rem" }}>
-                  <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, marginBottom: 6 }}>CERTIFICATIONS</p>
-                  <p style={{ fontSize: "0.875rem", color: T.muted, lineHeight: 1.6 }}>{trainer.certifications}</p>
+                <div style={{ marginBottom: "1.25rem" }}>
+                  <ExpandableText text={trainer.certifications} label="CERTIFICATIONS" />
                 </div>
               )}
 
               {trainer.bio && (
-                <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 10, padding: "1rem" }}>
-                  <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, marginBottom: 6 }}>BIO</p>
-                  <p style={{ fontSize: "0.875rem", color: T.muted, lineHeight: 1.6 }}>{trainer.bio}</p>
-                </div>
+                <ExpandableText text={trainer.bio} label="BIO" />
               )}
             </div>
           )}
 
-          {/* Assign tab */}
+          {/* ── Assign tab ──────────────────────────────────── */}
           {tab === "assign" && (
             <div>
               <p style={{ fontSize: "0.875rem", color: T.muted, lineHeight: 1.6, marginBottom: "1.5rem" }}>
@@ -307,12 +366,13 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                       <option value="">— Choose member —</option>
                       {unassigned.map(m => (
                         <option key={m.id} value={m.id}>
-                          {m.full_name || m.username} — {m.membership_type?.replace(/_/g," ")}
+                          {m.full_name || m.username} — {m.membership_type?.replace(/_/g, " ")}
                         </option>
                       ))}
                     </select>
                   </div>
-                  <button type="submit" disabled={assigning || !assignForm.member_id} style={{ padding: "12px", background: assigning ? "rgba(255,26,26,0.3)" : "linear-gradient(135deg,#FF1A1A,#cc0000)", color: "#fff", fontWeight: 700, border: "none", borderRadius: 9, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", opacity: assigning ? 0.6 : 1 }}>
+                  <button type="submit" disabled={assigning || !assignForm.member_id}
+                    style={{ padding: "12px", background: assigning ? "rgba(255,26,26,0.3)" : "linear-gradient(135deg,#FF1A1A,#cc0000)", color: "#fff", fontWeight: 700, border: "none", borderRadius: 9, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", opacity: assigning ? 0.6 : 1 }}>
                     {assigning ? "Assigning…" : "Assign Member →"}
                   </button>
                 </form>
@@ -325,7 +385,7 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
             </div>
           )}
 
-          {/* Members tab */}
+          {/* ── Members tab ─────────────────────────────────── */}
           {tab === "members" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {(trainer.assigned_members || []).length === 0 ? (
@@ -338,8 +398,8 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                     {(m.full_name || m.customer_name || "?")[0].toUpperCase()}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "#fff" }}>{m.full_name || m.customer_name || "—"}</p>
-                    <p style={{ fontSize: "11px", color: T.muted }}>{m.membership_type?.replace(/_/g," ") || "—"}</p>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "#fff", margin: 0 }}>{m.full_name || m.customer_name || "—"}</p>
+                    <p style={{ fontSize: "11px", color: T.muted, margin: 0 }}>{m.membership_type?.replace(/_/g, " ") || "—"}</p>
                   </div>
                 </div>
               ))}
@@ -351,6 +411,7 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
   );
 }
 
+// ── Main page ──────────────────────────────────────────────────
 export default function AdminTrainers() {
   const { user }   = useAuth();
   const [trainers, setTrainers] = useState([]);
@@ -372,7 +433,7 @@ export default function AdminTrainers() {
     ])
       .then(([tr, mem]) => {
         setTrainers(tr.data.trainers || []);
-        setMembers(mem.data.members || []);
+        setMembers(mem.data.members  || []);
       })
       .catch(() => showToast("Failed to load.", "error"))
       .finally(() => setLoading(false));
@@ -397,8 +458,6 @@ export default function AdminTrainers() {
     fetchAll();
   };
 
-  const canManage = user?.role === "admin" || user?.role === "staff";
-
   const cols = [
     {
       key: "full_name", label: "Trainer",
@@ -410,8 +469,8 @@ export default function AdminTrainers() {
               {(r.full_name || r.username || "T")[0].toUpperCase()}
             </div>
             <div>
-              <p style={{ color: "#fff", fontWeight: 700, fontSize: "0.875rem" }}>{r.full_name || r.username}</p>
-              <p style={{ color: T.muted, fontSize: "11px" }}>{r.email}</p>
+              <p style={{ color: "#fff", fontWeight: 700, fontSize: "0.875rem", margin: 0 }}>{r.full_name || r.username}</p>
+              <p style={{ color: T.muted, fontSize: "11px", margin: 0 }}>{r.email}</p>
             </div>
           </div>
         );
@@ -468,7 +527,7 @@ export default function AdminTrainers() {
       <style>{`
         @keyframes spin       { to { transform: rotate(360deg); } }
         @keyframes slideRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeUp     { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeUp     { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
 
       <DataTable
