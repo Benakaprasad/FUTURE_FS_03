@@ -14,7 +14,6 @@ const { ROLE_GROUPS, ROLES }                = require('../constants/roles');
 const { MEMBERSHIP_TYPES, PAYMENT_METHODS } = require('../constants/statuses');
 const pool = require('../config/database');
 
-// ── Plan → months map ─────────────────────────────────────────
 const PLAN_MONTHS = {
   student:     1,
   monthly:     1,
@@ -47,7 +46,7 @@ router.post('/create-order',
         currency:        order.currency,
         payment_id:      payment.id,
         key_id:          process.env.RAZORPAY_KEY_ID,
-        membership_type: req.body.membership_type, // ← pass back to frontend
+        membership_type: req.body.membership_type,
       });
     } catch (err) { next(err); }
   }
@@ -74,7 +73,7 @@ router.post('/verify',
         membership_type,
       } = req.body;
 
-      // 1. Verify Razorpay signature
+      // 1. Verify signature
       const expected = crypto
         .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -85,7 +84,7 @@ router.post('/verify',
         return res.status(400).json({ error: 'Payment verification failed — invalid signature' });
       }
 
-      // 2. Mark payment as paid in DB
+      // 2. Mark payment as paid
       const payment = await Payment.verifyAndCapture(req.body);
       if (!payment) {
         await client.query('ROLLBACK');
@@ -99,35 +98,60 @@ router.post('/verify',
         return res.status(404).json({ error: 'Customer profile not found' });
       }
 
-      // 4. Expire any existing active membership
-      await client.query(
-        `UPDATE members SET status = 'expired'
-         WHERE customer_id = $1 AND status = 'active'`,
-        [customer.id]
-      );
-
-      // 5. Calculate start + end dates
+      // 4. Calculate dates
       const months    = PLAN_MONTHS[membership_type] || 1;
       const startDate = new Date();
       const endDate   = new Date();
       endDate.setMonth(endDate.getMonth() + months);
-
       const fmt = (d) => d.toISOString().split('T')[0];
 
-      // 6. Auto-create member row
-      const member = await Member.create({
-        customer_id:     customer.id,
-        membership_type: membership_type,
-        start_date:      fmt(startDate),
-        end_date:        fmt(endDate),
-        payment_status:  'paid',
-        amount_paid:     payment.amount,
-        admission_notes: `Online payment · Razorpay ${razorpay_payment_id}`,
-        request_id:      null,
-        created_by:      null,
-      });
+      // 5. ── UNIQUE constraint fix: update if exists, insert if first time ──
+      const { rows: existingMember } = await client.query(
+        `SELECT id FROM members WHERE customer_id = $1`,
+        [customer.id]
+      );
 
-      // 7. Notify admin + staff
+      let member;
+      if (existingMember.length > 0) {
+        // Renewal — update existing row
+        const { rows: updated } = await client.query(
+          `UPDATE members
+           SET membership_type = $1,
+               start_date      = $2,
+               end_date        = $3,
+               payment_status  = 'paid',
+               amount_paid     = $4,
+               status          = 'active',
+               admission_notes = $5,
+               updated_at      = NOW()
+           WHERE customer_id = $6
+           RETURNING *`,
+          [
+            membership_type,
+            fmt(startDate),
+            fmt(endDate),
+            payment.amount,
+            `Online payment · Razorpay ${razorpay_payment_id}`,
+            customer.id,
+          ]
+        );
+        member = updated[0];
+      } else {
+        // First membership — insert
+        member = await Member.create({
+          customer_id:     customer.id,
+          membership_type: membership_type,
+          start_date:      fmt(startDate),
+          end_date:        fmt(endDate),
+          payment_status:  'paid',
+          amount_paid:     payment.amount,
+          admission_notes: `Online payment · Razorpay ${razorpay_payment_id}`,
+          request_id:      null,
+          created_by:      null,
+        });
+      }
+
+      // 6. Notify
       const customerName = customer.full_name || customer.username || `Customer #${customer.id}`;
       await notify.paymentReceived(customerName, payment.amount);
 
@@ -151,7 +175,6 @@ router.post('/verify',
 );
 
 // ── POST /api/payments/webhook ────────────────────────────────
-// Razorpay calls this server-to-server — separate from verify
 router.post('/webhook',
   express.raw({ type: 'application/json' }),
   async (req, res, next) => {
@@ -171,9 +194,8 @@ router.post('/webhook',
       const event = JSON.parse(body);
 
       if (event.event === 'payment.captured') {
-        const { order_id, id: razorpay_payment_id, amount } = event.payload.payment.entity;
+        const { order_id, id: razorpay_payment_id } = event.payload.payment.entity;
 
-        // Update payment row — idempotent, only fires if not already captured
         const { rows } = await pool.query(
           `UPDATE payments
            SET status = 'captured', razorpay_payment_id = $1
@@ -184,47 +206,69 @@ router.post('/webhook',
 
         if (rows[0]) {
           const { customer_id, amount: paidAmount, membership_type } = rows[0];
+          const fmt = (d) => d.toISOString().split('T')[0];
 
-          // Check if member row already exists (verify already ran)
-          const { rows: existing } = await pool.query(
+          // Check if verify already handled this payment
+          const { rows: alreadyHandled } = await pool.query(
             `SELECT id FROM members
              WHERE customer_id = $1
-               AND admission_notes ILIKE $2
-               AND status = 'active'`,
+               AND admission_notes ILIKE $2`,
             [customer_id, `%${razorpay_payment_id}%`]
           );
 
-          // Only create member if verify didn't already create one
-          if (!existing.length && membership_type) {
-            const months    = PLAN_MONTHS[membership_type] || 1;
-            const startDate = new Date();
-            const endDate   = new Date();
-            endDate.setMonth(endDate.getMonth() + months);
-            const fmt = (d) => d.toISOString().split('T')[0];
+          if (!alreadyHandled.length && membership_type) {
+            const months = PLAN_MONTHS[membership_type] || 1;
+            const start  = new Date();
+            const end    = new Date();
+            end.setMonth(end.getMonth() + months);
 
-            await pool.query(
-              `UPDATE members SET status = 'expired'
-               WHERE customer_id = $1 AND status = 'active'`,
+            const { rows: existingMember } = await pool.query(
+              `SELECT id FROM members WHERE customer_id = $1`,
               [customer_id]
             );
 
-            await Member.create({
-              customer_id:     customer_id,
-              membership_type: membership_type,
-              start_date:      fmt(startDate),
-              end_date:        fmt(endDate),
-              payment_status:  'paid',
-              amount_paid:     paidAmount / 100, // webhook sends paise
-              admission_notes: `Webhook capture · Razorpay ${razorpay_payment_id}`,
-              request_id:      null,
-              created_by:      null,
-            });
+            if (existingMember.length > 0) {
+              // Renewal — update existing row
+              await pool.query(
+                `UPDATE members
+                 SET membership_type = $1,
+                     start_date      = $2,
+                     end_date        = $3,
+                     payment_status  = 'paid',
+                     amount_paid     = $4,
+                     status          = 'active',
+                     admission_notes = $5,
+                     updated_at      = NOW()
+                 WHERE customer_id = $6`,
+                [
+                  membership_type,
+                  fmt(start),
+                  fmt(end),
+                  paidAmount,   // payments table stores rupees
+                  `Webhook capture · Razorpay ${razorpay_payment_id}`,
+                  customer_id,
+                ]
+              );
+            } else {
+              // First membership — insert
+              await Member.create({
+                customer_id:     customer_id,
+                membership_type: membership_type,
+                start_date:      fmt(start),
+                end_date:        fmt(end),
+                payment_status:  'paid',
+                amount_paid:     paidAmount,
+                admission_notes: `Webhook capture · Razorpay ${razorpay_payment_id}`,
+                request_id:      null,
+                created_by:      null,
+              });
+            }
           }
 
-          // Notify
           const customer     = await Customer.findById(customer_id);
-          const customerName = customer?.full_name || customer?.username || `Customer #${customer_id}`;
-          await notify.paymentReceived(customerName, (paidAmount / 100).toFixed(2));
+          const customerName = customer?.full_name || customer?.username
+                               || `Customer #${customer_id}`;
+          await notify.paymentReceived(customerName, paidAmount);
         }
       }
 

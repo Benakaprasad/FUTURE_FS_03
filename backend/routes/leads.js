@@ -35,31 +35,62 @@ router.post('/enquire',
     try {
       const { intent, phone, preferred_time, notes } = req.body;
 
-      // Build note with all context
       const noteText = [
         `Intent: ${intent}`,
         preferred_time ? `Preferred contact time: ${preferred_time}` : null,
         notes || null,
       ].filter(Boolean).join('\n');
 
+      // ── Dedup: if an open lead already exists for this user, append to it ──
+      const { rows: existing } = await pool.query(
+        `SELECT id FROM leads
+         WHERE user_id = $1
+           AND status NOT IN ('converted', 'dropped')
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [req.user.id]
+      );
+
+      if (existing.length > 0) {
+        // Append follow-up note to existing lead instead of creating a duplicate
+        await pool.query(
+          `UPDATE leads
+           SET notes      = COALESCE(notes, '') || $1,
+               updated_at = NOW()
+           WHERE id = $2`,
+          [`\n---\nFollow-up (${new Date().toLocaleDateString('en-IN')}): ${noteText}`, existing[0].id]
+        );
+
+        await notify.registeredUserEnquiry(
+          req.user.full_name || req.user.username,
+          `follow-up — ${intent}`
+        );
+
+        return res.status(200).json({
+          message: 'Enquiry updated — our team will follow up.',
+          lead_id: existing[0].id,
+          is_followup: true,
+        });
+      }
+
+      // ── No existing open lead — create a fresh one ──
       const lead = await Lead.create({
         name:       req.user.full_name || req.user.username,
         email:      req.user.email,
         phone:      phone || null,
-        source:     'website',           // closest valid source in your DB CHECK
+        source:     'website',
         notes:      noteText,
         status:     'new',
-        user_id:    req.user.id,         // ← links back to their account
+        user_id:    req.user.id,
         created_by: null,
       });
 
-      // Notify admin + staff
-      await notify.chatbotLead(
+      await notify.registeredUserEnquiry(
         req.user.full_name || req.user.username,
-        `Registered user enquiry — ${intent}`
+        intent
       );
 
-      res.status(201).json({ message: 'Enquiry submitted', lead });
+      res.status(201).json({ message: 'Enquiry submitted', lead, is_followup: false });
     } catch (err) { next(err); }
   }
 );
@@ -175,15 +206,26 @@ router.post('/:id/convert',
       await client.query('BEGIN');
 
       const lead = await Lead.findById(req.params.id);
-      if (!lead) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Lead not found' }); }
-      if (lead.status === 'converted') { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Lead already converted' }); }
+      if (!lead) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Lead not found' });
+      }
+      if (lead.status === 'converted') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Lead already converted' });
+      }
 
-      let userId = lead.user_id;
+      // ── Step 1: Resolve or create user account ──
+      let userId = lead.user_id; // already set if they registered
 
       if (!userId) {
-        const { rows: existing } = await client.query(`SELECT id FROM users WHERE email = $1`, [lead.email]);
-        if (existing.length > 0) {
-          userId = existing[0].id;
+        const { rows: existingUser } = await client.query(
+          `SELECT id FROM users WHERE email = $1`,
+          [lead.email]
+        );
+
+        if (existingUser.length > 0) {
+          userId = existingUser[0].id;
         } else {
           const bcrypt = require('bcryptjs');
           const raw    = req.body.password || Math.random().toString(36).slice(-10) + 'Aa1!';
@@ -192,7 +234,7 @@ router.post('/:id/convert',
             `INSERT INTO users (username, email, password, role, full_name, phone, is_active)
              VALUES ($1,$2,$3,'customer',$4,$5,true) RETURNING id`,
             [
-              lead.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g,'_') + '_' + Date.now().toString().slice(-4),
+              lead.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_') + '_' + Date.now().toString().slice(-4),
               lead.email, hash, lead.name, lead.phone || null,
             ]
           );
@@ -200,48 +242,67 @@ router.post('/:id/convert',
         }
       }
 
-      const { rows: existingCustomer } = await client.query(`SELECT id FROM customers WHERE user_id = $1`, [userId]);
+      // ── Step 2: Resolve or create customer record ──
+      const { rows: existingCustomer } = await client.query(
+        `SELECT id FROM customers WHERE user_id = $1`,
+        [userId]
+      );
+
       let customerId;
       if (existingCustomer.length > 0) {
         customerId = existingCustomer[0].id;
-        await client.query(`UPDATE customers SET status='active' WHERE id=$1`, [customerId]);
+        await client.query(
+          `UPDATE customers SET status = 'active' WHERE id = $1`,
+          [customerId]
+        );
       } else {
         const { rows: newCustomer } = await client.query(
-          `INSERT INTO customers (user_id, status) VALUES ($1,'active') RETURNING id`, [userId]
+          `INSERT INTO customers (user_id, status) VALUES ($1, 'active') RETURNING id`,
+          [userId]
         );
         customerId = newCustomer[0].id;
       }
 
+      // ── Step 3: Check no active membership already exists ──
       const { rows: activeMem } = await client.query(
-        `SELECT id FROM members WHERE customer_id=$1 AND status='active'`, [customerId]
+        `SELECT id FROM members WHERE customer_id = $1 AND status = 'active'`,
+        [customerId]
       );
       if (activeMem.length > 0) {
         await client.query('ROLLBACK');
         return res.status(409).json({ error: 'Customer already has an active membership' });
       }
 
+      // ── Step 4: Create membership ──
       await client.query(
         `INSERT INTO members
            (customer_id, membership_type, start_date, end_date,
             payment_status, amount_paid, admission_notes, created_by)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
         [
-          customerId, req.body.membership_type, req.body.start_date,
-          req.body.end_date || null,
+          customerId,
+          req.body.membership_type,
+          req.body.start_date,
+          req.body.end_date     || null,
           req.body.payment_status || 'pending',
-          req.body.amount_paid || null,
+          req.body.amount_paid  || null,
           req.body.admission_notes || null,
           req.user.id,
         ]
       );
 
+      // ── Step 5: Mark lead as converted ──
       await client.query(
-        `UPDATE leads SET status='converted', user_id=$1 WHERE id=$2`,
+        `UPDATE leads SET status = 'converted', user_id = $1 WHERE id = $2`,
         [userId, lead.id]
       );
 
       await client.query('COMMIT');
-      res.status(201).json({ message: 'Lead converted to member successfully', user_id: userId, customer_id: customerId });
+      res.status(201).json({
+        message: 'Lead converted to member successfully',
+        user_id:     userId,
+        customer_id: customerId,
+      });
     } catch (err) {
       await client.query('ROLLBACK');
       next(err);

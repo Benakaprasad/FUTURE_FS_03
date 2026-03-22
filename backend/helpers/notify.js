@@ -114,4 +114,11 @@ module.exports = {
   message:      `${name} enquired via chatbot${summary ? ` — "${summary.slice(0, 80)}"` : ''}.`,
   target_roles: ['admin', 'staff'],
 }),
+
+registeredUserEnquiry: (name, intent) => createNotification({
+  type:         'membership_request',
+  title:        '👤 Registered User Enquiry',
+  message:      `${name} (has account) enquired — ${intent}. Check Leads.`,
+  target_roles: ['admin', 'staff'],
+}),
 };

@@ -7,7 +7,6 @@ import {
   ResponsiveContainer,
   AreaChart, Area,
   BarChart, Bar,
-  FunnelChart, Funnel, LabelList,
   PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -173,17 +172,25 @@ const canSeeFinance = user?.role === "admin";
         };
       });
 
-  // ── Lead funnel data ───────────────────────────────────────────────────────
-  const funnelData = [
-    { name: "New",       value: stats?.new_leads    || 0, fill: "#00C2FF" },
-    { name: "Contacted", value: stats?.contacted    || 0, fill: "#A855F7" },
-    { name: "Qualified", value: stats?.qualified    || 0, fill: "#FFB800" },
-    { name: "Converted", value: stats?.converted    || 0, fill: "#22C55E" },
-  ];
+ const statsMap = {};
+(stats?.stats || []).forEach(s => { statsMap[s.status] = parseInt(s.count) || 0; });
+
+const totalLeads   = Object.values(statsMap).reduce((a, b) => a + b, 0);
+const newLeads     = statsMap['new']       || 0;
+const contacted    = statsMap['contacted'] || 0;
+const converted    = statsMap['converted'] || 0;
+const dropped      = statsMap['dropped']   || 0;
+
+const funnelData = [
+  { name: "New",       value: newLeads,  fill: "#00C2FF" },
+  { name: "Contacted", value: contacted, fill: "#A855F7" },
+  { name: "Converted", value: converted, fill: "#22C55E" },
+  { name: "Dropped",   value: dropped,   fill: "#FF1A1A"  },
+];
 
   // ── Membership plan breakdown ──────────────────────────────────────────────
   const planCounts = members.reduce((acc, m) => {
-    const plan = m.plan_type || "unknown";
+    const plan = m.membership_type || "unknown";
     acc[plan] = (acc[plan] || 0) + 1;
     return acc;
   }, {});
@@ -195,12 +202,12 @@ const canSeeFinance = user?.role === "admin";
 
   // ── Trainer workload ───────────────────────────────────────────────────────
   const trainerData = trainers
-    .map((t) => ({
-      name: t.full_name?.split(" ")[0] || t.username,
-      assignments: t.assignment_count || 0,
-    }))
-    .sort((a, b) => b.assignments - a.assignments)
-    .slice(0, 8);
+  .map((t) => ({
+    name:        t.full_name?.split(" ")[0] || t.username,
+    assignments: t.current_clients || 0,   
+  }))
+  .sort((a, b) => b.assignments - a.assignments)
+  .slice(0, 8);
 
   return (
     <DashLayout
@@ -219,10 +226,9 @@ const canSeeFinance = user?.role === "admin";
         <>
           {/* ── KPI grid ── */}
           <div style={as.kpiGrid}>
-            <KpiCard icon="👥" label="Total Leads"       value={stats?.total}        accent="#00C2FF" href="/admin/leads" />
-            <KpiCard icon="🆕" label="New Leads"         value={stats?.new_leads}    accent="#A855F7" href="/admin/leads" />
-            <KpiCard icon="✅" label="Converted"         value={stats?.converted}    accent="#22C55E" href="/admin/leads" />
-            <KpiCard icon="📋" label="Pending Requests"  value={requests.filter(r => r.status === "pending").length} accent="#FFB800" href="/admin/requests" />
+            <KpiCard icon="👥" label="Total Leads"       value={totalLeads}   accent="#00C2FF" href="/admin/leads" />
+            <KpiCard icon="🆕" label="New Leads"         value={newLeads}     accent="#A855F7" href="/admin/leads" />
+            <KpiCard icon="✅" label="Converted"         value={converted}    accent="#22C55E" href="/admin/leads" />
             {canSeeFinance && (
               <KpiCard icon="💰" label="Revenue (Month)"
                 value={revenue?.monthly ? `₹${Number(revenue.monthly).toLocaleString("en-IN")}` : "—"}
@@ -379,7 +385,7 @@ const canSeeFinance = user?.role === "admin";
               href="/admin/leads"
               cols={["Name", "Phone", "Source", "Status"]}
               rows={leads.map((l) => [
-                l.full_name || "—",
+                l.name || "—",
                 l.phone || "—",
                 l.source || "—",
                 <Badge key="s" status={l.status} />,
@@ -405,16 +411,16 @@ const canSeeFinance = user?.role === "admin";
               href="/admin/members"
               cols={["Member", "Plan", "Expires On", "Days Left"]}
               rows={expiring.map((m) => {
-                const days = Math.max(0, Math.ceil((new Date(m.end_date) - new Date()) / 86400000));
-                return [
-                  m.customer_name || "—",
-                  m.plan_type?.toUpperCase() || "—",
-                  new Date(m.end_date).toLocaleDateString("en-IN"),
-                  <span key="d" style={{ color: days <= 3 ? "#FF1A1A" : "#FFB800", fontWeight: 700 }}>
-                    {days}d
-                  </span>,
-                ];
-              })}
+              const days = Math.max(0, Math.ceil((new Date(m.end_date) - new Date()) / 86400000));
+              return [
+                m.full_name || m.username || "—",   // ← fix
+                m.membership_type?.toUpperCase().replace("_", "-") || "—",  // ← fix
+                new Date(m.end_date).toLocaleDateString("en-IN"),
+                <span key="d" style={{ color: days <= 3 ? "#FF1A1A" : "#FFB800", fontWeight: 700 }}>
+                  {days}d
+                </span>,
+              ];
+            })}
             />
           )}
 
