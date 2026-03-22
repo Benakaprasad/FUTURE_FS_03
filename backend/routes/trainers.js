@@ -112,16 +112,104 @@ router.put('/me/profile',
 );
 
 // PATCH /api/trainers/:id/status
+// ── Handles cascade when status → inactive:
+//    · Unlinks all assigned members  (trainer_id = NULL)
+//    · Soft-closes active assignments (status = 'inactive')
+//    · Zeroes current_clients count
+//    · Reactivation recalculates current_clients from live data
 router.patch('/:id/status',
   authorize(ROLE_GROUPS.ADMIN_ONLY), [
     body('status').isIn(TRAINER_STATUSES),
   ], validate,
   async (req, res, next) => {
+    const { id }     = req.params;
+    const { status } = req.body;
+    const client     = await pool.connect();
+
     try {
-      const trainer = await Trainer.updateStatus(req.params.id, req.body.status);
-      if (!trainer) return res.status(404).json({ error: 'Trainer not found' });
-      res.json({ message: 'Trainer status updated', trainer });
-    } catch (err) { next(err); }
+      await client.query('BEGIN');
+
+      // 1. Update trainer status
+      const { rows } = await client.query(
+        `UPDATE trainers
+         SET    status     = $1,
+                updated_at = NOW()
+         WHERE  id = $2
+         RETURNING *`,
+        [status, id]
+      );
+
+      if (!rows[0]) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Trainer not found' });
+      }
+
+      let membersUnassigned = 0;
+
+      // 2. Inactive cascade ──────────────────────────────────
+      if (status === 'inactive') {
+
+        // Unlink members → they surface in the unassigned pool
+        const unlinked = await client.query(
+          `UPDATE members
+           SET    trainer_id = NULL,
+                  updated_at = NOW()
+           WHERE  trainer_id = $1`,
+          [id]
+        );
+        membersUnassigned = unlinked.rowCount;
+
+        // Soft-close active assignments (keeps audit trail)
+        await client.query(
+          `UPDATE assignments
+           SET    status     = 'inactive',
+                  updated_at = NOW()
+           WHERE  trainer_id = $1
+             AND  status     = 'active'`,
+          [id]
+        );
+
+        // Zero out capacity counter
+        await client.query(
+          `UPDATE trainers
+           SET    current_clients = 0,
+                  updated_at      = NOW()
+           WHERE  id = $1`,
+          [id]
+        );
+      }
+
+      // 3. Reactivation — recalculate real member count ──────
+      if (status === 'active') {
+        await client.query(
+          `UPDATE trainers
+           SET    current_clients = (
+                    SELECT COUNT(*) FROM members
+                    WHERE  trainer_id = $1
+                  ),
+                  updated_at = NOW()
+           WHERE  id = $1`,
+          [id]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      // Re-fetch with updated current_clients included
+      const trainer = await Trainer.findById(id);
+
+      return res.json({
+        message:            `Trainer status updated to ${status}`,
+        trainer,
+        members_unassigned: membersUnassigned,
+      });
+
+    } catch (err) {
+      await client.query('ROLLBACK');
+      next(err);
+    } finally {
+      client.release();
+    }
   }
 );
 
@@ -147,7 +235,6 @@ router.patch('/:id/approve',
       }
       trainer = rows[0];
 
-      // Fetch user details for the email
       user = await User.findById(trainer.user_id);
 
       await client.query('COMMIT');
@@ -159,7 +246,6 @@ router.patch('/:id/approve',
       client.release();
     }
 
-    // ── Outside transaction — email + SSE ─────────────────
     if (user) {
       await notify.trainerApproved({
         full_name: user.full_name,
@@ -188,7 +274,6 @@ router.patch('/:id/reject',
 
       const trainer = rows[0];
 
-      // Fetch user for email
       const user = await User.findById(trainer.user_id);
       if (user) {
         await notify.trainerRejected({
