@@ -54,11 +54,12 @@ router.get('/pending',
   async (req, res, next) => {
     try {
       const { rows } = await pool.query(
-        `SELECT t.*, u.username, u.email, u.full_name, u.phone, u.created_at as registered_at
-         FROM trainers t
-         JOIN users u ON t.user_id = u.id
-         WHERE t.status = 'inactive'
-         ORDER BY u.created_at DESC`
+        `SELECT t.*, u.username, u.email, u.full_name, u.phone,
+                u.created_at AS registered_at
+         FROM   trainers t
+         JOIN   users    u ON t.user_id = u.id
+         WHERE  t.status = 'inactive'
+         ORDER  BY u.created_at DESC`
       );
       res.json({ trainers: rows });
     } catch (err) { next(err); }
@@ -113,18 +114,16 @@ router.put('/me/profile',
 
 // PATCH /api/trainers/:id/status
 // ─────────────────────────────────────────────────────────────
-// Uses pool.query() only — no pool.connect() — so it works
-// with any database.js export pattern (raw pool or query wrapper).
+// Schema notes:
+//   members.trainer_id  → references trainers(id)   ← trainers PK
+//   assignments.trainer_id → references users(id)   ← users PK
 //
-// Cascade when → inactive:
-//   1. trainer.status = inactive
-//   2. members.trainer_id = NULL   (unassigns all their members)
-//   3. assignments.status = inactive (soft-closes, keeps history)
-//   4. trainer.current_clients = 0
+// So when cascading on inactive:
+//   - UPDATE members   WHERE trainer_id = trainers.id   (route :id)
+//   - UPDATE assignments WHERE trainer_id = trainers.user_id
 //
-// Cascade when → active (reactivation):
-//   Recalculates current_clients from live member count
-//   so it's never stuck at 0 after reactivation.
+// Uses pool.query() only — no pool.connect() — works with any
+// database.js export pattern.
 // ─────────────────────────────────────────────────────────────
 router.patch('/:id/status',
   authorize(ROLE_GROUPS.ADMIN_ONLY), [
@@ -133,30 +132,35 @@ router.patch('/:id/status',
       .withMessage(`Status must be one of: ${TRAINER_STATUSES.join(', ')}`),
   ], validate,
   async (req, res, next) => {
-    const { id }     = req.params;
+    const { id }     = req.params;   // trainers.id (PK)
     const { status } = req.body;
 
     try {
-      // ── Step 1: update trainer status ──────────────────────
-      const trainerResult = await pool.query(
+      // ── Get trainer record first so we have user_id for assignments
+      const trainerLookup = await pool.query(
+        `SELECT id, user_id FROM trainers WHERE id = $1`,
+        [id]
+      );
+      if (!trainerLookup.rows[0]) {
+        return res.status(404).json({ error: 'Trainer not found' });
+      }
+      const userId = trainerLookup.rows[0].user_id; // for assignments FK
+
+      // ── Step 1: update trainer status
+      await pool.query(
         `UPDATE trainers
          SET    status     = $1,
                 updated_at = NOW()
-         WHERE  id = $2
-         RETURNING *`,
+         WHERE  id = $2`,
         [status, id]
       );
 
-      if (!trainerResult.rows[0]) {
-        return res.status(404).json({ error: 'Trainer not found' });
-      }
-
       let membersUnassigned = 0;
 
-      // ── Step 2: inactive cascade ───────────────────────────
+      // ── Step 2: inactive cascade
       if (status === 'inactive') {
 
-        // Unlink all assigned members
+        // Unlink members (members.trainer_id → trainers.id)
         const unlinked = await pool.query(
           `UPDATE members
            SET    trainer_id = NULL,
@@ -166,17 +170,17 @@ router.patch('/:id/status',
         );
         membersUnassigned = unlinked.rowCount;
 
-        // Soft-close active assignments (preserves history)
+        // Soft-close assignments (assignments.trainer_id → users.id)
         await pool.query(
           `UPDATE assignments
            SET    status     = 'inactive',
                   updated_at = NOW()
            WHERE  trainer_id = $1
              AND  status     = 'active'`,
-          [id]
+          [userId]
         );
 
-        // Zero out the capacity counter
+        // Zero capacity counter
         await pool.query(
           `UPDATE trainers
            SET    current_clients = 0,
@@ -186,7 +190,7 @@ router.patch('/:id/status',
         );
       }
 
-      // ── Step 3: reactivation — recalculate member count ────
+      // ── Step 3: reactivation — recalculate live member count
       if (status === 'active') {
         await pool.query(
           `UPDATE trainers
@@ -200,8 +204,7 @@ router.patch('/:id/status',
         );
       }
 
-      // Re-fetch the full trainer record so frontend gets
-      // the updated current_clients value immediately
+      // Re-fetch full trainer record so frontend gets updated values
       const trainer = await Trainer.findById(id);
 
       return res.json({
@@ -225,8 +228,11 @@ router.patch('/:id/approve',
 
     try {
       const { rows } = await pool.query(
-        `UPDATE trainers SET status = 'active', updated_at = NOW()
-         WHERE id = $1 RETURNING *`,
+        `UPDATE trainers
+         SET    status     = 'active',
+                updated_at = NOW()
+         WHERE  id = $1
+         RETURNING *`,
         [req.params.id]
       );
       if (!rows[0]) return res.status(404).json({ error: 'Trainer not found' });
@@ -236,8 +242,6 @@ router.patch('/:id/approve',
       return next(err);
     }
 
-    // Email outside the DB operation so a mail failure
-    // doesn't roll back the approval
     if (user) {
       try {
         await notify.trainerApproved({
@@ -264,11 +268,10 @@ router.patch('/:id/reject',
       const { rows } = await pool.query(
         `UPDATE trainers
          SET    status     = 'on_leave',
-                notes      = $2,
                 updated_at = NOW()
          WHERE  id = $1
          RETURNING *`,
-        [req.params.id, notes || null]
+        [req.params.id]
       );
       if (!rows[0]) return res.status(404).json({ error: 'Trainer not found' });
 

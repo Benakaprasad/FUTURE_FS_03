@@ -940,3 +940,124 @@ SELECT tier_key, label, min_wpm, max_wpm,
        discount_amount, locker_free_days, pt_sessions_free
 FROM reward_tiers
 ORDER BY min_wpm;
+
+-- ============================================================
+-- FITZONE — PATCH MIGRATION v3.1
+-- Run this on your existing production database.
+-- Safe to run multiple times (all statements use IF NOT EXISTS
+-- or DROP CONSTRAINT IF EXISTS).
+-- ============================================================
+
+
+-- ── 1. members: add trainer_id column ────────────────────────
+-- The trainer status cascade (UPDATE members SET trainer_id = NULL)
+-- requires this column. Without it every status change to inactive
+-- throws a 500.
+ALTER TABLE members
+    ADD COLUMN IF NOT EXISTS trainer_id INTEGER
+    REFERENCES trainers(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_members_trainer_id ON members(trainer_id);
+
+
+-- ── 2. members: add 'frozen' to status CHECK ─────────────────
+-- AdminRequests freeze action sets status = 'frozen'.
+-- Current constraint only allows active/expired/suspended/cancelled.
+ALTER TABLE members
+    DROP CONSTRAINT IF EXISTS check_member_status;
+
+ALTER TABLE members
+    ADD CONSTRAINT check_member_status CHECK (
+        status IN ('active', 'expired', 'suspended', 'cancelled', 'frozen')
+    );
+
+
+-- ── 3. assignments: add 'inactive' to status CHECK ───────────
+-- trainers.js sets assignments.status = 'inactive' when a trainer
+-- goes inactive. Current constraint only allows active/completed/reassigned.
+ALTER TABLE assignments
+    DROP CONSTRAINT IF EXISTS check_assignment_status;
+
+ALTER TABLE assignments
+    ADD CONSTRAINT check_assignment_status CHECK (
+        status IN ('active', 'completed', 'reassigned', 'inactive')
+    );
+
+
+-- ── 4. leads: add 'chatbot' to source CHECK ──────────────────
+-- The chatbot-lead route saves source = 'chatbot'.
+-- Current constraint rejects it → chatbot leads crash with 500.
+ALTER TABLE leads
+    DROP CONSTRAINT IF EXISTS check_lead_source;
+
+ALTER TABLE leads
+    ADD CONSTRAINT check_lead_source CHECK (
+        source IN ('walk-in', 'website', 'referral', 'social', 'phone', 'other', 'chatbot')
+    );
+
+
+-- ── 5. requests: add member_id column ────────────────────────
+-- AdminRequests freeze/cancel/upgrade actions need to know which
+-- member record to update. Without this column those actions
+-- cannot find the member to act on.
+ALTER TABLE requests
+    ADD COLUMN IF NOT EXISTS member_id INTEGER
+    REFERENCES members(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_requests_member_id ON requests(member_id);
+
+
+-- ── 6. requests: relax membership_type CHECK to allow NULL ───
+-- The constraint currently rejects NULL but membership_type is
+-- optional on initial submission (customer may not know the plan
+-- yet). The NOT NULL enforcement happens at approval time.
+ALTER TABLE requests
+    DROP CONSTRAINT IF EXISTS check_membership_type;
+
+ALTER TABLE requests
+    ADD CONSTRAINT check_membership_type CHECK (
+        membership_type IS NULL OR
+        membership_type IN (
+            'monthly', 'quarterly', 'half_yearly',
+            'annual', 'student', 'corporate'
+        )
+    );
+
+
+-- ── 7. Backfill member_id on existing requests ───────────────
+-- For requests that already have an approved membership,
+-- link them to the correct member record.
+UPDATE requests r
+SET    member_id = m.id
+FROM   members m
+WHERE  m.request_id = r.id
+  AND  r.member_id IS NULL;
+
+
+-- ── Verify ───────────────────────────────────────────────────
+SELECT
+    column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name   = 'members'
+  AND column_name  IN ('trainer_id', 'status')
+ORDER BY column_name;
+
+SELECT
+    column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name   = 'requests'
+  AND column_name  IN ('member_id', 'membership_type', 'request_type')
+ORDER BY column_name;
+
+SELECT conname, pg_get_constraintdef(oid) AS definition
+FROM   pg_constraint
+WHERE  conrelid IN (
+    'leads'::regclass,
+    'members'::regclass,
+    'assignments'::regclass,
+    'requests'::regclass
+)
+  AND  contype = 'c'
+ORDER BY conrelid::text, conname;
