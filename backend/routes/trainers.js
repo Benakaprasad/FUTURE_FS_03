@@ -112,25 +112,33 @@ router.put('/me/profile',
 );
 
 // PATCH /api/trainers/:id/status
-// ── Handles cascade when status → inactive:
-//    · Unlinks all assigned members  (trainer_id = NULL)
-//    · Soft-closes active assignments (status = 'inactive')
-//    · Zeroes current_clients count
-//    · Reactivation recalculates current_clients from live data
+// ─────────────────────────────────────────────────────────────
+// Uses pool.query() only — no pool.connect() — so it works
+// with any database.js export pattern (raw pool or query wrapper).
+//
+// Cascade when → inactive:
+//   1. trainer.status = inactive
+//   2. members.trainer_id = NULL   (unassigns all their members)
+//   3. assignments.status = inactive (soft-closes, keeps history)
+//   4. trainer.current_clients = 0
+//
+// Cascade when → active (reactivation):
+//   Recalculates current_clients from live member count
+//   so it's never stuck at 0 after reactivation.
+// ─────────────────────────────────────────────────────────────
 router.patch('/:id/status',
   authorize(ROLE_GROUPS.ADMIN_ONLY), [
-    body('status').isIn(TRAINER_STATUSES),
+    body('status')
+      .isIn(TRAINER_STATUSES)
+      .withMessage(`Status must be one of: ${TRAINER_STATUSES.join(', ')}`),
   ], validate,
   async (req, res, next) => {
     const { id }     = req.params;
     const { status } = req.body;
-    const client     = await pool.connect();
 
     try {
-      await client.query('BEGIN');
-
-      // 1. Update trainer status
-      const { rows } = await client.query(
+      // ── Step 1: update trainer status ──────────────────────
+      const trainerResult = await pool.query(
         `UPDATE trainers
          SET    status     = $1,
                 updated_at = NOW()
@@ -139,18 +147,17 @@ router.patch('/:id/status',
         [status, id]
       );
 
-      if (!rows[0]) {
-        await client.query('ROLLBACK');
+      if (!trainerResult.rows[0]) {
         return res.status(404).json({ error: 'Trainer not found' });
       }
 
       let membersUnassigned = 0;
 
-      // 2. Inactive cascade ──────────────────────────────────
+      // ── Step 2: inactive cascade ───────────────────────────
       if (status === 'inactive') {
 
-        // Unlink members → they surface in the unassigned pool
-        const unlinked = await client.query(
+        // Unlink all assigned members
+        const unlinked = await pool.query(
           `UPDATE members
            SET    trainer_id = NULL,
                   updated_at = NOW()
@@ -159,8 +166,8 @@ router.patch('/:id/status',
         );
         membersUnassigned = unlinked.rowCount;
 
-        // Soft-close active assignments (keeps audit trail)
-        await client.query(
+        // Soft-close active assignments (preserves history)
+        await pool.query(
           `UPDATE assignments
            SET    status     = 'inactive',
                   updated_at = NOW()
@@ -169,8 +176,8 @@ router.patch('/:id/status',
           [id]
         );
 
-        // Zero out capacity counter
-        await client.query(
+        // Zero out the capacity counter
+        await pool.query(
           `UPDATE trainers
            SET    current_clients = 0,
                   updated_at      = NOW()
@@ -179,9 +186,9 @@ router.patch('/:id/status',
         );
       }
 
-      // 3. Reactivation — recalculate real member count ──────
+      // ── Step 3: reactivation — recalculate member count ────
       if (status === 'active') {
-        await client.query(
+        await pool.query(
           `UPDATE trainers
            SET    current_clients = (
                     SELECT COUNT(*) FROM members
@@ -193,9 +200,8 @@ router.patch('/:id/status',
         );
       }
 
-      await client.query('COMMIT');
-
-      // Re-fetch with updated current_clients included
+      // Re-fetch the full trainer record so frontend gets
+      // the updated current_clients value immediately
       const trainer = await Trainer.findById(id);
 
       return res.json({
@@ -205,10 +211,7 @@ router.patch('/:id/status',
       });
 
     } catch (err) {
-      await client.query('ROLLBACK');
       next(err);
-    } finally {
-      client.release();
     }
   }
 );
@@ -217,41 +220,34 @@ router.patch('/:id/status',
 router.patch('/:id/approve',
   authorize(ROLE_GROUPS.ADMIN_ONLY),
   async (req, res, next) => {
-    const client = await pool.connect();
-    let trainer  = null;
-    let user     = null;
+    let trainer = null;
+    let user    = null;
 
     try {
-      await client.query('BEGIN');
-
-      const { rows } = await client.query(
-        `UPDATE trainers SET status = 'active'
+      const { rows } = await pool.query(
+        `UPDATE trainers SET status = 'active', updated_at = NOW()
          WHERE id = $1 RETURNING *`,
         [req.params.id]
       );
-      if (!rows[0]) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'Trainer not found' });
-      }
+      if (!rows[0]) return res.status(404).json({ error: 'Trainer not found' });
       trainer = rows[0];
-
-      user = await User.findById(trainer.user_id);
-
-      await client.query('COMMIT');
+      user    = await User.findById(trainer.user_id);
     } catch (err) {
-      await client.query('ROLLBACK');
-      next(err);
-      return;
-    } finally {
-      client.release();
+      return next(err);
     }
 
+    // Email outside the DB operation so a mail failure
+    // doesn't roll back the approval
     if (user) {
-      await notify.trainerApproved({
-        full_name: user.full_name,
-        username:  user.username,
-        email:     user.email,
-      });
+      try {
+        await notify.trainerApproved({
+          full_name: user.full_name,
+          username:  user.username,
+          email:     user.email,
+        });
+      } catch (mailErr) {
+        console.error('[notify] trainerApproved failed:', mailErr.message);
+      }
     }
 
     res.json({ message: 'Trainer approved', trainer });
@@ -266,21 +262,29 @@ router.patch('/:id/reject',
       const { notes } = req.body;
 
       const { rows } = await pool.query(
-        `UPDATE trainers SET status = 'on_leave', notes = $2
-         WHERE id = $1 RETURNING *`,
+        `UPDATE trainers
+         SET    status     = 'on_leave',
+                notes      = $2,
+                updated_at = NOW()
+         WHERE  id = $1
+         RETURNING *`,
         [req.params.id, notes || null]
       );
       if (!rows[0]) return res.status(404).json({ error: 'Trainer not found' });
 
       const trainer = rows[0];
 
-      const user = await User.findById(trainer.user_id);
-      if (user) {
-        await notify.trainerRejected({
-          full_name: user.full_name,
-          username:  user.username,
-          email:     user.email,
-        }, notes || null);
+      try {
+        const user = await User.findById(trainer.user_id);
+        if (user) {
+          await notify.trainerRejected({
+            full_name: user.full_name,
+            username:  user.username,
+            email:     user.email,
+          }, notes || null);
+        }
+      } catch (mailErr) {
+        console.error('[notify] trainerRejected failed:', mailErr.message);
       }
 
       res.json({ message: 'Trainer rejected', trainer });
