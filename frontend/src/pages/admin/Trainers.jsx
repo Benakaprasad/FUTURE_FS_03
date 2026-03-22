@@ -32,20 +32,28 @@ const STATUS_CONFIG = {
   inactive: { color: T.muted, bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.1)", label: "Inactive" },
 };
 
-// ── Portal dropdown — escapes overflow:auto clipping ──────────
+// ─────────────────────────────────────────────────────────────
+// FIX 3 — STATUS DROPDOWN
+// Portal-based so it escapes overflow:auto clipping.
+// stopPropagation on BOTH onMouseDown and onClick on every
+// button so the DataTable row click never fires when the user
+// is interacting with the dropdown.
+// ─────────────────────────────────────────────────────────────
 function StatusDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const btnRef          = useRef(null);
   const menuRef         = useRef(null);
   const [pos, setPos]   = useState({ top: 0, left: 0 });
-  const cfg = STATUS_CONFIG[value] || STATUS_CONFIG.inactive;
+  const cfg = STATUS_CONFIG[value] || STATUS_CONFIG.active;
 
+  // Recalculate position every time menu opens
   useEffect(() => {
     if (!open || !btnRef.current) return;
     const r = btnRef.current.getBoundingClientRect();
     setPos({ top: r.bottom + 6, left: r.left });
   }, [open]);
 
+  // Close on outside click or Escape
   useEffect(() => {
     if (!open) return;
     const onDown = (e) => {
@@ -61,6 +69,7 @@ function StatusDropdown({ value, onChange }) {
     };
   }, [open]);
 
+  // Close on scroll or resize so menu doesn't float detached
   useEffect(() => {
     if (!open) return;
     const close = () => setOpen(false);
@@ -74,6 +83,7 @@ function StatusDropdown({ value, onChange }) {
 
   return (
     <>
+      {/* Trigger pill */}
       <button
         ref={btnRef}
         onMouseDown={(e) => e.stopPropagation()}
@@ -94,19 +104,28 @@ function StatusDropdown({ value, onChange }) {
         </svg>
       </button>
 
+      {/* Menu portal — renders in <body>, never clipped */}
       {open && createPortal(
-        <div ref={menuRef} onMouseDown={(e) => e.stopPropagation()}
+        <div
+          ref={menuRef}
+          onMouseDown={(e) => e.stopPropagation()}
           style={{
             position: "fixed", top: pos.top, left: pos.left,
-            minWidth: "130px", background: "#111",
-            border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px",
-            overflow: "hidden", zIndex: 99999, boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
+            minWidth: "140px", background: "#111",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: "10px", overflow: "hidden",
+            zIndex: 99999, boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
           }}
         >
           {Object.entries(STATUS_CONFIG).map(([key, c]) => (
-            <button key={key}
+            <button
+              key={key}
               onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onChange(key); setOpen(false); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(key);   // always call — even if same value, lets parent decide
+                setOpen(false);
+              }}
               style={{
                 display: "flex", alignItems: "center", gap: "8px",
                 width: "100%", padding: "10px 14px",
@@ -116,10 +135,12 @@ function StatusDropdown({ value, onChange }) {
               }}
             >
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color, flexShrink: 0 }} />
-              <span style={{ fontSize: "12px", fontWeight: 700, color: key === value ? c.color : "rgba(255,255,255,0.6)" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: key === value ? c.color : "rgba(255,255,255,0.65)" }}>
                 {c.label}
               </span>
-              {key === value && <span style={{ marginLeft: "auto", fontSize: "10px", color: c.color }}>✓</span>}
+              {key === value && (
+                <span style={{ marginLeft: "auto", fontSize: "11px", color: c.color }}>✓</span>
+              )}
             </button>
           ))}
         </div>,
@@ -129,22 +150,26 @@ function StatusDropdown({ value, onChange }) {
   );
 }
 
-// ── Full profile modal ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// FULL PROFILE MODAL
+// Portal-based so it renders above the drawer (zIndex 99998).
+// Shows every field, bio, certifications, cover letter, docs,
+// assigned members, and timestamps.
+// ─────────────────────────────────────────────────────────────
 function ProfileModal({ trainer, onClose }) {
-  const specColor = SPEC_COLORS[trainer.specialization] || T.red;
-  const statusCfg = STATUS_CONFIG[trainer.status] || STATUS_CONFIG.inactive;
+  const specColor  = SPEC_COLORS[trainer.specialization] || T.red;
+  const statusCfg  = STATUS_CONFIG[trainer.status] || STATUS_CONFIG.inactive;
   const isInactive = trainer.status === "inactive";
 
-  // Sections to render
   const fields = [
-    { label: "Full name",       value: trainer.full_name       },
-    { label: "Email",           value: trainer.email           },
-    { label: "Phone",           value: trainer.phone           },
-    { label: "Specialization",  value: trainer.specialization  },
-    { label: "Experience",      value: trainer.experience_years ? `${trainer.experience_years} years` : null },
-    { label: "Hourly rate",     value: trainer.hourly_rate     ? `₹${trainer.hourly_rate}/hr` : null },
-    { label: "Availability",    value: trainer.availability    },
-    { label: "Max clients",     value: trainer.max_clients     },
+    { label: "Full name",      value: trainer.full_name      },
+    { label: "Email",          value: trainer.email          },
+    { label: "Phone",          value: trainer.phone          },
+    { label: "Specialization", value: trainer.specialization },
+    { label: "Experience",     value: trainer.experience_years ? `${trainer.experience_years} years` : null },
+    { label: "Hourly rate",    value: trainer.hourly_rate    ? `₹${trainer.hourly_rate}/hr` : null },
+    { label: "Availability",   value: trainer.availability   },
+    { label: "Max clients",    value: trainer.max_clients    },
   ].filter(f => f.value);
 
   return createPortal(
@@ -154,8 +179,7 @@ function ProfileModal({ trainer, onClose }) {
         position: "fixed", inset: 0,
         background: "rgba(0,0,0,0.82)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        zIndex: 99998, backdropFilter: "blur(6px)",
-        padding: "24px",
+        zIndex: 99998, backdropFilter: "blur(6px)", padding: "24px",
       }}
     >
       <div
@@ -170,7 +194,7 @@ function ProfileModal({ trainer, onClose }) {
           animation: "profileIn 0.28s cubic-bezier(0.16,1,0.3,1) forwards",
         }}
       >
-        {/* ── Modal header ─────────────────────────────── */}
+        {/* Header */}
         <div style={{
           padding: "1.75rem 2rem 1.25rem",
           borderBottom: "1px solid rgba(255,255,255,0.07)",
@@ -179,13 +203,9 @@ function ProfileModal({ trainer, onClose }) {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
             <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-              {/* Avatar / photo */}
               {trainer.profile_image_url ? (
-                <img
-                  src={trainer.profile_image_url}
-                  alt={trainer.full_name}
-                  style={{ width: 60, height: 60, borderRadius: 14, objectFit: "cover", border: `2px solid ${specColor}40`, flexShrink: 0 }}
-                />
+                <img src={trainer.profile_image_url} alt={trainer.full_name}
+                  style={{ width: 60, height: 60, borderRadius: 14, objectFit: "cover", border: `2px solid ${specColor}40`, flexShrink: 0 }} />
               ) : (
                 <div style={{
                   width: 60, height: 60, borderRadius: 14, flexShrink: 0,
@@ -196,13 +216,11 @@ function ProfileModal({ trainer, onClose }) {
                   {(trainer.full_name || "T")[0].toUpperCase()}
                 </div>
               )}
-
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: 4 }}>
                   <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.5rem", letterSpacing: "1.5px", color: "#fff", margin: 0 }}>
                     {trainer.full_name || trainer.username}
                   </h2>
-                  {/* Status badge (read-only here — change via table/drawer) */}
                   <span style={{
                     fontSize: "10px", fontWeight: 800, padding: "3px 10px", borderRadius: "100px",
                     background: statusCfg.bg, border: `1px solid ${statusCfg.border}`, color: statusCfg.color,
@@ -214,7 +232,6 @@ function ProfileModal({ trainer, onClose }) {
                 <p style={{ fontSize: "12px", color: T.muted, margin: 0 }}>{trainer.email}</p>
               </div>
             </div>
-
             <button onClick={onClose} style={{
               background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)",
               borderRadius: "8px", width: 32, height: 32, cursor: "pointer",
@@ -223,7 +240,6 @@ function ProfileModal({ trainer, onClose }) {
             }}>✕</button>
           </div>
 
-          {/* Inactive warning banner */}
           {isInactive && (
             <div style={{
               marginTop: "1rem", padding: "10px 14px", borderRadius: "10px",
@@ -236,17 +252,17 @@ function ProfileModal({ trainer, onClose }) {
               <div>
                 <p style={{ fontSize: "12px", fontWeight: 700, color: T.red, margin: 0 }}>Trainer is inactive</p>
                 <p style={{ fontSize: "11px", color: "rgba(255,100,100,0.7)", margin: 0 }}>
-                  Previously assigned members have been unassigned. Record is preserved for audit and payment history.
+                  Previously assigned members have been unassigned. Record preserved for audit and payment history.
                 </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* ── Modal body ───────────────────────────────── */}
+        {/* Body */}
         <div style={{ padding: "1.5rem 2rem", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
-          {/* Tags row */}
+          {/* Tags */}
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             {trainer.specialization && (
               <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "1px", padding: "4px 12px", borderRadius: "100px", background: specColor + "15", color: specColor, border: `1px solid ${specColor}30` }}>
@@ -272,7 +288,7 @@ function ProfileModal({ trainer, onClose }) {
               {fields.map(({ label, value }) => (
                 <div key={label} style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 10, padding: "0.875rem" }}>
                   <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.2px", color: T.sub, margin: "0 0 4px" }}>{label.toUpperCase()}</p>
-                  <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#fff", margin: 0 }}>{value}</p>
+                  <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#fff", margin: 0 }}>{String(value)}</p>
                 </div>
               ))}
             </div>
@@ -304,7 +320,7 @@ function ProfileModal({ trainer, onClose }) {
             </div>
           )}
 
-          {/* Bio — full, no truncation in the modal */}
+          {/* Bio — full, no truncation inside modal */}
           {trainer.bio && (
             <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 10, padding: "1rem" }}>
               <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, marginBottom: 8 }}>BIO</p>
@@ -312,7 +328,7 @@ function ProfileModal({ trainer, onClose }) {
             </div>
           )}
 
-          {/* Cover letter (from original application) */}
+          {/* Cover letter */}
           {trainer.cover_letter && (
             <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 10, padding: "1rem" }}>
               <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, marginBottom: 8 }}>APPLICATION — COVER LETTER</p>
@@ -320,7 +336,7 @@ function ProfileModal({ trainer, onClose }) {
             </div>
           )}
 
-          {/* Document uploads (profile_image already shown above; any other docs) */}
+          {/* Uploaded documents */}
           {trainer.documents && trainer.documents.length > 0 && (
             <div>
               <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, marginBottom: "10px" }}>UPLOADED DOCUMENTS</p>
@@ -331,7 +347,7 @@ function ProfileModal({ trainer, onClose }) {
                       display: "flex", alignItems: "center", gap: "10px",
                       padding: "10px 14px", background: T.glass,
                       border: `1px solid ${T.border}`, borderRadius: 10,
-                      textDecoration: "none", transition: "border-color 0.2s",
+                      textDecoration: "none",
                     }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -347,7 +363,7 @@ function ProfileModal({ trainer, onClose }) {
             </div>
           )}
 
-          {/* Assigned members (read-only list) */}
+          {/* Assigned members */}
           {(trainer.assigned_members || []).length > 0 && (
             <div>
               <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, marginBottom: "10px" }}>
@@ -374,13 +390,17 @@ function ProfileModal({ trainer, onClose }) {
             {trainer.created_at && (
               <div>
                 <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1px", color: T.sub, margin: "8px 0 2px" }}>JOINED</p>
-                <p style={{ fontSize: "12px", color: T.muted, margin: 0 }}>{new Date(trainer.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
+                <p style={{ fontSize: "12px", color: T.muted, margin: 0 }}>
+                  {new Date(trainer.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
               </div>
             )}
             {trainer.updated_at && (
               <div>
                 <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1px", color: T.sub, margin: "8px 0 2px" }}>LAST UPDATED</p>
-                <p style={{ fontSize: "12px", color: T.muted, margin: 0 }}>{new Date(trainer.updated_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
+                <p style={{ fontSize: "12px", color: T.muted, margin: 0 }}>
+                  {new Date(trainer.updated_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
               </div>
             )}
           </div>
@@ -391,7 +411,14 @@ function ProfileModal({ trainer, onClose }) {
   );
 }
 
-// ── Trainer drawer (side panel) ────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// TRAINER DRAWER
+// FIX 1 — "View Profile" button: always visible in header
+// FIX 2 — "Assign Member" button: always visible in header,
+//          red when active, greyed when inactive/at capacity
+// FIX 3 — sticky header zIndex raised to 10 so buttons are
+//          never hidden behind scrolling content
+// ─────────────────────────────────────────────────────────────
 function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) {
   const [tab,        setTab]        = useState("profile");
   const [assignForm, setAssignForm] = useState({ member_id: "" });
@@ -399,8 +426,10 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
   const [toast,      setToast]      = useState(null);
   const [showModal,  setShowModal]  = useState(false);
 
-  const specColor = SPEC_COLORS[trainer.specialization] || T.red;
+  const specColor  = SPEC_COLORS[trainer.specialization] || T.red;
   const isInactive = trainer.status === "inactive";
+  const atCapacity = (trainer.current_clients || 0) >= (trainer.max_clients || 10);
+  const assignDisabled = isInactive || atCapacity;
   const unassigned = members.filter(m => !m.trainer_id && m.status === "active");
 
   const handleAssign = async (e) => {
@@ -421,16 +450,25 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
 
   return (
     <>
+      {/* Backdrop */}
       <div
         style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", justifyContent: "flex-end", zIndex: 9000, backdropFilter: "blur(4px)" }}
         onClick={onClose}
       >
+        {/* Panel */}
         <div
           style={{ width: "100%", maxWidth: "460px", height: "100%", background: "#0a0a0a", borderLeft: "1px solid rgba(255,255,255,0.08)", overflowY: "auto", animation: "slideRight 0.3s cubic-bezier(0.16,1,0.3,1)" }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div style={{ padding: "1.5rem 2rem 1.5rem", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, background: "#0a0a0a", zIndex: 10 }}>
+
+          {/* ── STICKY HEADER ── zIndex:10 so it always sits above scrolled content */}
+          <div style={{
+            padding: "1.5rem 2rem 1.25rem",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            position: "sticky", top: 0,
+            background: "#0a0a0a",
+            zIndex: 10,        // FIX: was 1, raised to 10
+          }}>
 
             {/* Inactive ribbon */}
             {isInactive && (
@@ -444,6 +482,7 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
               </div>
             )}
 
+            {/* Name row */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                 {trainer.profile_image_url ? (
@@ -464,78 +503,85 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                   <p style={{ fontSize: "12px", color: T.muted, margin: 0 }}>{trainer.email}</p>
                 </div>
               </div>
-              <button onClick={onClose} style={{ background: "none", border: "none", color: T.muted, fontSize: "1.2rem", cursor: "pointer", flexShrink: 0 }}>✕</button>
+              <button onClick={onClose} style={{ background: "none", border: "none", color: T.muted, fontSize: "1.2rem", cursor: "pointer", flexShrink: 0, padding: "4px" }}>✕</button>
             </div>
 
-            {/* Action buttons row — View Profile + Assign Member */}
-            <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
+            {/* ── FIX 1 & 2 — ACTION BUTTONS ROW ─────────────────────────
+                Both buttons are ALWAYS rendered.
+                "View Profile" → opens full profile modal
+                "Assign Member" → red when available, grey when disabled
+            ──────────────────────────────────────────────────────────── */}
+            <div style={{ marginTop: "14px", display: "flex", gap: "8px" }}>
 
+              {/* View Profile button */}
               <button
                 onClick={() => setShowModal(true)}
                 style={{
-                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
-                  padding: "9px 0", background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px",
-                  color: "#fff", fontSize: "12px", fontWeight: 700,
-                  fontFamily: "'DM Sans',sans-serif", cursor: "pointer",
+                  flex: 1,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
+                  padding: "10px 0",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: "10px",
+                  color: "#fff",
+                  fontSize: "12px", fontWeight: 700,
+                  fontFamily: "'DM Sans',sans-serif",
+                  cursor: "pointer",
                   transition: "background 0.2s",
                 }}
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
                 </svg>
                 View Profile
               </button>
 
-              {(() => {
-                const atCapacity = (trainer.current_clients || 0) >= (trainer.max_clients || 10);
-                const disabled   = isInactive || atCapacity;
-                const label      = isInactive ? "Inactive" : atCapacity ? "At capacity" : "Assign Member";
-                return (
-                  <button
-                    onClick={() => { if (!disabled) setTab("assign"); }}
-                    disabled={disabled}
-                    title={
-                      isInactive  ? "Cannot assign — trainer is inactive"
-                      : atCapacity ? "Trainer has reached max client capacity"
-                      :              "Assign a member to this trainer"
-                    }
-                    style={{
-                      flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
-                      padding: "9px 0",
-                      background:  disabled ? "rgba(255,255,255,0.03)" : "linear-gradient(135deg,#FF1A1A,#cc1010)",
-                      border:      disabled ? "1px solid rgba(255,255,255,0.07)" : "none",
-                      borderRadius: "10px",
-                      color:       disabled ? T.muted : "#fff",
-                      fontSize:    "12px", fontWeight: 700,
-                      fontFamily:  "'DM Sans',sans-serif",
-                      cursor:      disabled ? "not-allowed" : "pointer",
-                      boxShadow:   disabled ? "none" : "0 4px 14px rgba(255,26,26,0.3)",
-                      transition:  "all 0.2s",
-                    }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
-                      <circle cx="9" cy="7" r="4"/>
-                      <line x1="19" y1="8" x2="19" y2="14"/>
-                      <line x1="22" y1="11" x2="16" y2="11"/>
-                    </svg>
-                    {label}
-                  </button>
-                );
-              })()}
+              {/* Assign Member button */}
+              <button
+                onClick={() => { if (!assignDisabled) setTab("assign"); }}
+                disabled={assignDisabled}
+                title={
+                  isInactive   ? "Cannot assign to an inactive trainer"
+                  : atCapacity ? "Trainer is at maximum client capacity"
+                  :              "Assign a member to this trainer"
+                }
+                style={{
+                  flex: 1,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
+                  padding: "10px 0",
+                  background:   assignDisabled ? "rgba(255,255,255,0.03)" : "linear-gradient(135deg, #FF1A1A, #cc1010)",
+                  border:       assignDisabled ? "1px solid rgba(255,255,255,0.08)" : "none",
+                  borderRadius: "10px",
+                  color:        assignDisabled ? "rgba(255,255,255,0.3)" : "#fff",
+                  fontSize:     "12px", fontWeight: 700,
+                  fontFamily:   "'DM Sans',sans-serif",
+                  cursor:       assignDisabled ? "not-allowed" : "pointer",
+                  boxShadow:    assignDisabled ? "none" : "0 4px 14px rgba(255,26,26,0.35)",
+                  transition:   "all 0.2s",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <line x1="19" y1="8" x2="19" y2="14"/>
+                  <line x1="22" y1="11" x2="16" y2="11"/>
+                </svg>
+                {isInactive ? "Inactive" : atCapacity ? "At capacity" : "Assign Member"}
+              </button>
+
             </div>
           </div>
 
           {/* Tabs */}
           <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             {[
-              { id: "profile", label: "👤 Profile" },
-              { id: "assign",  label: "🔗 Assign",  disabled: isInactive },
-              { id: "members", label: `👥 Members (${trainer.current_clients || 0})` },
+              { id: "profile", label: "👤 Profile",  disabled: false },
+              { id: "assign",  label: "🔗 Assign",   disabled: isInactive },
+              { id: "members", label: `👥 Members (${trainer.current_clients || 0})`, disabled: false },
             ].map(t => (
               <button key={t.id}
-                onClick={() => !t.disabled && setTab(t.id)}
+                onClick={() => { if (!t.disabled) setTab(t.id); }}
                 style={{
                   padding: "12px 20px", background: "none", border: "none",
                   cursor: t.disabled ? "not-allowed" : "pointer",
@@ -543,12 +589,14 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                   color: t.disabled ? T.sub : tab === t.id ? "#fff" : T.muted,
                   borderBottom: `2px solid ${tab === t.id && !t.disabled ? T.red : "transparent"}`,
                   transition: "all 0.2s", opacity: t.disabled ? 0.4 : 1,
-                }}>
+                }}
+              >
                 {t.label}
               </button>
             ))}
           </div>
 
+          {/* Tab content */}
           <div style={{ padding: "1.5rem 2rem" }}>
 
             {/* Profile tab */}
@@ -588,6 +636,7 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                   </div>
                 </div>
 
+                {/* Phone + availability */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.25rem" }}>
                   {[
                     { label: "Phone",        value: trainer.phone        || "—" },
@@ -600,16 +649,21 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                   ))}
                 </div>
 
-                {/* Bio preview — 2 lines, "View Full Profile" to see rest */}
+                {/* Bio preview with "View full →" */}
                 {trainer.bio && (
                   <div style={{ background: T.glass, border: `1px solid ${T.border}`, borderRadius: 10, padding: "1rem" }}>
                     <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: T.sub, marginBottom: 6 }}>BIO</p>
                     <p style={{
                       fontSize: "0.875rem", color: T.muted, lineHeight: 1.7, margin: 0,
                       display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
-                    }}>{trainer.bio}</p>
+                    }}>
+                      {trainer.bio}
+                    </p>
                     {trainer.bio.length > 100 && (
-                      <button onClick={() => setShowModal(true)} style={{ marginTop: 6, background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "12px", fontWeight: 700, color: T.red, fontFamily: "'DM Sans',sans-serif" }}>
+                      <button
+                        onClick={() => setShowModal(true)}
+                        style={{ marginTop: 8, background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "12px", fontWeight: 700, color: T.red, fontFamily: "'DM Sans',sans-serif" }}
+                      >
                         View full →
                       </button>
                     )}
@@ -618,7 +672,7 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
               </div>
             )}
 
-            {/* Assign tab — disabled when inactive */}
+            {/* Assign tab */}
             {tab === "assign" && !isInactive && (
               <div>
                 <p style={{ fontSize: "0.875rem", color: T.muted, lineHeight: 1.6, marginBottom: "1.5rem" }}>
@@ -634,16 +688,25 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                       <label style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px", color: T.muted, display: "block", marginBottom: 8, textTransform: "uppercase" }}>
                         Select Member
                       </label>
-                      <select required value={assignForm.member_id} onChange={e => setAssignForm({ member_id: e.target.value })}
-                        style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 8, padding: "12px 14px", color: "#fff", fontSize: "0.875rem", fontFamily: "'DM Sans',sans-serif", cursor: "pointer", outline: "none" }}>
+                      <select
+                        required
+                        value={assignForm.member_id}
+                        onChange={e => setAssignForm({ member_id: e.target.value })}
+                        style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 8, padding: "12px 14px", color: "#fff", fontSize: "0.875rem", fontFamily: "'DM Sans',sans-serif", cursor: "pointer", outline: "none" }}
+                      >
                         <option value="">— Choose member —</option>
                         {unassigned.map(m => (
-                          <option key={m.id} value={m.id}>{m.full_name || m.username} — {m.membership_type?.replace(/_/g, " ")}</option>
+                          <option key={m.id} value={m.id}>
+                            {m.full_name || m.username} — {m.membership_type?.replace(/_/g, " ")}
+                          </option>
                         ))}
                       </select>
                     </div>
-                    <button type="submit" disabled={assigning || !assignForm.member_id}
-                      style={{ padding: "12px", background: assigning ? "rgba(255,26,26,0.3)" : "linear-gradient(135deg,#FF1A1A,#cc0000)", color: "#fff", fontWeight: 700, border: "none", borderRadius: 9, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", opacity: assigning ? 0.6 : 1 }}>
+                    <button
+                      type="submit"
+                      disabled={assigning || !assignForm.member_id}
+                      style={{ padding: "12px", background: assigning ? "rgba(255,26,26,0.3)" : "linear-gradient(135deg,#FF1A1A,#cc0000)", color: "#fff", fontWeight: 700, border: "none", borderRadius: 9, cursor: assigning ? "not-allowed" : "pointer", fontFamily: "'DM Sans',sans-serif", opacity: assigning ? 0.6 : 1 }}
+                    >
                       {assigning ? "Assigning…" : "Assign Member →"}
                     </button>
                   </form>
@@ -681,17 +744,20 @@ function TrainerDrawer({ trainer, members, onClose, onStatusChange, onAssign }) 
                 ))}
               </div>
             )}
+
           </div>
         </div>
       </div>
 
-      {/* Full profile modal — portal, above the drawer */}
+      {/* Full profile modal — portal above the drawer */}
       {showModal && <ProfileModal trainer={trainer} onClose={() => setShowModal(false)} />}
     </>
   );
 }
 
-// ── Main page ──────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────
 export default function AdminTrainers() {
   const { user }   = useAuth();
   const [trainers, setTrainers] = useState([]);
@@ -708,7 +774,7 @@ export default function AdminTrainers() {
   const fetchAll = useCallback(() => {
     setLoading(true);
     Promise.all([
-      api.get("/trainers"),         // all statuses — inactive trainers still shown to admin
+      api.get("/trainers"),
       api.get("/members?status=active"),
     ])
       .then(([tr, mem]) => {
@@ -721,23 +787,30 @@ export default function AdminTrainers() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  // ── FIX 3 — STATUS CHANGE
+  // Shows the exact error from the server if the API call fails,
+  // so you can see what went wrong instead of a generic message.
+  // Also re-fetches after every status change so the UI is always
+  // in sync with the database.
   const handleStatusChange = async (id, status) => {
     try {
-      await api.patch(`/trainers/${id}/status`, { status });
+      const res = await api.patch(`/trainers/${id}/status`, { status });
+      const unassigned = res.data?.members_unassigned;
 
-      // If going inactive → unassign all their members on the backend.
-      // The backend route should handle this; we just refresh.
-      if (status === "inactive") {
-        showToast("Trainer set to inactive. Assigned members have been unassigned.");
+      if (status === "inactive" && unassigned > 0) {
+        showToast(`Trainer inactive. ${unassigned} member${unassigned !== 1 ? "s" : ""} unassigned.`);
       } else {
-        showToast(`Status updated to ${status}.`);
+        const label = { active: "Active", on_leave: "On Leave", inactive: "Inactive" }[status] || status;
+        showToast(`Status updated to ${label}.`);
       }
 
       setTrainers(prev => prev.map(t => t.id === id ? { ...t, status } : t));
       if (selected?.id === id) setSelected(prev => ({ ...prev, status }));
-      fetchAll(); // refresh to get updated current_clients count
-    } catch {
-      showToast("Failed to update status.", "error");
+      fetchAll();
+    } catch (err) {
+      // Show the actual server error so the developer can diagnose it
+      const msg = err.response?.data?.error || err.response?.data?.errors?.[0]?.msg || "Failed to update status.";
+      showToast(msg, "error");
     }
   };
 
@@ -751,15 +824,15 @@ export default function AdminTrainers() {
     {
       key: "full_name", label: "Trainer",
       render: (r) => {
-        const specColor  = SPEC_COLORS[r.specialization] || T.red;
-        const isInactive = r.status === "inactive";
+        const sc = SPEC_COLORS[r.specialization] || T.red;
+        const dim = r.status === "inactive";
         return (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", opacity: isInactive ? 0.55 : 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", opacity: dim ? 0.55 : 1 }}>
             {r.profile_image_url ? (
               <img src={r.profile_image_url} alt={r.full_name}
-                style={{ width: 36, height: 36, borderRadius: 9, objectFit: "cover", border: `1px solid ${specColor}25`, flexShrink: 0 }} />
+                style={{ width: 36, height: 36, borderRadius: 9, objectFit: "cover", border: `1px solid ${sc}25`, flexShrink: 0 }} />
             ) : (
-              <div style={{ width: 36, height: 36, borderRadius: 9, flexShrink: 0, background: specColor + "15", border: `1px solid ${specColor}25`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Bebas Neue',sans-serif", fontSize: "13px", color: specColor }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, flexShrink: 0, background: sc + "15", border: `1px solid ${sc}25`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Bebas Neue',sans-serif", fontSize: "13px", color: sc }}>
                 {(r.full_name || r.username || "T")[0].toUpperCase()}
               </div>
             )}
@@ -769,7 +842,7 @@ export default function AdminTrainers() {
             </div>
           </div>
         );
-      }
+      },
     },
     {
       key: "specialization", label: "Specialization",
@@ -778,32 +851,36 @@ export default function AdminTrainers() {
         return r.specialization
           ? <span style={{ fontSize: "11px", fontWeight: 700, padding: "3px 9px", borderRadius: "100px", background: color + "12", color, border: `1px solid ${color}25` }}>{r.specialization}</span>
           : <span style={{ color: T.sub }}>—</span>;
-      }
+      },
     },
     {
       key: "experience_years", label: "Exp.",
       render: (r) => r.experience_years
         ? <span style={{ fontSize: "0.875rem", color: T.muted }}>{r.experience_years} yrs</span>
-        : <span style={{ color: T.sub }}>—</span>
+        : <span style={{ color: T.sub }}>—</span>,
     },
     {
       key: "current_clients", label: "Members",
       render: (r) => (
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.1rem", color: r.status === "inactive" ? T.sub : T.cyan }}>{r.current_clients || 0}</span>
+          <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.1rem", color: r.status === "inactive" ? T.sub : T.cyan }}>
+            {r.current_clients || 0}
+          </span>
           <span style={{ fontSize: "11px", color: T.sub }}>/ {r.max_clients || 10}</span>
         </div>
-      )
+      ),
     },
     {
       key: "certifications", label: "Certifications",
       render: (r) => r.certifications
         ? <span style={{ fontSize: "12px", color: T.muted, maxWidth: "140px", display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.certifications}</span>
-        : <span style={{ color: T.sub }}>—</span>
+        : <span style={{ color: T.sub }}>—</span>,
     },
     {
       key: "status", label: "Status",
-      render: (r) => <StatusDropdown value={r.status} onChange={(s) => handleStatusChange(r.id, s)} />
+      render: (r) => (
+        <StatusDropdown value={r.status} onChange={(s) => handleStatusChange(r.id, s)} />
+      ),
     },
   ];
 
@@ -812,18 +889,20 @@ export default function AdminTrainers() {
       title="TRAINERS"
       subtitle="Manage trainer profiles, status and member assignments"
       actions={
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <span style={{ fontSize: "13px", color: T.muted }}>
-            {trainers.filter(t => t.status === "active").length} active · {trainers.filter(t => t.status === "inactive").length} inactive
-          </span>
-        </div>
+        <span style={{ fontSize: "13px", color: T.muted }}>
+          {trainers.filter(t => t.status === "active").length} active
+          {" · "}
+          {trainers.filter(t => t.status === "on_leave").length} on leave
+          {" · "}
+          {trainers.filter(t => t.status === "inactive").length} inactive
+        </span>
       }
     >
       <style>{`
-        @keyframes spin        { to { transform: rotate(360deg); } }
-        @keyframes slideRight  { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes profileIn   { from { opacity: 0; transform: scale(0.95) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        @keyframes fadeUp      { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin       { to { transform: rotate(360deg); } }
+        @keyframes slideRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes profileIn  { from { opacity: 0; transform: scale(0.95) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes fadeUp     { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
 
       <DataTable
